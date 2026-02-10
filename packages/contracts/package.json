@@ -12,7 +12,7 @@
     "format": "prettier -w ."
   },
   "devDependencies": {
-    "@eslint/js": "^9.19.0",
+    "@eslint/js": "^10.0.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.4",
     "@nomicfoundation/hardhat-mocha": "^3.0.9",
     "@nomicfoundation/hardhat-network-helpers": "^3.0.3",

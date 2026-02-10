@@ -71,6 +71,15 @@ async function main() {
   await timelock.grantRole(PROPOSER_ROLE, await governor.getAddress());
   await timelock.grantRole(EXECUTOR_ROLE, ethers.ZeroAddress);
 
+  const OrgRegistry = await ethers.getContractFactory("YNXOrgRegistry", deployer);
+  const orgRegistry = await OrgRegistry.deploy();
+
+  const SubjectRegistry = await ethers.getContractFactory("YNXSubjectRegistry", deployer);
+  const subjectRegistry = await SubjectRegistry.deploy(await orgRegistry.getAddress());
+
+  const Arbitration = await ethers.getContractFactory("YNXArbitration", deployer);
+  const arbitration = await Arbitration.deploy(await orgRegistry.getAddress());
+
   const latest = await ethers.provider.getBlock("latest");
   const now = latest?.timestamp ?? Math.floor(Date.now() / 1000);
   const startTimestamp = BigInt(now + DEVNET.vesting.cliffSeconds);
@@ -102,6 +111,9 @@ async function main() {
       treasury: await treasury.getAddress(),
       governor: await governor.getAddress(),
       teamVesting: await teamVesting.getAddress(),
+      orgRegistry: await orgRegistry.getAddress(),
+      subjectRegistry: await subjectRegistry.getAddress(),
+      arbitration: await arbitration.getAddress(),
     },
     accounts: {
       deployer: deployer.address,

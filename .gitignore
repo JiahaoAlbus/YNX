@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+coverage
+.env
+.env.*
+packages/contracts/artifacts
+packages/contracts/cache
+packages/contracts/deployments

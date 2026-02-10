@@ -1,0 +1,34 @@
+{
+  "name": "@ynx/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "devnet:node": "hardhat node --hostname 127.0.0.1 --port 8545",
+    "devnet:deploy": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sim": "hardhat run scripts/deploy.ts --network default",
+    "test": "hardhat test",
+    "lint": "eslint .",
+    "format": "prettier -w ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@nomicfoundation/hardhat-ethers": "^4.0.4",
+    "@nomicfoundation/hardhat-mocha": "^3.0.9",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
+    "@types/node": "^22.13.1",
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
+    "chai": "^5.1.2",
+    "eslint": "^9.19.0",
+    "globals": "^15.15.0",
+    "hardhat": "^3.1.7",
+    "mocha": "^11.0.0",
+    "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0"
+  }
+}

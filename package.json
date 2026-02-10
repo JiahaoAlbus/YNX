@@ -1,0 +1,13 @@
+{
+  "name": "ynx",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm --workspaces --if-present run build",
+    "test": "npm --workspaces run test",
+    "lint": "npm --workspaces run lint",
+    "format": "npm --workspaces run format"
+  }
+}

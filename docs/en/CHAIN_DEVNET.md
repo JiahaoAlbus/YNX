@@ -31,6 +31,12 @@ Defaults:
 - Gas denom: `anyxt` (display denom: `nyxt`, 18 decimals)
 - JSON-RPC: `http://127.0.0.1:8545`
 
+Dev key (for local testing only):
+
+- `chain/scripts/localnet.sh` uses the standard Hardhat test mnemonic by default:
+  - `test test test test test test test test test test test junk`
+- Override via `YNX_MNEMONIC=...` when running the script.
+
 ## Connect EVM tooling
 
 - Add a custom network in MetaMask / Rabby:
@@ -38,7 +44,14 @@ Defaults:
   - Chain ID: `9001`
   - Currency symbol: `NYXT` (display)
 
-## Next
+## Deploy system contracts (EVM)
 
-- Deploy the reference system contracts from `packages/contracts` to this devnet (work-in-progress wiring).
+With the chain running:
 
+```bash
+npm --workspace @ynx/contracts run ynxdev:deploy
+```
+
+Deployment output:
+
+- `packages/contracts/deployments/devnet-9001.json`

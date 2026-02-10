@@ -5,8 +5,7 @@ import { network } from "hardhat";
 
 const { ethers } = await network.connect();
 
-const DEVNET = {
-  chainId: 31337,
+const PARAMS = {
   tokenSymbol: "NYXT",
   genesisSupply: ethers.parseUnits("100000000000", 18), // 100B
   allocations: {
@@ -33,18 +32,19 @@ function percentOf(total: bigint, percent: bigint): bigint {
 }
 
 async function main() {
+  const chainId = Number((await ethers.provider.getNetwork()).chainId);
   const [deployer, teamBeneficiary, communityRecipient] = await ethers.getSigners();
 
   const NYXT = await ethers.getContractFactory("NYXT", deployer);
   const token = await NYXT.deploy(
     deployer.address,
     deployer.address,
-    DEVNET.genesisSupply,
+    PARAMS.genesisSupply,
   );
 
   const Timelock = await ethers.getContractFactory("YNXTimelock", deployer);
   const timelock = await Timelock.deploy(
-    BigInt(DEVNET.governance.timelockDelaySeconds),
+    BigInt(PARAMS.governance.timelockDelaySeconds),
     [],
     [],
     deployer.address,
@@ -59,11 +59,11 @@ async function main() {
     await token.getAddress(),
     await timelock.getAddress(),
     await treasury.getAddress(),
-    DEVNET.governance.votingDelayBlocks,
-    DEVNET.governance.votingPeriodBlocks,
-    DEVNET.governance.proposalThreshold,
-    DEVNET.governance.proposalDeposit,
-    DEVNET.governance.quorumPercent,
+    PARAMS.governance.votingDelayBlocks,
+    PARAMS.governance.votingPeriodBlocks,
+    PARAMS.governance.proposalThreshold,
+    PARAMS.governance.proposalDeposit,
+    PARAMS.governance.quorumPercent,
   );
 
   const PROPOSER_ROLE = await timelock.PROPOSER_ROLE();
@@ -82,21 +82,21 @@ async function main() {
 
   const latest = await ethers.provider.getBlock("latest");
   const now = latest?.timestamp ?? Math.floor(Date.now() / 1000);
-  const startTimestamp = BigInt(now + DEVNET.vesting.cliffSeconds);
+  const startTimestamp = BigInt(now + PARAMS.vesting.cliffSeconds);
 
   const TeamVesting = await ethers.getContractFactory("NYXTTeamVesting", deployer);
   const teamVesting = await TeamVesting.deploy(
     teamBeneficiary.address,
     startTimestamp,
-    BigInt(DEVNET.vesting.vestingSeconds),
+    BigInt(PARAMS.vesting.vestingSeconds),
   );
 
-  const teamAllocation = percentOf(DEVNET.genesisSupply, DEVNET.allocations.teamPercent);
-  const treasuryAllocation = percentOf(DEVNET.genesisSupply, DEVNET.allocations.treasuryPercent);
-  const communityAllocation = percentOf(DEVNET.genesisSupply, DEVNET.allocations.communityPercent);
+  const teamAllocation = percentOf(PARAMS.genesisSupply, PARAMS.allocations.teamPercent);
+  const treasuryAllocation = percentOf(PARAMS.genesisSupply, PARAMS.allocations.treasuryPercent);
+  const communityAllocation = percentOf(PARAMS.genesisSupply, PARAMS.allocations.communityPercent);
   const checkSum = teamAllocation + treasuryAllocation + communityAllocation;
-  if (checkSum !== DEVNET.genesisSupply) {
-    throw new Error(`Allocation mismatch: got ${checkSum} expected ${DEVNET.genesisSupply}`);
+  if (checkSum !== PARAMS.genesisSupply) {
+    throw new Error(`Allocation mismatch: got ${checkSum} expected ${PARAMS.genesisSupply}`);
   }
 
   await token.transfer(await treasury.getAddress(), treasuryAllocation);
@@ -104,7 +104,7 @@ async function main() {
   await token.transfer(communityRecipient.address, communityAllocation);
 
   const summary = {
-    chainId: DEVNET.chainId,
+    chainId,
     contracts: {
       nyxt: await token.getAddress(),
       timelock: await timelock.getAddress(),
@@ -120,12 +120,12 @@ async function main() {
       teamBeneficiary: teamBeneficiary.address,
       communityRecipient: communityRecipient.address,
     },
-    params: DEVNET,
+    params: PARAMS,
   };
 
   const outDir = path.join(process.cwd(), "deployments");
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, `devnet-${DEVNET.chainId}.json`);
+  const outPath = path.join(outDir, `devnet-${chainId}.json`);
   const json = JSON.stringify(
     summary,
     (_key, value) => (typeof value === "bigint" ? value.toString() : value),

@@ -2,6 +2,10 @@
 
 This repo includes a **reference implementation** of YNX’s governance + treasury contracts and the `YN...` address format SDK.
 
+For running the YNX base-chain devnet (node + JSON-RPC), see:
+
+- `docs/en/CHAIN_DEVNET.md`
+
 ## Prereqs
 
 - Node.js (this repo was tested with Node 24.x)

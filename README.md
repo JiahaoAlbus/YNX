@@ -6,6 +6,7 @@ This repository contains:
 
 - v0 protocol specs (canonical)
 - v0 reference implementation (system contracts + SDK)
+- base-chain MVP (`ynxd`) built on Cosmos SDK + Cosmos EVM
 
 ## Canonical Docs (English)
 
@@ -34,6 +35,9 @@ npm test
 Devnet:
 
 ```bash
+# YNX chain devnet (node + JSON-RPC)
+(cd chain && ./scripts/localnet.sh --reset)
+
 # terminal 1
 npm --workspace @ynx/contracts run devnet:node
 

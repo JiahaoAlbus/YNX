@@ -6,3 +6,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
 
+  - package-ecosystem: "gomod"
+    directory: "/chain"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10

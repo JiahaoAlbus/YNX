@@ -15,8 +15,15 @@ These components are chain-agnostic and will be used regardless of which L1/L2 s
 - `packages/sdk`
   - `YN...` ⇄ `0x...` address encoding/decoding + CLI (`npx ynx ...`)
 
+## Base-chain (MVP)
+
+- `chain`
+  - `ynxd` node built on Cosmos SDK + Cosmos EVM (CometBFT consensus, staking, governance, EVM + JSON-RPC)
+  - Local devnet helper: `chain/scripts/localnet.sh`
+
 ## Not implemented yet (next)
 
-- Base-chain client (consensus, validator set, fee split enforcement at protocol level, inflation minting)
-- Preconfirmations (≤ 1s UX) and the finality path (5–8s target)
+- Preconfirmations (≤ 1s UX) and the two-path confirmation model (preconfirm vs BFT finality)
+- Fee split enforcement at the protocol level (50% burn / 40% validators / 10% treasury)
+- Inflation minting split enforcement (2% annual, 70% security / 30% treasury)
 - Additional “order modules” beyond v0: registries (names/permits), reputation/attestations, appeal processes and arbitration economics

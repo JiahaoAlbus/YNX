@@ -20,3 +20,4 @@ Last updated: 2026-02-09
 
 - `docs/en/IMPLEMENTATION.md`
 - `docs/en/DEVNET.md`
+- `docs/en/CHAIN_DEVNET.md`

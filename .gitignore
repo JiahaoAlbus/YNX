@@ -7,3 +7,6 @@ coverage
 packages/contracts/artifacts
 packages/contracts/cache
 packages/contracts/deployments
+chain/.localnet
+chain/build
+chain/ynxd

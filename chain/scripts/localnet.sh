@@ -36,6 +36,7 @@ KEYRING="${YNX_KEYRING:-test}"
 KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
 VAL_KEY="${YNX_VAL_KEY:-validator}"
 MONIKER="${YNX_MONIKER:-localtestnet}"
+MNEMONIC="${YNX_MNEMONIC:-test test test test test test test test test test test junk}"
 
 BIN="$ROOT_DIR/ynxd"
 
@@ -61,7 +62,9 @@ echo "Configuring client defaults..."
 
 if ! "$BIN" keys show "$VAL_KEY" --keyring-backend "$KEYRING" --home "$HOME_DIR" >/dev/null 2>&1; then
   echo "Creating validator key: $VAL_KEY"
-  "$BIN" keys add "$VAL_KEY" --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$HOME_DIR" >/dev/null
+  echo "Using mnemonic:"
+  echo "  $MNEMONIC"
+  echo "$MNEMONIC" | "$BIN" keys add "$VAL_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$HOME_DIR" >/dev/null
 fi
 
 VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
@@ -81,4 +84,3 @@ echo "  Home:     $HOME_DIR"
 echo "  Chain ID: $CHAIN_ID"
 
 "$BIN" start --home "$HOME_DIR" --minimum-gas-prices "0$DENOM"
-

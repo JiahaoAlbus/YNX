@@ -9,7 +9,7 @@
     "ynxdev:deploy": "hardhat run scripts/deploy.ts --network ynxdev",
     "deploy:sim": "hardhat run scripts/deploy.ts --network default",
     "test": "hardhat test",
-    "lint": "eslint .",
+    "lint": "node ../../node_modules/eslint/bin/eslint.js .",
     "format": "prettier -w ."
   },
   "devDependencies": {

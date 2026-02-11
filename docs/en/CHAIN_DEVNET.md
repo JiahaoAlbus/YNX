@@ -5,14 +5,14 @@ This document describes how to run a single-node YNX devnet locally using the `y
 ## Prereqs
 
 - Go (this repo was tested with Go 1.25.x)
-- A working C toolchain (Cosmos EVM builds require cgo)
-  - On macOS, make sure Xcode Command Line Tools are installed and the Xcode license is accepted.
+- (Optional) A working C toolchain if you want `cgo` builds.
+  - The local devnet script defaults to `CGO_ENABLED=0` for portability.
 
 ## Build
 
 ```bash
 cd chain
-go build ./cmd/ynxd
+CGO_ENABLED=0 go build ./cmd/ynxd
 ```
 
 ## Run
@@ -30,6 +30,7 @@ Defaults:
 - EVM Chain ID (EIP-155): `9001`
 - Gas denom: `anyxt` (display denom: `nyxt`, 18 decimals)
 - JSON-RPC: `http://127.0.0.1:8545`
+- Build mode: `CGO_ENABLED=0` (override with `YNX_CGO_ENABLED=1`)
 
 Dev key (for local testing only):
 

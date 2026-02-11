@@ -270,6 +270,8 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// local fork to avoid cgo-only secp256k1 usage
+	github.com/cosmos/evm => ./third_party/cosmos-evm
 	// use Cosmos geth fork (release/1.16)
 	github.com/ethereum/go-ethereum => github.com/cosmos/go-ethereum v1.16.2-cosmos-1
 	// Security Advisory https://github.com/advisories/GHSA-h395-qcrw-5vmq

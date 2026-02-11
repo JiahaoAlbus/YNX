@@ -31,6 +31,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_DIR="${YNX_HOME:-$ROOT_DIR/.localnet}"
 CHAIN_ID="${YNX_CHAIN_ID:-ynx_9001-1}"
 DENOM="${YNX_DENOM:-anyxt}"
+CGO_ENABLED_VALUE="${YNX_CGO_ENABLED:-0}"
 
 KEYRING="${YNX_KEYRING:-test}"
 KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
@@ -45,7 +46,7 @@ mkdir -p "$ROOT_DIR"
 echo "Building ynxd..."
 (
   cd "$ROOT_DIR"
-  go build -o "$BIN" ./cmd/ynxd
+  CGO_ENABLED="$CGO_ENABLED_VALUE" go build -o "$BIN" ./cmd/ynxd
 )
 
 if [[ "$RESET" -eq 1 ]]; then
@@ -83,4 +84,8 @@ echo "  JSON-RPC: http://127.0.0.1:8545"
 echo "  Home:     $HOME_DIR"
 echo "  Chain ID: $CHAIN_ID"
 
-"$BIN" start --home "$HOME_DIR" --minimum-gas-prices "0$DENOM"
+"$BIN" start \
+  --home "$HOME_DIR" \
+  --minimum-gas-prices "0$DENOM" \
+  --json-rpc.enable \
+  --json-rpc.enable-indexer

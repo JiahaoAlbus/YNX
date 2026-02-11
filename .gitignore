@@ -8,5 +8,6 @@ packages/contracts/artifacts
 packages/contracts/cache
 packages/contracts/deployments
 chain/.localnet
+chain/.localnet.log
 chain/build
 chain/ynxd

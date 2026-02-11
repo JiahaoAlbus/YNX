@@ -41,6 +41,7 @@ async function main() {
     deployer.address,
     PARAMS.genesisSupply,
   );
+  await token.waitForDeployment();
 
   const Timelock = await ethers.getContractFactory("YNXTimelock", deployer);
   const timelock = await Timelock.deploy(
@@ -49,9 +50,11 @@ async function main() {
     [],
     deployer.address,
   );
+  await timelock.waitForDeployment();
 
   const Treasury = await ethers.getContractFactory("YNXTreasury", deployer);
   const treasury = await Treasury.deploy(await timelock.getAddress());
+  await treasury.waitForDeployment();
 
   const Governor = await ethers.getContractFactory("YNXGovernor", deployer);
   const governor = await Governor.deploy(
@@ -65,20 +68,24 @@ async function main() {
     PARAMS.governance.proposalDeposit,
     PARAMS.governance.quorumPercent,
   );
+  await governor.waitForDeployment();
 
   const PROPOSER_ROLE = await timelock.PROPOSER_ROLE();
   const EXECUTOR_ROLE = await timelock.EXECUTOR_ROLE();
-  await timelock.grantRole(PROPOSER_ROLE, await governor.getAddress());
-  await timelock.grantRole(EXECUTOR_ROLE, ethers.ZeroAddress);
+  await (await timelock.grantRole(PROPOSER_ROLE, await governor.getAddress())).wait();
+  await (await timelock.grantRole(EXECUTOR_ROLE, ethers.ZeroAddress)).wait();
 
   const OrgRegistry = await ethers.getContractFactory("YNXOrgRegistry", deployer);
   const orgRegistry = await OrgRegistry.deploy();
+  await orgRegistry.waitForDeployment();
 
   const SubjectRegistry = await ethers.getContractFactory("YNXSubjectRegistry", deployer);
   const subjectRegistry = await SubjectRegistry.deploy(await orgRegistry.getAddress());
+  await subjectRegistry.waitForDeployment();
 
   const Arbitration = await ethers.getContractFactory("YNXArbitration", deployer);
   const arbitration = await Arbitration.deploy(await orgRegistry.getAddress());
+  await arbitration.waitForDeployment();
 
   const latest = await ethers.provider.getBlock("latest");
   const now = latest?.timestamp ?? Math.floor(Date.now() / 1000);
@@ -90,6 +97,7 @@ async function main() {
     startTimestamp,
     BigInt(PARAMS.vesting.vestingSeconds),
   );
+  await teamVesting.waitForDeployment();
 
   const teamAllocation = percentOf(PARAMS.genesisSupply, PARAMS.allocations.teamPercent);
   const treasuryAllocation = percentOf(PARAMS.genesisSupply, PARAMS.allocations.treasuryPercent);
@@ -99,9 +107,9 @@ async function main() {
     throw new Error(`Allocation mismatch: got ${checkSum} expected ${PARAMS.genesisSupply}`);
   }
 
-  await token.transfer(await treasury.getAddress(), treasuryAllocation);
-  await token.transfer(await teamVesting.getAddress(), teamAllocation);
-  await token.transfer(communityRecipient.address, communityAllocation);
+  await (await token.transfer(await treasury.getAddress(), treasuryAllocation)).wait();
+  await (await token.transfer(await teamVesting.getAddress(), teamAllocation)).wait();
+  await (await token.transfer(communityRecipient.address, communityAllocation)).wait();
 
   const summary = {
     chainId,

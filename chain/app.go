@@ -135,6 +135,9 @@ import (
 	cosmosevmserver "github.com/cosmos/evm/server"
 
 	ynxconfig "github.com/JiahaoAlbus/YNX/chain/config"
+	ynxkeeper "github.com/JiahaoAlbus/YNX/chain/x/ynx/keeper"
+	ynxmodule "github.com/JiahaoAlbus/YNX/chain/x/ynx/module"
+	ynxmodtypes "github.com/JiahaoAlbus/YNX/chain/x/ynx/types"
 )
 
 func init() {
@@ -198,6 +201,9 @@ type App struct {
 	PreciseBankKeeper precisebankkeeper.Keeper
 	EVMMempool        *evmmempool.ExperimentalEVMMempool
 
+	// YNX keepers
+	YNXKeeper ynxkeeper.Keeper
+
 	// the module manager
 	ModuleManager      *module.Manager
 	BasicModuleManager module.BasicManager
@@ -244,6 +250,7 @@ func NewApp(
 		minttypes.StoreKey, distrtypes.StoreKey, slashingtypes.StoreKey,
 		govtypes.StoreKey, consensusparamtypes.StoreKey,
 		upgradetypes.StoreKey, feegrant.StoreKey, evidencetypes.StoreKey, authzkeeper.StoreKey,
+		ynxmodtypes.StoreKey,
 		// ibc keys
 		ibcexported.StoreKey, ibctransfertypes.StoreKey,
 		// Cosmos EVM store keys
@@ -549,6 +556,17 @@ func NewApp(
 
 	/****  Module Options ****/
 
+	app.YNXKeeper = ynxkeeper.NewKeeper(
+		appCodec,
+		runtime.NewKVStoreService(keys[ynxmodtypes.StoreKey]),
+		authAddr,
+		app.AccountKeeper,
+		app.BankKeeper,
+		app.MintKeeper,
+		app.EVMKeeper,
+		app.FeeMarketKeeper,
+	)
+
 	// NOTE: Any module instantiated in the module manager that is later modified
 	// must be passed by reference here.
 	app.ModuleManager = module.NewManager(
@@ -561,6 +579,7 @@ func NewApp(
 		feegrantmodule.NewAppModule(appCodec, app.AccountKeeper, app.BankKeeper, app.FeeGrantKeeper, app.interfaceRegistry),
 		gov.NewAppModule(appCodec, &app.GovKeeper, app.AccountKeeper, app.BankKeeper, nil),
 		mint.NewAppModule(appCodec, app.MintKeeper, app.AccountKeeper, nil, nil),
+		ynxmodule.NewAppModule(appCodec, app.YNXKeeper),
 		slashing.NewAppModule(appCodec, app.SlashingKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, nil, app.interfaceRegistry),
 		distr.NewAppModule(appCodec, app.DistrKeeper, app.AccountKeeper, app.BankKeeper, app.StakingKeeper, nil),
 		staking.NewAppModule(appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, nil),
@@ -611,6 +630,7 @@ func NewApp(
 	// NOTE: capability module's beginblocker must come before any modules using capabilities (e.g. IBC)
 	app.ModuleManager.SetOrderBeginBlockers(
 		minttypes.ModuleName,
+		ynxmodtypes.ModuleName,
 
 		// IBC modules
 		ibcexported.ModuleName, ibctransfertypes.ModuleName,
@@ -665,6 +685,7 @@ func NewApp(
 		feemarkettypes.ModuleName,
 		erc20types.ModuleName,
 		precisebanktypes.ModuleName,
+		ynxmodtypes.ModuleName,
 
 		ibctransfertypes.ModuleName,
 		genutiltypes.ModuleName, evidencetypes.ModuleName, authz.ModuleName,
@@ -790,7 +811,31 @@ func (app *App) setAnteHandler(txConfig client.TxConfig, maxGasWanted uint64) {
 		panic(err)
 	}
 
-	app.SetAnteHandler(evmante.NewAnteHandler(options))
+	baseAnte := evmante.NewAnteHandler(options)
+	feeCollectorAddr := authtypes.NewModuleAddress(authtypes.FeeCollectorName)
+
+	app.SetAnteHandler(func(ctx sdk.Context, tx sdk.Tx, sim bool) (sdk.Context, error) {
+		if ctx.IsCheckTx() || ctx.IsReCheckTx() || sim {
+			return baseAnte(ctx, tx, sim)
+		}
+
+		before := app.BankKeeper.GetBalance(ctx, feeCollectorAddr, ynxconfig.BaseDenom).Amount
+
+		newCtx, err := baseAnte(ctx, tx, sim)
+		if err != nil {
+			return newCtx, err
+		}
+
+		after := app.BankKeeper.GetBalance(newCtx, feeCollectorAddr, ynxconfig.BaseDenom).Amount
+		delta := after.Sub(before)
+		if delta.IsPositive() {
+			if err := app.YNXKeeper.SplitTxFee(newCtx, sdk.NewCoin(ynxconfig.BaseDenom, delta)); err != nil {
+				return newCtx, err
+			}
+		}
+
+		return newCtx, nil
+	})
 }
 
 func (app *App) onPendingTx(hash common.Hash) {

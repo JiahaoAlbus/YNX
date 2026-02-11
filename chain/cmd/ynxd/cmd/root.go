@@ -169,9 +169,13 @@ func initRootCmd(rootCmd *cobra.Command, evmApp *ynx.App) {
 	sdkAppCreator := func(l log.Logger, d dbm.DB, w io.Writer, ao servertypes.AppOptions) servertypes.Application {
 		return newApp(l, d, w, ao)
 	}
+
+	genesisCmd := genutilcli.Commands(evmApp.TxConfig(), evmApp.BasicModuleManager, defaultNodeHome)
+	genesisCmd.AddCommand(ynxGenesisCmd())
+
 	rootCmd.AddCommand(
 		initCmd(evmApp, defaultNodeHome),
-		genutilcli.Commands(evmApp.TxConfig(), evmApp.BasicModuleManager, defaultNodeHome),
+		genesisCmd,
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		evmdebug.Cmd(),
 		confixcmd.ConfigCommand(),

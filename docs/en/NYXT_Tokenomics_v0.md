@@ -2,7 +2,7 @@
 
 Status: Draft  
 Version: v0.1  
-Last updated: 2026-02-09  
+Last updated: 2026-02-11  
 Canonical language: English
 
 ## 0. Normative Language
@@ -31,13 +31,29 @@ Inflation MUST be split as:
 
 > Emission schedule (per-block vs per-epoch) is TBD but MUST be deterministic and auditable.
 
+On the base-chain implementation, the treasury share is enforced via `x/ynx`:
+
+- `inflation_treasury_bps = 3000` (30%)
+
 ## 3. Transaction Fee Split
 
 For every transaction fee paid (gas fees), the protocol MUST apply the following split:
 
-- **50%** burned (permanently removed from supply)
+- **40%** burned (permanently removed from supply)
 - **40%** to validators (and their delegators per delegation rules)
-- **10%** to the treasury
+- **10%** to the on-chain treasury
+- **10%** to the protocol founder (protocol revenue)
+
+### 3.1 Fee Split Parameters (v0 defaults)
+
+On the base-chain implementation, the split is parameterized (basis points) via `x/ynx`:
+
+- `fee_burn_bps = 4000` (40%)
+- `fee_treasury_bps = 1000` (10%)
+- `fee_founder_bps = 1000` (10%)
+- Validators receive the remainder (by leaving the remainder in the fee collector for distribution).
+
+If `treasury_address` or `founder_address` is unset, the corresponding share MUST default to validators.
 
 ## 4. Genesis Allocation (v0)
 
@@ -65,4 +81,3 @@ NYXT supply is elastic due to:
 - Fee burning (-)
 
 Any dashboards or explorers MUST present supply transparently (total supply, circulating supply, burned supply, treasury holdings).
-

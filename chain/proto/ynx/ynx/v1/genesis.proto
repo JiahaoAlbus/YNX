@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package ynx.ynx.v1;
+
+option go_package = "github.com/JiahaoAlbus/YNX/chain/x/ynx/types";
+
+import "gogoproto/gogo.proto";
+
+import "ynx/ynx/v1/params.proto";
+
+message SystemConfig {
+  // enabled controls whether the chain deploys the system contracts during InitGenesis.
+  bool enabled = 1;
+
+  // deployer_address is the EVM deployer address used for deterministic deployments.
+  // It MAY be provided as 0x... (hex) or a chain bech32 address.
+  string deployer_address = 2;
+
+  // team_beneficiary_address receives the vested team allocation in the NYXTTeamVesting contract.
+  // It MAY be provided as 0x... (hex) or a chain bech32 address.
+  string team_beneficiary_address = 3;
+
+  // community_recipient_address receives the community allocation.
+  // It MAY be provided as 0x... (hex) or a chain bech32 address.
+  string community_recipient_address = 4;
+
+  // genesis_supply is the NYXT ERC20 genesis supply (uint256) as a base-10 string.
+  string genesis_supply = 5;
+
+  // Allocation percentages (must sum to 100).
+  uint32 team_percent = 6;
+  uint32 treasury_percent = 7;
+  uint32 community_percent = 8;
+
+  // Governance params.
+  uint64 voting_delay_blocks = 9;
+  uint64 voting_period_blocks = 10;
+  string proposal_threshold = 11;
+  string proposal_deposit = 12;
+  uint64 quorum_percent = 13;
+  uint64 timelock_delay_seconds = 14;
+
+  // Vesting params.
+  uint64 vesting_cliff_seconds = 15;
+  uint64 vesting_duration_seconds = 16;
+}
+
+message SystemContracts {
+  string nyxt = 1;
+  string timelock = 2;
+  string treasury = 3;
+  string governor = 4;
+  string team_vesting = 5;
+  string org_registry = 6;
+  string subject_registry = 7;
+  string arbitration = 8;
+}
+
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+  SystemConfig system = 2 [(gogoproto.nullable) = false];
+  SystemContracts system_contracts = 3 [(gogoproto.nullable) = false];
+}

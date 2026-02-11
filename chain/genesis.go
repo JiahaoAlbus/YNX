@@ -3,6 +3,8 @@ package ynx
 import (
 	"encoding/json"
 
+	"cosmossdk.io/math"
+
 	ynxconfig "github.com/JiahaoAlbus/YNX/chain/config"
 
 	erc20types "github.com/cosmos/evm/x/erc20/types"
@@ -46,6 +48,14 @@ func NewErc20GenesisState() *erc20types.GenesisState { return erc20types.Default
 func NewMintGenesisState() *minttypes.GenesisState {
 	mintGenState := minttypes.DefaultGenesisState()
 	mintGenState.Params.MintDenom = ynxconfig.BaseDenom
+	mintGenState.Params.BlocksPerYear = 31_536_000 // 1s target blocks
+
+	// v0 tokenomics: fixed 2% annual inflation.
+	fixedInflation := math.LegacyNewDecWithPrec(2, 2)
+	mintGenState.Minter.Inflation = fixedInflation
+	mintGenState.Params.InflationRateChange = math.LegacyZeroDec()
+	mintGenState.Params.InflationMin = fixedInflation
+	mintGenState.Params.InflationMax = fixedInflation
 
 	return mintGenState
 }

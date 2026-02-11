@@ -36,6 +36,7 @@ CGO_ENABLED_VALUE="${YNX_CGO_ENABLED:-0}"
 KEYRING="${YNX_KEYRING:-test}"
 KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
 VAL_KEY="${YNX_VAL_KEY:-validator}"
+DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-localtestnet}"
 MNEMONIC="${YNX_MNEMONIC:-test test test test test test test test test test test junk}"
 
@@ -68,10 +69,28 @@ if ! "$BIN" keys show "$VAL_KEY" --keyring-backend "$KEYRING" --home "$HOME_DIR"
   echo "$MNEMONIC" | "$BIN" keys add "$VAL_KEY" --recover --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$HOME_DIR" >/dev/null
 fi
 
+if ! "$BIN" keys show "$DEPLOYER_KEY" --keyring-backend "$KEYRING" --home "$HOME_DIR" >/dev/null 2>&1; then
+  echo "Creating deployer key: $DEPLOYER_KEY"
+  "$BIN" keys add "$DEPLOYER_KEY" --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$HOME_DIR" >/dev/null
+fi
+
 VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
+DEPLOYER_ADDR="$("$BIN" keys show "$DEPLOYER_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
+
+echo "Configuring YNX module genesis..."
+"$BIN" genesis ynx set \
+  --home "$HOME_DIR" \
+  --ynx.system.enabled \
+  --ynx.system.deployer "$DEPLOYER_ADDR" \
+  --ynx.system.team-beneficiary "$VAL_ADDR" \
+  --ynx.system.community-recipient "$VAL_ADDR" \
+  --ynx.params.founder "$VAL_ADDR" >/dev/null
 
 echo "Funding validator account..."
 "$BIN" genesis add-genesis-account "$VAL_ADDR" "1000000000000000000000000$DENOM" --home "$HOME_DIR" >/dev/null
+
+echo "Funding deployer account..."
+"$BIN" genesis add-genesis-account "$DEPLOYER_ADDR" "1000000000000000000000000$DENOM" --home "$HOME_DIR" >/dev/null
 
 echo "Generating gentx..."
 "$BIN" genesis gentx "$VAL_KEY" "1000000000000000000000$DENOM" --chain-id "$CHAIN_ID" --keyring-backend "$KEYRING" --home "$HOME_DIR" >/dev/null

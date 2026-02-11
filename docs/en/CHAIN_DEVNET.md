@@ -45,14 +45,20 @@ Dev key (for local testing only):
   - Chain ID: `9001`
   - Currency symbol: `NYXT` (display)
 
-## Deploy system contracts (EVM)
+## System contracts (EVM)
 
-With the chain running:
+The chain can deploy the v0 system contracts deterministically during `InitGenesis` via `x/ynx`.
+
+- `chain/scripts/localnet.sh` enables this by default.
+- The script uses a dedicated deployer key (`deployer`) so validator gentx signing is not affected by EVM nonce/sequence increments.
+  - Override the key name via `YNX_DEPLOYER_KEY=...`.
+
+```bash
+ynxd query ynx system-contracts --home chain/.localnet
+```
+
+Optional: reference deploy script (not required for the chain devnet):
 
 ```bash
 npm --workspace @ynx/contracts run ynxdev:deploy
 ```
-
-Deployment output:
-
-- `packages/contracts/deployments/devnet-9001.json`

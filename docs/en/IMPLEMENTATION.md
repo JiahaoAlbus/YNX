@@ -1,7 +1,7 @@
 # Implementation (v0) — What’s in this repo
 
 Status: In progress  
-Last updated: 2026-02-09
+Last updated: 2026-02-11
 
 ## Reference implementation (shipping now)
 
@@ -19,11 +19,12 @@ These components are chain-agnostic and will be used regardless of which L1/L2 s
 
 - `chain`
   - `ynxd` node built on Cosmos SDK + Cosmos EVM (CometBFT consensus, staking, governance, EVM + JSON-RPC)
+  - `x/ynx` protocol module:
+    - deterministic system contract deployment during `InitGenesis` (optional)
+    - protocol enforcement for fee splits and inflation-to-treasury splits
   - Local devnet helper: `chain/scripts/localnet.sh`
 
 ## Not implemented yet (next)
 
 - Preconfirmations (≤ 1s UX) and the two-path confirmation model (preconfirm vs BFT finality)
-- Fee split enforcement at the protocol level (50% burn / 40% validators / 10% treasury)
-- Inflation minting split enforcement (2% annual, 70% security / 30% treasury)
 - Additional “order modules” beyond v0: registries (names/permits), reputation/attestations, appeal processes and arbitration economics

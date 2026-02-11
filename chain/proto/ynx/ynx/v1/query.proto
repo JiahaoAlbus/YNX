@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package ynx.ynx.v1;
+
+option go_package = "github.com/JiahaoAlbus/YNX/chain/x/ynx/types";
+
+import "gogoproto/gogo.proto";
+
+import "ynx/ynx/v1/genesis.proto";
+import "ynx/ynx/v1/params.proto";
+
+service Query {
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse);
+  rpc SystemContracts(QuerySystemContractsRequest) returns (QuerySystemContractsResponse);
+}
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1 [(gogoproto.nullable) = false];
+}
+
+message QuerySystemContractsRequest {}
+
+message QuerySystemContractsResponse {
+  SystemConfig system = 1 [(gogoproto.nullable) = false];
+  SystemContracts system_contracts = 2 [(gogoproto.nullable) = false];
+}
+

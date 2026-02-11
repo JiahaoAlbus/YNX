@@ -19,5 +19,6 @@ Last updated: 2026-02-09
 ## Reference Implementation
 
 - `docs/en/IMPLEMENTATION.md`
+- `docs/en/X_YNX_Module.md`
 - `docs/en/DEVNET.md`
 - `docs/en/CHAIN_DEVNET.md`

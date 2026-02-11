@@ -20,7 +20,7 @@ This repository contains:
 - Token: **NYXT**
 - Genesis supply: **100,000,000,000 NYXT**
 - Inflation: **2% / year** (70% validators+delegators, 30% treasury)
-- Fee split: **50% burn / 40% validators / 10% treasury**
+- Fee split: **40% burn / 40% validators / 10% treasury / 10% founder**
 - Team allocation: **15%**, **1y cliff + 4y linear vesting** (on-chain, public)
 - Treasury (genesis reserve): **40%** (spend via on-chain governance)
 - Governance: proposer stake **1,000,000 NYXT**, deposit **100,000 NYXT**, voting **7d**, timelock **7d**

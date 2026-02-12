@@ -35,7 +35,6 @@ async function main() {
 
   let batch = 1n;
   // Find the next unused batch.
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const c = await inbox.commitments(domainId, batch);
     if (!c.exists) break;
@@ -54,4 +53,3 @@ async function main() {
 }
 
 await main();
-

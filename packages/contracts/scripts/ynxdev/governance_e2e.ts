@@ -11,7 +11,6 @@ function sleep(ms: number): Promise<void> {
 async function waitForNextBlock(minDelta = 1, timeoutMs = 120_000): Promise<void> {
   const start = await ethers.provider.getBlockNumber();
   const deadline = Date.now() + timeoutMs;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const now = await ethers.provider.getBlockNumber();
     if (now >= start + minDelta) return;
@@ -29,7 +28,6 @@ async function waitForProposalState(
   timeoutMs = 10 * 60_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const st = Number(await governor.state(proposalId));
     if (st === expected) return;
@@ -170,4 +168,3 @@ async function main() {
 }
 
 await main();
-

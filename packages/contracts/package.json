@@ -19,7 +19,7 @@
     "@nomicfoundation/hardhat-ethers": "^4.0.4",
     "@nomicfoundation/hardhat-mocha": "^3.0.9",
     "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
-    "@types/node": "^22.13.1",
+    "@types/node": "^25.2.3",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",
     "chai": "^6.2.2",

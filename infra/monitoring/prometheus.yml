@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "ynx-cometbft"
+    static_configs:
+      - targets:
+          - "host.docker.internal:26660"
+
+  - job_name: "ynx-indexer"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "host.docker.internal:8081"

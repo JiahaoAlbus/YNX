@@ -24,5 +24,10 @@ Last updated: 2026-02-12
 - `docs/en/DEVNET.md`
 - `docs/en/CHAIN_DEVNET.md`
 - `docs/en/TESTNET_BOOTSTRAP.md`
+- `docs/en/TESTNET_RELEASE.md`
+- `docs/en/FAUCET.md`
+- `docs/en/INDEXER.md`
+- `docs/en/EXPLORER.md`
+- `docs/en/MONITORING.md`
 - `docs/en/Preconfirmations_v0.md`
 - `docs/en/Protocol_Precompile_v0.md`

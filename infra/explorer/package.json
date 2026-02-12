@@ -1,0 +1,10 @@
+{
+  "name": "ynx-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YNX testnet explorer UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

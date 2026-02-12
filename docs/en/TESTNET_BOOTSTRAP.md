@@ -55,7 +55,7 @@ cd chain
 
 ### 3.1 Generating founder / team / community addresses
 
-YNX uses bech32 account addresses with prefix `ynx1...`.
+YNX uses bech32 account addresses with prefix `ynx1`.
 
 If you need real addresses to set in genesis (recommended for public testnets), generate them with `ynxd`:
 
@@ -65,11 +65,10 @@ cd chain
 ./ynxd keys show founder --keyring-backend os --bech acc -a
 ```
 
-To convert between bech32 (`ynx1...`) and EVM hex (`0x...`):
+To convert between bech32 (`ynx1`) and EVM hex (`0x`), pass any address to `ynxd debug addr`:
 
 ```bash
-./ynxd debug addr ynx1...
-./ynxd debug addr 0x...
+./ynxd debug addr "$(./ynxd keys show founder --keyring-backend os --bech acc -a)"
 ```
 
 Defaults:
@@ -83,10 +82,10 @@ Defaults:
 You can override bootstrap fields via environment variables:
 
 ```bash
-YNX_CHAIN_ID=ynx_9002-1 \
-YNX_EVM_CHAIN_ID=9002 \
-YNX_COMMUNITY_RECIPIENT=ynx1... \
-YNX_FOUNDER_ADDRESS=ynx1... \
+export YNX_CHAIN_ID=ynx_9002-1
+export YNX_EVM_CHAIN_ID=9002
+export YNX_COMMUNITY_RECIPIENT="$(./ynxd keys show community --keyring-backend os --bech acc -a)"
+export YNX_FOUNDER_ADDRESS="$(./ynxd keys show founder --keyring-backend os --bech acc -a)"
 ./scripts/testnet_bootstrap.sh --reset
 ```
 
@@ -114,13 +113,11 @@ Operational requirement:
 
 ### 4.1 Coordinator workflow (scripted)
 
-1) Create a repo-local `.env` with your real addresses (not committed). The scripts check `repo/.env` first, then `chain/.env`:
+1) Create a repo-local `.env` with real addresses (not committed). The scripts check `repo/.env` first, then `chain/.env`. Include:
 
-```
-YNX_FOUNDER_ADDRESS=ynx1...
-YNX_TEAM_BENEFICIARY=ynx1...
-YNX_COMMUNITY_RECIPIENT=ynx1...
-```
+- `YNX_FOUNDER_ADDRESS`
+- `YNX_TEAM_BENEFICIARY`
+- `YNX_COMMUNITY_RECIPIENT`
 
 2) Initialize base genesis:
 
@@ -129,10 +126,9 @@ cd chain
 ./scripts/testnet_coordinator.sh --reset
 ```
 
-3) Collect validator gentxs in a directory (default: `chain/.testnet/config/gentx`) and add their genesis balances:
+3) Collect validator gentxs in a directory (default: `chain/.testnet/config/gentx`), set `YNX_VALIDATOR_ACCOUNTS` to a comma-separated list of account entries (address + amount in base denom), then finalize:
 
 ```bash
-export YNX_VALIDATOR_ACCOUNTS="ynx1...:1000000000000000000000anyxt,ynx1...:1000000000000000000000anyxt"
 ./scripts/testnet_coordinator.sh --finalize
 ```
 
@@ -167,6 +163,8 @@ Options:
 - `YNX_VALIDATOR_COUNT=4` to change the number of validators.
 - `YNX_JSONRPC_NODE=0` to select which node exposes JSON-RPC (default: node 0).
 - `./scripts/testnet_multinode.sh --max` to auto-scale to the maximum your machine can handle.
+- `YNX_PROMETHEUS=1` to enable Prometheus metrics (default on).
+- `YNX_TELEMETRY=1` to enable SDK telemetry (default on).
 
 The script:
 

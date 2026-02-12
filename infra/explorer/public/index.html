@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YNX Testnet Explorer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <h1>YNX Testnet Explorer</h1>
+        <p id="networkMeta" class="muted">Connecting...</p>
+      </div>
+      <button id="refreshBtn" class="btn">Refresh</button>
+    </header>
+
+    <section class="card">
+      <div class="search">
+        <input id="searchInput" type="text" placeholder="Search by block height or tx hash" />
+        <button id="searchBtn" class="btn">Search</button>
+      </div>
+      <div id="searchResult" class="result"></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Latest Blocks</h2>
+        <div id="blocksTable"></div>
+      </div>
+      <div class="card">
+        <h2>Latest Transactions</h2>
+        <div id="txsTable"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <div id="statusPanel" class="status"></div>
+    </section>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -34,8 +34,10 @@ Environment:
   YNX_KEYALGO              Key algo (default: eth_secp256k1)
   YNX_VAL_KEY              Validator key name (default: validator)
   YNX_DEPLOYER_KEY         Deployer key name (default: deployer)
-  YNX_COMMUNITY_RECIPIENT  Optional community recipient address (0x... or bech32)
+  YNX_COMMUNITY_RECIPIENT  Optional community recipient address (0x hex or bech32)
   YNX_FOUNDER_ADDRESS      Optional founder fee recipient (bech32). Defaults to validator address.
+  YNX_PROMETHEUS           Enable CometBFT Prometheus metrics (default: 1)
+  YNX_TELEMETRY            Enable Cosmos SDK telemetry (default: 1)
 
 Notes:
   - The default keyring backend is "test" for non-interactive bootstrap.
@@ -60,6 +62,8 @@ KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
 VAL_KEY="${YNX_VAL_KEY:-validator}"
 DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-ynx-testnet}"
+PROMETHEUS_ENABLED="${YNX_PROMETHEUS:-1}"
+TELEMETRY_ENABLED="${YNX_TELEMETRY:-1}"
 
 ENV_FILE="${YNX_ENV_FILE:-}"
 if [[ -z "$ENV_FILE" ]]; then
@@ -112,6 +116,19 @@ echo "Configuring client defaults..."
 
 echo "Setting EVM chain id: $EVM_CHAIN_ID"
 sed -i.bak -E "s/^evm-chain-id = .*/evm-chain-id = ${EVM_CHAIN_ID}/" "$APP_TOML"
+
+if [[ "$PROMETHEUS_ENABLED" == "1" ]]; then
+  sed -i.bak -E "s/^prometheus = .*/prometheus = true/" "$CONFIG_TOML" || true
+else
+  sed -i.bak -E "s/^prometheus = .*/prometheus = false/" "$CONFIG_TOML" || true
+fi
+sed -i.bak -E "s/^prometheus_listen_addr = .*/prometheus_listen_addr = \":26660\"/" "$CONFIG_TOML" || true
+
+if [[ "$TELEMETRY_ENABLED" == "1" ]]; then
+  sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = true/' "$APP_TOML" || true
+else
+  sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = false/' "$APP_TOML" || true
+fi
 
 echo "Tuning CometBFT timeouts (target ~1s blocks)..."
 sed -i.bak 's/timeout_propose = "3s"/timeout_propose = "1s"/' "$CONFIG_TOML"

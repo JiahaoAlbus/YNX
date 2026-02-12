@@ -11,6 +11,8 @@ if [[ -n "${YNX_VALIDATOR_COUNT+x}" ]]; then
   VALIDATOR_COUNT_SET=1
 fi
 JSONRPC_NODE="${YNX_JSONRPC_NODE:-0}"
+PROMETHEUS_ENABLED="${YNX_PROMETHEUS:-1}"
+TELEMETRY_ENABLED="${YNX_TELEMETRY:-1}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -66,6 +68,8 @@ Environment:
   YNX_FAST_BLOCKS          Tune CometBFT timeouts for fast blocks (default: 1)
   YNX_JSONRPC_NODE         Index of the node that runs JSON-RPC (default: 0)
   YNX_DISABLE_NON_RPC      Disable API/gRPC/JSON-RPC on non-JSON nodes (default: 1)
+  YNX_PROMETHEUS           Enable CometBFT Prometheus metrics (default: 1)
+  YNX_TELEMETRY            Enable Cosmos SDK telemetry (default: 1)
 
 Autoscale tuning (used with --max):
   YNX_PER_NODE_MB          Estimated RAM per node (default: 600)
@@ -272,12 +276,22 @@ set_ports() {
   sed -i.bak -E "s|^laddr = \"tcp://0.0.0.0:[0-9]+\"|laddr = \"tcp://0.0.0.0:${p2p_port}\"|" "$config"
   sed -i.bak -E "s|^pprof_laddr = \"localhost:[0-9]+\"|pprof_laddr = \"localhost:${pprof_port}\"|" "$config" || true
   sed -i.bak -E "s|^prometheus_listen_addr = \":?[0-9]+\"|prometheus_listen_addr = \":${prom_port}\"|" "$config" || true
+  if [[ "$PROMETHEUS_ENABLED" == "1" ]]; then
+    sed -i.bak -E "s/^prometheus = .*/prometheus = true/" "$config" || true
+  else
+    sed -i.bak -E "s/^prometheus = .*/prometheus = false/" "$config" || true
+  fi
 
   sed -i.bak -E "s#^address = \"tcp://(0.0.0.0|127.0.0.1|localhost):1317\"#address = \"tcp://0.0.0.0:${api_port}\"#" "$app" || true
   sed -i.bak -E "s#^address = \"(0.0.0.0|127.0.0.1|localhost):9090\"#address = \"0.0.0.0:${grpc_port}\"#" "$app" || true
   sed -i.bak -E "s#^address = \"(0.0.0.0|127.0.0.1|localhost):9091\"#address = \"0.0.0.0:${grpc_web_port}\"#" "$app" || true
   sed -i.bak -E "s#^address = \"(0.0.0.0|127.0.0.1|localhost):8545\"#address = \"0.0.0.0:${jsonrpc_port}\"#" "$app" || true
   sed -i.bak -E "s#^ws-address = \"(0.0.0.0|127.0.0.1|localhost):8546\"#ws-address = \"0.0.0.0:${jsonrpc_ws_port}\"#" "$app" || true
+  if [[ "$TELEMETRY_ENABLED" == "1" ]]; then
+    sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = true/' "$app" || true
+  else
+    sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = false/' "$app" || true
+  fi
 }
 
 disable_non_rpc_services() {

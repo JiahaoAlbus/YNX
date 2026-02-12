@@ -40,16 +40,17 @@ Environment:
   YNX_KEYRING              Keyring backend (default: os)
   YNX_KEYALGO              Key algo (default: eth_secp256k1)
   YNX_DEPLOYER_KEY         Deployer key name (default: deployer)
-  YNX_DEPLOYER_ADDRESS     Optional deployer address (0x... or bech32). If set, no key is created.
+  YNX_DEPLOYER_ADDRESS     Optional deployer address (0x hex or bech32). If set, no key is created.
 
   YNX_FOUNDER_ADDRESS      REQUIRED founder fee recipient (bech32)
-  YNX_TEAM_BENEFICIARY     REQUIRED team vesting beneficiary (bech32 or 0x...)
-  YNX_COMMUNITY_RECIPIENT  REQUIRED community recipient (bech32 or 0x...)
+  YNX_TEAM_BENEFICIARY     REQUIRED team vesting beneficiary (bech32 or 0x hex)
+  YNX_COMMUNITY_RECIPIENT  REQUIRED community recipient (bech32 or 0x hex)
   YNX_TREASURY_ADDRESS     Optional treasury recipient (bech32)
 
   YNX_VALIDATOR_ACCOUNTS   Comma-separated list of addr:amount for validator accounts
-                            Example: "ynx1...:1000000000000000000000anyxt,ynx1...:1000000000000000000000anyxt"
   YNX_EXTRA_GENESIS_ACCOUNTS Comma-separated list of addr:amount to fund extra accounts
+  YNX_PROMETHEUS           Enable CometBFT Prometheus metrics (default: 1)
+  YNX_TELEMETRY            Enable Cosmos SDK telemetry (default: 1)
 EOF
       exit 0
       ;;
@@ -69,6 +70,8 @@ KEYRING="${YNX_KEYRING:-os}"
 KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
 DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-ynx-testnet}"
+PROMETHEUS_ENABLED="${YNX_PROMETHEUS:-1}"
+TELEMETRY_ENABLED="${YNX_TELEMETRY:-1}"
 
 ENV_FILE="${YNX_ENV_FILE:-}"
 if [[ -z "$ENV_FILE" ]]; then
@@ -135,6 +138,19 @@ if [[ "$FINALIZE" -eq 0 ]]; then
 
   echo "Setting EVM chain id: $EVM_CHAIN_ID"
   sed -i.bak -E "s/^evm-chain-id = .*/evm-chain-id = ${EVM_CHAIN_ID}/" "$APP_TOML"
+
+  if [[ "$PROMETHEUS_ENABLED" == "1" ]]; then
+    sed -i.bak -E "s/^prometheus = .*/prometheus = true/" "$CONFIG_TOML" || true
+  else
+    sed -i.bak -E "s/^prometheus = .*/prometheus = false/" "$CONFIG_TOML" || true
+  fi
+  sed -i.bak -E "s/^prometheus_listen_addr = .*/prometheus_listen_addr = \":26660\"/" "$CONFIG_TOML" || true
+
+  if [[ "$TELEMETRY_ENABLED" == "1" ]]; then
+    sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = true/' "$APP_TOML" || true
+  else
+    sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = false/' "$APP_TOML" || true
+  fi
 
   if [[ "${YNX_FAST_BLOCKS:-1}" == "1" ]]; then
     echo "Tuning CometBFT timeouts (target ~1s blocks)..."

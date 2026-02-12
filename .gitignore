@@ -12,5 +12,7 @@ chain/.localnet.log
 chain/.testnet
 chain/.testnet.log
 chain/.testnet-multi
+chain/.release
 chain/build
 chain/ynxd
+infra/**/data

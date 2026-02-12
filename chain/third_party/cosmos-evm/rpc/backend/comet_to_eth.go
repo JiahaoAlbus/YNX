@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/pkg/errors"
 
-	cmtrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmtrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	rpctypes "github.com/cosmos/evm/rpc/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -91,7 +91,7 @@ func (b *Backend) EthMsgsFromCometBlock(
 	var result []*evmtypes.MsgEthereumTx
 	block := resBlock.Block
 
-	txResults := blockRes.TxsResults
+	txResults := blockRes.TxResults
 
 	for i, tx := range block.Txs {
 		// Check if tx exists on EVM by cross checking with blockResults:
@@ -175,7 +175,7 @@ func (b *Backend) EthBlockFromCometBlock(
 
 	// 8. Gas Used
 	gasUsed := uint64(0)
-	for _, txsResult := range blockRes.TxsResults {
+	for _, txsResult := range blockRes.TxResults {
 		// workaround for cosmos-sdk bug. https://github.com/cosmos/cosmos-sdk/issues/10832
 		if ShouldIgnoreGasUsed(txsResult) {
 			// block gas limit has exceeded, other txs must have failed with same reason.
@@ -265,7 +265,7 @@ func (b *Backend) ReceiptsFromCometBlock(
 
 		msgIndex := int(txResult.MsgIndex) // #nosec G115 -- checked for int overflow already
 		logs, err := evmtypes.DecodeMsgLogs(
-			blockRes.TxsResults[txResult.TxIndex].Data,
+			blockRes.TxResults[txResult.TxIndex].Data,
 			msgIndex,
 			uint64(resBlock.Block.Height), // #nosec G115 -- checked for int overflow already
 		)

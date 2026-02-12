@@ -13,7 +13,7 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/sync/errgroup"
 
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpcclient "github.com/cometbft/cometbft/v2/rpc/client"
 
 	evmmempool "github.com/cosmos/evm/mempool"
 	"github.com/cosmos/evm/rpc"

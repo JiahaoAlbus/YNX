@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cmtconfig "github.com/cometbft/cometbft/config"
-	sm "github.com/cometbft/cometbft/state"
-	cmtstore "github.com/cometbft/cometbft/store"
+	cmtconfig "github.com/cometbft/cometbft/v2/config"
+	sm "github.com/cometbft/cometbft/v2/state"
+	cmtstore "github.com/cometbft/cometbft/v2/store"
 
 	"github.com/cosmos/evm/indexer"
 
@@ -66,7 +66,7 @@ func NewIndexTxCmd() *cobra.Command {
 			})
 
 			indexBlock := func(height int64) error {
-				blk := blockStore.LoadBlock(height)
+				blk, _ := blockStore.LoadBlock(height)
 				if blk == nil {
 					return fmt.Errorf("block not found %d", height)
 				}

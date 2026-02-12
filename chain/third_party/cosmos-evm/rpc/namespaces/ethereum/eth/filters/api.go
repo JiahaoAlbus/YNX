@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	coretypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	"github.com/cosmos/evm/rpc/stream"
 	"github.com/cosmos/evm/rpc/types"

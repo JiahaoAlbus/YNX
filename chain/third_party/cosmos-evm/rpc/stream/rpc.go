@@ -8,10 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 
-	cmtquery "github.com/cometbft/cometbft/libs/pubsub/query"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
-	cmttypes "github.com/cometbft/cometbft/types"
+	cmtquery "github.com/cometbft/cometbft/v2/libs/pubsub/query"
+	rpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	coretypes "github.com/cometbft/cometbft/v2/rpc/core/types"
+	cmttypes "github.com/cometbft/cometbft/v2/types"
 
 	"github.com/cosmos/evm/rpc/types"
 	"github.com/cosmos/evm/utils"

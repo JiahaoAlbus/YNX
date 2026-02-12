@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/netutil"
 
-	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
+	tmcmd "github.com/cometbft/cometbft/v2/cmd/cometbft/commands"
 
 	"github.com/cosmos/evm/server/config"
 

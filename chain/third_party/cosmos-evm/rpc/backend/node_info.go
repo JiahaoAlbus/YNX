@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	cmttypes "github.com/cometbft/cometbft/types"
+	cmttypes "github.com/cometbft/cometbft/v2/types"
 
 	"github.com/cosmos/evm/crypto/ethsecp256k1"
 	rpctypes "github.com/cosmos/evm/rpc/types"

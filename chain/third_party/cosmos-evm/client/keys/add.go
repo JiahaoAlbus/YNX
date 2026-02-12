@@ -188,7 +188,7 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 					return evmkeyring.CreatePubkey(key)
 				})
 				cosmosLedger.SetAppName(evmkeyring.AppName)
-				cosmosLedger.SetDERConversion(false)
+				cosmosLedger.SetSkipDERConversion()
 			case 118:
 				cosmosLedger.SetDiscoverLedger(func() (cosmosLedger.SECP256K1, error) {
 					device, err := ledger.FindLedgerCosmosUserApp()
@@ -200,8 +200,7 @@ func RunAddCmd(ctx client.Context, cmd *cobra.Command, args []string, inBuf *buf
 				cosmosLedger.SetCreatePubkey(func(key []byte) cryptotypes.PubKey {
 					return &secp256k1.PubKey{Key: key}
 				})
-				cosmosLedger.SetAppName(cosmosLedger.AppName)
-				cosmosLedger.SetDERConversion(true)
+				cosmosLedger.SetAppName("Cosmos")
 			default:
 				return fmt.Errorf(
 					"unsupported coin type %d for Ledger. Supported coin types: 60 (Ethereum app), 118 (Cosmos app)", coinType,

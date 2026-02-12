@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
-	cmtrpcclient "github.com/cometbft/cometbft/rpc/client"
-	cmtrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmtrpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	cmtrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	rpctypes "github.com/cosmos/evm/rpc/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"

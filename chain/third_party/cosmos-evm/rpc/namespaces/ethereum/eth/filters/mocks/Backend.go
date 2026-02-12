@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	coretypes "github.com/cometbft/cometbft/rpc/core/types"
+	coretypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 	common "github.com/ethereum/go-ethereum/common"
 
 	mock "github.com/stretchr/testify/mock"

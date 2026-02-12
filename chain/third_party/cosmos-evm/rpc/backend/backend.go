@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
-	tmrpcclient "github.com/cometbft/cometbft/rpc/client"
-	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmrpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	tmrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	evmmempool "github.com/cosmos/evm/mempool"
 	"github.com/cosmos/evm/rpc/types"

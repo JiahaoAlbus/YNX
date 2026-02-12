@@ -15,16 +15,18 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	abciserver "github.com/cometbft/cometbft/abci/server"
-	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
-	cmtcfg "github.com/cometbft/cometbft/config"
-	"github.com/cometbft/cometbft/node"
-	"github.com/cometbft/cometbft/p2p"
-	pvm "github.com/cometbft/cometbft/privval"
-	"github.com/cometbft/cometbft/proxy"
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
-	"github.com/cometbft/cometbft/rpc/client/local"
-	cmttypes "github.com/cometbft/cometbft/types"
+	abciserver "github.com/cometbft/cometbft/v2/abci/server"
+	tcmd "github.com/cometbft/cometbft/v2/cmd/cometbft/commands"
+	cmtcfg "github.com/cometbft/cometbft/v2/config"
+	cmtcrypto "github.com/cometbft/cometbft/v2/crypto"
+	cmted25519 "github.com/cometbft/cometbft/v2/crypto/ed25519"
+	"github.com/cometbft/cometbft/v2/crypto/tmhash"
+	"github.com/cometbft/cometbft/v2/node"
+	"github.com/cometbft/cometbft/v2/p2p"
+	pvm "github.com/cometbft/cometbft/v2/privval"
+	"github.com/cometbft/cometbft/v2/proxy"
+	rpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	"github.com/cometbft/cometbft/v2/rpc/client/local"
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/evm/indexer"
@@ -424,9 +426,19 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 		logger.Info("starting node with ABCI CometBFT in-process")
 
 		cmtApp := server.NewCometABCIWrapper(app)
+		privVal, err := pvm.LoadOrGenFilePV(
+			cfg.PrivValidatorKeyFile(),
+			cfg.PrivValidatorStateFile(),
+			func() (cmtcrypto.PrivKey, error) { return cmted25519.GenPrivKey(), nil },
+		)
+		if err != nil {
+			logger.Error("failed load or gen priv validator", "error", err.Error())
+			return err
+		}
 		bftNode, err = node.NewNode(
+			ctx,
 			cfg,
-			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
+			privVal,
 			nodeKey,
 			proxy.NewLocalClientCreator(cmtApp),
 			genDocProvider,
@@ -521,7 +533,7 @@ func startInProcess(svrCtx *server.Context, clientCtx client.Context, opts Start
 
 		clientCtx = clientCtx.
 			WithHomeDir(home).
-			WithChainID(genDoc.ChainID)
+			WithChainID(genDoc.GenesisDoc.ChainID)
 	}
 
 	grpcSrv, clientCtx, err := startGrpcServer(ctx, svrCtx, clientCtx, g, config.GRPC, app)
@@ -724,14 +736,24 @@ func startAPIServer(
 	})
 }
 
-// GenDocProvider returns a function which returns the genesis doc from the genesis file.
-func GenDocProvider(cfg *cmtcfg.Config) func() (*cmttypes.GenesisDoc, error) {
-	return func() (*cmttypes.GenesisDoc, error) {
-		appGenesis, err := genutiltypes.AppGenesisFromFile(cfg.GenesisFile())
+// GenDocProvider returns a function which returns the genesis doc and its checksum from the genesis file.
+func GenDocProvider(cfg *cmtcfg.Config) node.GenesisDocProvider {
+	return func() (node.ChecksummedGenesisDoc, error) {
+		jsonBlob, err := os.ReadFile(cfg.GenesisFile())
 		if err != nil {
-			return nil, err
+			return node.ChecksummedGenesisDoc{}, err
 		}
 
-		return appGenesis.ToGenesisDoc()
+		appGenesis, err := genutiltypes.AppGenesisFromFile(cfg.GenesisFile())
+		if err != nil {
+			return node.ChecksummedGenesisDoc{}, err
+		}
+
+		genDoc, err := appGenesis.ToGenesisDoc()
+		if err != nil {
+			return node.ChecksummedGenesisDoc{}, err
+		}
+
+		return node.ChecksummedGenesisDoc{GenesisDoc: genDoc, Sha256Checksum: tmhash.Sum(jsonBlob)}, nil
 	}
 }

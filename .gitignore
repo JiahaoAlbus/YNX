@@ -9,5 +9,7 @@ packages/contracts/cache
 packages/contracts/deployments
 chain/.localnet
 chain/.localnet.log
+chain/.testnet
+chain/.testnet.log
 chain/build
 chain/ynxd

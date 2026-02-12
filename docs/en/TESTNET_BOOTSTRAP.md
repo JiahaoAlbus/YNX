@@ -166,6 +166,7 @@ Options:
 
 - `YNX_VALIDATOR_COUNT=4` to change the number of validators.
 - `YNX_JSONRPC_NODE=0` to select which node exposes JSON-RPC (default: node 0).
+- `./scripts/testnet_multinode.sh --max` to auto-scale to the maximum your machine can handle.
 
 The script:
 
@@ -174,6 +175,7 @@ The script:
 - Collects all `gentx` files into a single genesis.
 - Connects validators via `persistent_peers`.
 - Auto-loads `repo/.env` for founder / team / community addresses (falls back to node0 if unset).
+- Disables API/gRPC/JSON-RPC on non-JSON nodes by default (override with `YNX_DISABLE_NON_RPC=0`).
 
 JSON-RPC (default):
 

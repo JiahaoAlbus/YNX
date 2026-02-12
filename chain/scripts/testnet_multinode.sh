@@ -4,7 +4,12 @@ set -euo pipefail
 
 RESET=0
 START=0
+AUTO=0
 VALIDATOR_COUNT="${YNX_VALIDATOR_COUNT:-4}"
+VALIDATOR_COUNT_SET=0
+if [[ -n "${YNX_VALIDATOR_COUNT+x}" ]]; then
+  VALIDATOR_COUNT_SET=1
+fi
 JSONRPC_NODE="${YNX_JSONRPC_NODE:-0}"
 
 while [[ $# -gt 0 ]]; do
@@ -19,7 +24,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --validators|-n)
       VALIDATOR_COUNT="${2:-}"
+      VALIDATOR_COUNT_SET=1
       shift 2
+      ;;
+    --max|--auto)
+      AUTO=1
+      shift
       ;;
     -h|--help)
       cat <<EOF
@@ -31,6 +41,7 @@ Options:
   --reset        Delete existing home dir before init
   --start        Start all validators after init
   --validators   Number of validators (default: 4)
+  --max          Auto-calc max validators for this machine
 
 Environment:
   YNX_ENV_FILE             Path to .env (default: repo/.env or chain/.env)
@@ -54,6 +65,14 @@ Environment:
 
   YNX_FAST_BLOCKS          Tune CometBFT timeouts for fast blocks (default: 1)
   YNX_JSONRPC_NODE         Index of the node that runs JSON-RPC (default: 0)
+  YNX_DISABLE_NON_RPC      Disable API/gRPC/JSON-RPC on non-JSON nodes (default: 1)
+
+Autoscale tuning (used with --max):
+  YNX_PER_NODE_MB          Estimated RAM per node (default: 600)
+  YNX_RESERVED_MB          Reserved RAM for OS/other (default: 1500)
+  YNX_CPU_FACTOR           Validators per CPU core (default: 4)
+  YNX_FD_PER_NODE          File descriptors per node (default: 256)
+  YNX_MAX_VALIDATORS_CAP   Optional hard cap on validators
 
 Port bases (overridable):
   YNX_P2P_PORT_BASE        (default: 26656)
@@ -110,6 +129,7 @@ GRPC_WEB_PORT_BASE="${YNX_GRPC_WEB_PORT_BASE:-9091}"
 JSONRPC_PORT_BASE="${YNX_JSONRPC_PORT_BASE:-8545}"
 JSONRPC_WS_PORT_BASE="${YNX_JSONRPC_WS_PORT_BASE:-8546}"
 PORT_OFFSET="${YNX_PORT_OFFSET:-10}"
+DISABLE_NON_RPC="${YNX_DISABLE_NON_RPC:-1}"
 
 ENV_FILE="${YNX_ENV_FILE:-}"
 if [[ -z "$ENV_FILE" ]]; then
@@ -134,6 +154,84 @@ if [[ -z "$EVM_CHAIN_ID" ]]; then
     EVM_CHAIN_ID="9002"
   fi
 fi
+
+auto_scale() {
+  local cores mem_bytes mem_mb reserved_mb per_node_mb cpu_factor fd_limit fd_per_node max_by_mem max_by_cpu max_by_fd max
+  cores="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
+  mem_bytes="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
+  mem_mb=$((mem_bytes / 1024 / 1024))
+  reserved_mb="${YNX_RESERVED_MB:-1500}"
+  per_node_mb="${YNX_PER_NODE_MB:-600}"
+  cpu_factor="${YNX_CPU_FACTOR:-4}"
+  fd_limit="$(ulimit -n 2>/dev/null || echo 1024)"
+  fd_per_node="${YNX_FD_PER_NODE:-256}"
+
+  if [[ "$mem_mb" -le 0 ]]; then
+    max_by_mem=1
+  else
+    local available_mb=$((mem_mb - reserved_mb))
+    if [[ "$available_mb" -le 0 ]]; then
+      available_mb="$mem_mb"
+    fi
+    max_by_mem=$((available_mb / per_node_mb))
+  fi
+
+  max_by_cpu=$((cores * cpu_factor))
+  max_by_fd=$(((fd_limit - 1024) / fd_per_node))
+
+  if [[ "$max_by_fd" -le 0 ]]; then
+    max_by_fd=1
+  fi
+
+  max="$max_by_mem"
+  if [[ "$max_by_cpu" -lt "$max" ]]; then
+    max="$max_by_cpu"
+  fi
+  if [[ "$max_by_fd" -lt "$max" ]]; then
+    max="$max_by_fd"
+  fi
+  if [[ "$max" -lt 1 ]]; then
+    max=1
+  fi
+
+  if [[ -n "${YNX_MAX_VALIDATORS_CAP:-}" && "$YNX_MAX_VALIDATORS_CAP" -gt 0 ]]; then
+    if [[ "$max" -gt "$YNX_MAX_VALIDATORS_CAP" ]]; then
+      max="$YNX_MAX_VALIDATORS_CAP"
+    fi
+  fi
+
+  echo "$max"
+}
+
+if [[ "$AUTO" -eq 1 && "$VALIDATOR_COUNT_SET" -eq 0 ]]; then
+  VALIDATOR_COUNT="$(auto_scale)"
+  echo "Auto-scaled validator count: $VALIDATOR_COUNT"
+fi
+
+if ! [[ "$VALIDATOR_COUNT" =~ ^[0-9]+$ ]] || [[ "$VALIDATOR_COUNT" -lt 1 ]]; then
+  echo "Invalid validator count: $VALIDATOR_COUNT" >&2
+  exit 1
+fi
+
+check_ports() {
+  local base="$1"
+  local max_port=$((base + (VALIDATOR_COUNT - 1) * PORT_OFFSET))
+  if [[ "$max_port" -gt 65535 ]]; then
+    echo "Port range exceeds 65535 (base $base, offset $PORT_OFFSET, count $VALIDATOR_COUNT)" >&2
+    exit 1
+  fi
+}
+
+check_ports "$P2P_PORT_BASE"
+check_ports "$RPC_PORT_BASE"
+check_ports "$APP_PORT_BASE"
+check_ports "$PROM_PORT_BASE"
+check_ports "$PPROF_PORT_BASE"
+check_ports "$API_PORT_BASE"
+check_ports "$GRPC_PORT_BASE"
+check_ports "$GRPC_WEB_PORT_BASE"
+check_ports "$JSONRPC_PORT_BASE"
+check_ports "$JSONRPC_WS_PORT_BASE"
 
 BIN="$ROOT_DIR/ynxd"
 if [[ ! -x "$BIN" ]]; then
@@ -182,6 +280,14 @@ set_ports() {
   sed -i.bak -E "s#^ws-address = \"(0.0.0.0|127.0.0.1|localhost):8546\"#ws-address = \"0.0.0.0:${jsonrpc_ws_port}\"#" "$app" || true
 }
 
+disable_non_rpc_services() {
+  local app="$1"
+  sed -i.bak -E '/^\[api\]$/,/^\[/ s/^enable = .*/enable = false/' "$app" || true
+  sed -i.bak -E '/^\[grpc\]$/,/^\[/ s/^enable = .*/enable = false/' "$app" || true
+  sed -i.bak -E '/^\[grpc-web\]$/,/^\[/ s/^enable = .*/enable = false/' "$app" || true
+  sed -i.bak -E '/^\[json-rpc\]$/,/^\[/ s/^enable = .*/enable = false/' "$app" || true
+}
+
 tune_timeouts() {
   local config="$1"
   echo "Tuning CometBFT timeouts (target ~1s blocks)..."
@@ -197,6 +303,13 @@ tune_timeouts() {
     sed -i.bak 's/timeout_precommit_delta = "500ms"/timeout_precommit_delta = "200ms"/' "$config"
   fi
   sed -i.bak 's/timeout_commit = "5s"/timeout_commit = "1s"/' "$config"
+}
+
+configure_local_p2p() {
+  local config="$1"
+  sed -i.bak 's/^allow_duplicate_ip = .*/allow_duplicate_ip = true/' "$config" || true
+  sed -i.bak 's/^addr_book_strict = .*/addr_book_strict = false/' "$config" || true
+  sed -i.bak 's/^pex = .*/pex = false/' "$config" || true
 }
 
 declare -a NODE_HOME=()
@@ -221,7 +334,13 @@ for ((i=0; i<VALIDATOR_COUNT; i++)); do
     tune_timeouts "$home/config/config.toml"
   fi
 
+  configure_local_p2p "$home/config/config.toml"
+
   set_ports "$home" "$i"
+
+  if [[ "$DISABLE_NON_RPC" == "1" && "$i" -ne "$JSONRPC_NODE" ]]; then
+    disable_non_rpc_services "$home/config/app.toml"
+  fi
 
   if ! "$BIN" keys show validator --keyring-backend "$KEYRING" --home "$home" >/dev/null 2>&1; then
     "$BIN" keys add validator --keyring-backend "$KEYRING" --algo "$KEYALGO" --home "$home" >/dev/null 2>&1

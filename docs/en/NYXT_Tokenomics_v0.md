@@ -37,7 +37,7 @@ Inflation MUST be split as:
 - **70%** to validators and delegators (security rewards)
 - **30%** to the on-chain treasury (public goods and ecosystem budget)
 
-> Emission schedule (per-block vs per-epoch) is TBD but MUST be deterministic and auditable.
+Emission is minted **per block** via the Cosmos SDK mint module using `blocks_per_year = 31,536,000` (1s target blocks).
 
 On the base-chain implementation, the treasury share is enforced via `x/ynx`:
 

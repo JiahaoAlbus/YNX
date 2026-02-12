@@ -19,7 +19,7 @@ This document defines the v0 goals and protocol-level requirements for YNX:
 - EVM compatibility and a gas fee model
 - A scalable architecture that supports layered execution
 
-Implementation details that are not yet locked (e.g., the exact BFT variant, committee size parameters, cryptographic primitives for threshold signatures) are explicitly marked **TBD**.
+This v0 spec reflects the current public implementation and avoids placeholders.
 
 ## 2. Goals & Non-goals
 
@@ -60,31 +60,18 @@ Finality is the protocol state where a transaction is considered non-reversible 
 ## 4. Execution & Fees
 
 - The execution environment MUST be **EVM-compatible**.
-- Transactions MUST pay fees via an EVM-style **gas** model (base fee/priority fee model is RECOMMENDED; exact algorithm TBD).
+- Transactions MUST pay fees via an EVM-style **gas** model using EIP‑1559 base fee + priority fee (implemented via `x/feemarket`).
 - Fee handling MUST follow the locked v0 splits defined in `docs/en/NYXT_Tokenomics_v0.md`.
 
-## 5. Consensus Design (v0 Requirements)
+## 5. Consensus Design (v0 Implementation)
 
-### 5.1 Design constraint
+YNX v0 uses **CometBFT (Tendermint BFT)**:
 
-Global, permissionless participation at large scale cannot have “every validator votes on every block” at sub-second latency. YNX therefore separates:
+- All active validators participate in consensus.
+- Blocks are committed with **≥ 2/3 precommit voting power**.
+- Finality is achieved at **block commit** (no extra finality committee).
 
-- A large validator set (permissionless, long-term decentralization), and
-- A **rotating, randomly selected committee** that participates in fast BFT finality for a given window.
-
-### 5.2 Two-signature path
-
-YNX consensus is specified as a two-path confirmation system:
-
-1) **Preconfirm quorum signature** (fast path, UX confirmation) — **TBD**
-2) **Finality committee BFT vote** (hard finality) — **TBD**
-
-The protocol MUST define:
-
-- Committee selection mechanism (randomness beacon / VRF) — **TBD**
-- Committee rotation schedule (epoch length) — **TBD**
-- Slashing conditions for equivocation and safety violations — **TBD**
-- Liveness conditions and fallback behavior during partial network failures — **TBD**
+The validator set and voting power are managed by the staking module.
 
 ## 6. Layered Scaling (Accepted)
 
@@ -107,6 +94,6 @@ The design MUST account for:
 
 - Governance capture (whales, collusion) and mitigation via timelocks and veto mechanisms
 - Preconfirmation fraud or equivocation and enforcement via slashing
-- MEV and ordering manipulation (policy TBD)
+- MEV and ordering manipulation: in v0, ordering is proposer‑controlled within CometBFT rules (no protocol‑level MEV mitigation yet)
 - Bridge and cross-domain risk (minimize trust, clear security boundaries)
 - Key management and operational security for validators and system contracts

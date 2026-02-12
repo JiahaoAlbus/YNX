@@ -22,7 +22,7 @@ YNX governance MUST control:
 Voting power SHOULD be stake-weighted.
 
 - One staked NYXT SHOULD equal one unit of voting power.
-- Delegators SHOULD be able to vote directly; otherwise their voting power defaults to their validator’s vote (TBD).
+- Delegators can vote directly; if they do not, their voting power follows their validator’s vote (Cosmos SDK default).
 
 ## 3. Proposal Requirements
 
@@ -64,7 +64,7 @@ Governance MUST be protected against:
 
 - Low-participation capture (quorum)
 - Malicious proposals (veto + deposit slashing + timelock)
-- Fast-drain attacks (timelock and spend limits — TBD)
+- Fast-drain attacks (mitigated by timelock; no spend‑limit module in v0)
 
 ## 8. EVM-native execution (v0 reference)
 

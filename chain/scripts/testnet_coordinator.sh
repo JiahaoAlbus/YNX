@@ -31,7 +31,7 @@ Options:
   --start    Start the node after finalize
 
 Environment:
-  YNX_ENV_FILE             Path to .env (default: repo/.env)
+  YNX_ENV_FILE             Path to .env (default: repo/.env or chain/.env)
   YNX_HOME                 Home directory (default: chain/.testnet)
   YNX_CHAIN_ID             Cosmos chain id (default: ynx_9002-1)
   YNX_EVM_CHAIN_ID         EVM chain id (EIP-155). Default: parsed from chain id or 9002
@@ -70,8 +70,15 @@ KEYALGO="${YNX_KEYALGO:-eth_secp256k1}"
 DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-ynx-testnet}"
 
-ENV_FILE="${YNX_ENV_FILE:-$ROOT_DIR/.env}"
-if [[ -f "$ENV_FILE" ]]; then
+ENV_FILE="${YNX_ENV_FILE:-}"
+if [[ -z "$ENV_FILE" ]]; then
+  if [[ -f "$ROOT_DIR/../.env" ]]; then
+    ENV_FILE="$ROOT_DIR/../.env"
+  elif [[ -f "$ROOT_DIR/.env" ]]; then
+    ENV_FILE="$ROOT_DIR/.env"
+  fi
+fi
+if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
   source "$ENV_FILE"

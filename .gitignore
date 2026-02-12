@@ -11,5 +11,6 @@ chain/.localnet
 chain/.localnet.log
 chain/.testnet
 chain/.testnet.log
+chain/.testnet-multi
 chain/build
 chain/ynxd

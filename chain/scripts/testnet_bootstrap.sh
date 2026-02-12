@@ -61,8 +61,15 @@ VAL_KEY="${YNX_VAL_KEY:-validator}"
 DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-ynx-testnet}"
 
-ENV_FILE="${YNX_ENV_FILE:-$ROOT_DIR/.env}"
-if [[ -f "$ENV_FILE" ]]; then
+ENV_FILE="${YNX_ENV_FILE:-}"
+if [[ -z "$ENV_FILE" ]]; then
+  if [[ -f "$ROOT_DIR/../.env" ]]; then
+    ENV_FILE="$ROOT_DIR/../.env"
+  elif [[ -f "$ROOT_DIR/.env" ]]; then
+    ENV_FILE="$ROOT_DIR/.env"
+  fi
+fi
+if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
   source "$ENV_FILE"

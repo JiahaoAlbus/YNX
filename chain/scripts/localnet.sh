@@ -33,8 +33,15 @@ CHAIN_ID="${YNX_CHAIN_ID:-ynx_9001-1}"
 DENOM="${YNX_DENOM:-anyxt}"
 CGO_ENABLED_VALUE="${YNX_CGO_ENABLED:-0}"
 
-ENV_FILE="${YNX_ENV_FILE:-$ROOT_DIR/.env}"
-if [[ -f "$ENV_FILE" ]]; then
+ENV_FILE="${YNX_ENV_FILE:-}"
+if [[ -z "$ENV_FILE" ]]; then
+  if [[ -f "$ROOT_DIR/../.env" ]]; then
+    ENV_FILE="$ROOT_DIR/../.env"
+  elif [[ -f "$ROOT_DIR/.env" ]]; then
+    ENV_FILE="$ROOT_DIR/.env"
+  fi
+fi
+if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
   source "$ENV_FILE"

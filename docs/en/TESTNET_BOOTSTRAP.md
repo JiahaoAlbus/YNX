@@ -90,7 +90,7 @@ YNX_FOUNDER_ADDRESS=ynx1... \
 ./scripts/testnet_bootstrap.sh --reset
 ```
 
-You may also store these in a repo-local `.env` file (auto-loaded by the script).
+You may also store these in a repo-local `.env` file (auto-loaded by the script). The script checks `repo/.env` first, then `chain/.env` (override with `YNX_ENV_FILE`).
 
 This creates:
 
@@ -114,7 +114,7 @@ Operational requirement:
 
 ### 4.1 Coordinator workflow (scripted)
 
-1) Create a repo-local `.env` with your real addresses (not committed):
+1) Create a repo-local `.env` with your real addresses (not committed). The scripts check `repo/.env` first, then `chain/.env`:
 
 ```
 YNX_FOUNDER_ADDRESS=ynx1...
@@ -152,6 +152,37 @@ Then sends to the coordinator:
 
 - The generated `gentx-*.json`
 - The `node-id` and public P2P address (`node-id@ip:26656`)
+
+### 4.3 Single-machine multi-validator simulation (local only)
+
+If you only have one machine but want to run multiple validators for a realistic testnet topology, use:
+
+```bash
+cd chain
+./scripts/testnet_multinode.sh --reset --start
+```
+
+Options:
+
+- `YNX_VALIDATOR_COUNT=4` to change the number of validators.
+- `YNX_JSONRPC_NODE=0` to select which node exposes JSON-RPC (default: node 0).
+
+The script:
+
+- Creates `chain/.testnet-multi/node0`, `node1`, ... with unique ports.
+- Generates validator keys in each node home (default keyring: `test`).
+- Collects all `gentx` files into a single genesis.
+- Connects validators via `persistent_peers`.
+- Auto-loads `repo/.env` for founder / team / community addresses (falls back to node0 if unset).
+
+JSON-RPC (default):
+
+- `http://127.0.0.1:8545` (node 0)
+
+Notes:
+
+- This is a **local simulation**, not true decentralization.
+- For a public testnet, use the coordinator + validator workflow above.
 
 ## 5. Tokenomics bootstrap note (no community yet)
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	rpcclient "github.com/cometbft/cometbft/rpc/client"
+	rpcclient "github.com/cometbft/cometbft/v2/rpc/client"
 
 	"github.com/cosmos/evm/server/config"
 

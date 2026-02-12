@@ -45,7 +45,7 @@ Optional genesis address overrides (useful when testing fee revenue routing):
 - `YNX_TEAM_BENEFICIARY=ynx1...` (defaults to local validator)
 - `YNX_COMMUNITY_RECIPIENT=ynx1...` (defaults to local validator)
 
-You may also store these in a repo-local `.env` file (auto-loaded by the script):
+You may also store these in a repo-local `.env` file (auto-loaded by the script). The script checks `repo/.env` first, then `chain/.env` (override with `YNX_ENV_FILE`):
 
 ```
 YNX_FOUNDER_ADDRESS=ynx1...

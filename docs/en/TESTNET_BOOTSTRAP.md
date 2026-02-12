@@ -112,6 +112,47 @@ Operational requirement:
 - The `system.deployer_address` SHOULD be a dedicated account and MUST NOT be the same key used for a validator `gentx`
   (system deployment increments account sequence/nonce during `InitGenesis`).
 
+### 4.1 Coordinator workflow (scripted)
+
+1) Create a repo-local `.env` with your real addresses (not committed):
+
+```
+YNX_FOUNDER_ADDRESS=ynx1...
+YNX_TEAM_BENEFICIARY=ynx1...
+YNX_COMMUNITY_RECIPIENT=ynx1...
+```
+
+2) Initialize base genesis:
+
+```bash
+cd chain
+./scripts/testnet_coordinator.sh --reset
+```
+
+3) Collect validator gentxs in a directory (default: `chain/.testnet/config/gentx`) and add their genesis balances:
+
+```bash
+export YNX_VALIDATOR_ACCOUNTS="ynx1...:1000000000000000000000anyxt,ynx1...:1000000000000000000000anyxt"
+./scripts/testnet_coordinator.sh --finalize
+```
+
+This outputs the finalized `genesis.json` and a SHA256 checksum.
+
+### 4.2 Validator workflow (scripted)
+
+Each validator runs:
+
+```bash
+cd chain
+export YNX_CHAIN_ID=ynx_9002-1
+./scripts/testnet_validator.sh --reset
+```
+
+Then sends to the coordinator:
+
+- The generated `gentx-*.json`
+- The `node-id` and public P2P address (`node-id@ip:26656`)
+
 ## 5. Tokenomics bootstrap note (no community yet)
 
 In v0, NYXT ERC20 genesis allocation includes a “community & ecosystem” share.

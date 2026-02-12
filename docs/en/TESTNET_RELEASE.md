@@ -29,11 +29,7 @@ cd chain
 ./scripts/testnet_release.sh --reset
 ```
 
-By default, the bundle is written to:
-
-```
-chain/.release/<chain-id>-<YYYYMMDD>/
-```
+By default, the bundle is written under `chain/.release/` with the chain id and current date in the folder name.
 
 ## 3. Add seeds / peers
 

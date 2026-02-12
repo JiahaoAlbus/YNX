@@ -207,7 +207,7 @@ func ynxGenesisSetCmd() *cobra.Command {
 	cmd.Flags().Bool(flagYNXSystemEnabled, false, "enable deterministic system contract deployment during InitGenesis")
 	cmd.Flags().String(flagYNXSystemDeployer, "", "system contracts deployer address (0x... or bech32)")
 	cmd.Flags().String(flagYNXSystemTeamBeneficiary, "", "team vesting beneficiary address (0x... or bech32)")
-	cmd.Flags().String(flagYNXSystemCommunityRecipient, "", "community allocation recipient address (0x... or bech32; optional, defaults to deployed treasury contract)")
+	cmd.Flags().String(flagYNXSystemCommunityRecipient, "", "community allocation recipient address (0x... or bech32; optional, defaults to deployer address)")
 	cmd.Flags().String(flagYNXSystemGenesisSupply, "", "NYXT ERC20 genesis supply (base-10 uint256 string)")
 	cmd.Flags().Uint32(flagYNXSystemTeamPercent, 0, "team allocation percent (0-100)")
 	cmd.Flags().Uint32(flagYNXSystemTreasuryPercent, 0, "treasury allocation percent (0-100)")

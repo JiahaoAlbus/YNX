@@ -145,9 +145,11 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 			return ynxtypes.SystemContracts{}, err
 		}
 		community = common.BytesToAddress(communityAcc.Bytes())
-		if community == (common.Address{}) {
-			return ynxtypes.SystemContracts{}, fmt.Errorf("invalid community_recipient_address: zero address")
-		}
+	} else {
+		community = from
+	}
+	if community == (common.Address{}) {
+		return ynxtypes.SystemContracts{}, fmt.Errorf("invalid community_recipient_address: zero address")
 	}
 
 	teamAcc, err := parseAnyAddress(ctx, cfg.TeamBeneficiaryAddress)
@@ -248,9 +250,6 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 	if err != nil {
 		return ynxtypes.SystemContracts{}, err
 	}
-	if community == (common.Address{}) {
-		community = treasuryAddr
-	}
 
 	governorInit, err := abiPackInitCode(
 		governorABI,
@@ -341,8 +340,10 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 	if _, err := d.call(nyxtAddr, mustAbiPack(nyxtABI, "transfer", teamVestingAddr, teamAllocation)); err != nil {
 		return ynxtypes.SystemContracts{}, err
 	}
-	if _, err := d.call(nyxtAddr, mustAbiPack(nyxtABI, "transfer", community, communityAllocation)); err != nil {
-		return ynxtypes.SystemContracts{}, err
+	if community != from {
+		if _, err := d.call(nyxtAddr, mustAbiPack(nyxtABI, "transfer", community, communityAllocation)); err != nil {
+			return ynxtypes.SystemContracts{}, err
+		}
 	}
 
 	// Ensure module account exists (sanity) and reserve the system contract addresses.

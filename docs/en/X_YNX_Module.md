@@ -31,7 +31,7 @@ When `system.enabled = true`, the following fields MUST be set:
 
 - `system.deployer_address` — the EVM deployer (bech32 or `0x...`)
 - `system.team_beneficiary_address` — the recipient of the team vesting stream
-- `system.community_recipient_address` — the recipient of the community allocation (optional; defaults to the deployed `treasury` contract)
+- `system.community_recipient_address` — the recipient of the community allocation (optional; defaults to the `deployer_address`)
 
 The remaining fields have v0 defaults (supply, allocation percents, governance thresholds, voting period, timelock delay, vesting schedule).
 

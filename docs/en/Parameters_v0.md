@@ -69,7 +69,7 @@ For every fee paid:
 
 - Team: **15%** via on-chain vesting (**1y cliff + 4y linear**)
 - Treasury reserve: **40%** (governance-controlled)
-- Community & ecosystem: **45%** (if `system.community_recipient_address` is unset, defaults to the deployed treasury contract)
+- Community & ecosystem: **45%** (if `system.community_recipient_address` is unset, defaults to the deployer address)
 
 See `docs/en/NYXT_Tokenomics_v0.md`.
 

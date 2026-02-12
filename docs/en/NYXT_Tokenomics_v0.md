@@ -80,7 +80,7 @@ If `treasury_address` or `founder_address` is unset, the corresponding share MUS
 
 - **45%** (45,000,000,000 NYXT)
 - Distribution SHOULD prioritize real users, developers, and infrastructure contributors, using auditable programs.
-- Bootstrap note: if `system.community_recipient_address` is unset at genesis, the community allocation MUST be held by the on-chain treasury (governance-controlled) until governance-approved distributions begin.
+- Bootstrap note: if `system.community_recipient_address` is unset at genesis, it defaults to the deployer address. Production networks SHOULD set an explicit recipient (e.g., a governance-controlled treasury contract or multi-sig) and migrate to on-chain distribution programs over time.
 
 ## 5. Supply Notes
 

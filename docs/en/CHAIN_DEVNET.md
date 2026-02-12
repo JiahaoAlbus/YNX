@@ -123,7 +123,7 @@ The chain can deploy the v0 system contracts deterministically during `InitGenes
 - `chain/scripts/localnet.sh` enables this by default.
 - The script uses a dedicated deployer key (`deployer`) so validator gentx signing is not affected by EVM nonce/sequence increments.
   - Override the key name via `YNX_DEPLOYER_KEY=...`.
-- If you do not have a community recipient at genesis, you may omit `system.community_recipient_address`; it defaults to the deployed treasury contract.
+- If you do not have a community recipient at genesis, you may omit `system.community_recipient_address`; it defaults to the deployer address.
 
 ```bash
 ynxd query ynx system-contracts --home chain/.localnet

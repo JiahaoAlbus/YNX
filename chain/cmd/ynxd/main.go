@@ -7,6 +7,8 @@ import (
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	_ "github.com/JiahaoAlbus/YNX/chain/rpc/ynx"
+
 	"github.com/JiahaoAlbus/YNX/chain/cmd/ynxd/cmd"
 	ynxconfig "github.com/JiahaoAlbus/YNX/chain/config"
 )

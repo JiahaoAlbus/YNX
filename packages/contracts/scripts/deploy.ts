@@ -87,6 +87,10 @@ async function main() {
   const arbitration = await Arbitration.deploy(await orgRegistry.getAddress());
   await arbitration.waitForDeployment();
 
+  const DomainInbox = await ethers.getContractFactory("YNXDomainInbox", deployer);
+  const domainInbox = await DomainInbox.deploy();
+  await domainInbox.waitForDeployment();
+
   const latest = await ethers.provider.getBlock("latest");
   const now = latest?.timestamp ?? Math.floor(Date.now() / 1000);
   const startTimestamp = BigInt(now + PARAMS.vesting.cliffSeconds);
@@ -122,6 +126,7 @@ async function main() {
       orgRegistry: await orgRegistry.getAddress(),
       subjectRegistry: await subjectRegistry.getAddress(),
       arbitration: await arbitration.getAddress(),
+      domainInbox: await domainInbox.getAddress(),
     },
     accounts: {
       deployer: deployer.address,

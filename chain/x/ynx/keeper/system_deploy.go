@@ -200,6 +200,10 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 	if err != nil {
 		return ynxtypes.SystemContracts{}, err
 	}
+	domainInboxABI, domainInboxBytecode, err := loadHardhatArtifact("YNXDomainInbox")
+	if err != nil {
+		return ynxtypes.SystemContracts{}, err
+	}
 	vestingABI, vestingBytecode, err := loadHardhatArtifact("NYXTTeamVesting")
 	if err != nil {
 		return ynxtypes.SystemContracts{}, err
@@ -287,6 +291,15 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 		return ynxtypes.SystemContracts{}, err
 	}
 
+	domainInboxInit, err := abiPackInitCode(domainInboxABI, domainInboxBytecode)
+	if err != nil {
+		return ynxtypes.SystemContracts{}, err
+	}
+	domainInboxAddr, _, err := d.create(domainInboxInit)
+	if err != nil {
+		return ynxtypes.SystemContracts{}, err
+	}
+
 	startUnix := ctx.BlockTime().Unix()
 	if startUnix < 0 {
 		startUnix = 0
@@ -335,6 +348,7 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 		OrgRegistry:    orgAddr.Hex(),
 		SubjectRegistry: subjectAddr.Hex(),
 		Arbitration:    arbitrationAddr.Hex(),
+		DomainInbox:    domainInboxAddr.Hex(),
 	}, nil
 }
 

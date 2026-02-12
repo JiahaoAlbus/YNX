@@ -6,6 +6,7 @@ import (
 	"cosmossdk.io/math"
 
 	ynxconfig "github.com/JiahaoAlbus/YNX/chain/config"
+	"github.com/JiahaoAlbus/YNX/chain/precompiles/ynxprotocol"
 
 	erc20types "github.com/cosmos/evm/x/erc20/types"
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
@@ -33,7 +34,8 @@ func NewEVMGenesisState() *evmtypes.GenesisState {
 	evmGenState.Params.ExtendedDenomOptions = &evmtypes.ExtendedDenomOptions{
 		ExtendedDenom: ynxconfig.BaseDenom,
 	}
-	evmGenState.Params.ActiveStaticPrecompiles = evmtypes.AvailableStaticPrecompiles
+	evmGenState.Params.ActiveStaticPrecompiles = append([]string{}, evmtypes.AvailableStaticPrecompiles...)
+	evmGenState.Params.ActiveStaticPrecompiles = append(evmGenState.Params.ActiveStaticPrecompiles, ynxprotocol.PrecompileAddress)
 	evmGenState.Preinstalls = evmtypes.DefaultPreinstalls
 
 	return evmGenState

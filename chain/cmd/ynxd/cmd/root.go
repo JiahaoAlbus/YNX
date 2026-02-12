@@ -176,6 +176,7 @@ func initRootCmd(rootCmd *cobra.Command, evmApp *ynx.App) {
 	rootCmd.AddCommand(
 		initCmd(evmApp, defaultNodeHome),
 		genesisCmd,
+		preconfirmCmd(),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		evmdebug.Cmd(),
 		confixcmd.ConfigCommand(),

@@ -2,7 +2,7 @@
 
 Status: Draft  
 Version: v0.1  
-Last updated: 2026-02-09  
+Last updated: 2026-02-12  
 Canonical language: English
 
 ## 0. Normative Language
@@ -66,3 +66,14 @@ Governance MUST be protected against:
 - Malicious proposals (veto + deposit slashing + timelock)
 - Fast-drain attacks (timelock and spend limits — TBD)
 
+## 8. EVM-native execution (v0 reference)
+
+YNX ships v0 EVM “system contracts” (Governor + Timelock + Treasury) and a chain-specific protocol precompile bridge.
+
+- The canonical execution path for governance actions SHOULD be:
+  - `YNXGovernor` proposal → `YNXTimelock` queue → on-chain execution.
+- Protocol parameter changes (fee/inflation splits) are exposed to the EVM via:
+  - `IYNXProtocol` precompile at `0x0000000000000000000000000000000000000810`
+  - `updateParams(...)` MUST only be callable by the timelock (enforced by `msg.sender`).
+
+See `docs/en/Protocol_Precompile_v0.md`.

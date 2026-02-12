@@ -54,6 +54,7 @@ message SystemContracts {
   string org_registry = 6;
   string subject_registry = 7;
   string arbitration = 8;
+  string domain_inbox = 9;
 }
 
 message GenesisState {

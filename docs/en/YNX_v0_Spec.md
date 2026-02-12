@@ -2,7 +2,7 @@
 
 Status: Draft  
 Version: v0.1  
-Last updated: 2026-02-09  
+Last updated: 2026-02-12  
 Canonical language: English
 
 ## 0. Normative Language
@@ -45,6 +45,10 @@ Preconfirmation is a fast acknowledgment that a transaction (or transaction batc
 - Preconfirmations MUST be cryptographically verifiable.
 - Preconfirmations MUST clearly state their security boundary (they are not finality).
 - The protocol SHOULD minimize the probability of preconfirm rollback.
+
+v0 reference implementation:
+
+- Signed preconfirm receipts are exposed via JSON-RPC `ynx_preconfirmTx` (see `docs/en/Preconfirmations_v0.md`).
 
 ### 3.2 Finality (hard confirmation)
 
@@ -106,4 +110,3 @@ The design MUST account for:
 - MEV and ordering manipulation (policy TBD)
 - Bridge and cross-domain risk (minimize trust, clear security boundaries)
 - Key management and operational security for validators and system contracts
-

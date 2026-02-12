@@ -30,6 +30,7 @@ Defaults:
 - EVM Chain ID (EIP-155): `9001`
 - Gas denom: `anyxt` (display denom: `nyxt`, 18 decimals)
 - JSON-RPC: `http://127.0.0.1:8545`
+- JSON-RPC APIs: `eth,net,web3,ynx`
 - Build mode: `CGO_ENABLED=0` (override with `YNX_CGO_ENABLED=1`)
 
 Dev key (for local testing only):
@@ -37,6 +38,36 @@ Dev key (for local testing only):
 - `chain/scripts/localnet.sh` uses the standard Hardhat test mnemonic by default:
   - `test test test test test test test test test test test junk`
 - Override via `YNX_MNEMONIC=...` when running the script.
+
+## Fast local blocks (dev-only)
+
+`chain/scripts/localnet.sh` tunes CometBFT timeouts for a fast single-node experience (target ~1s blocks).
+
+These settings are for local development only and are NOT a recommendation for production networks.
+
+## Preconfirmations (v0 prototype)
+
+The localnet script enables the `ynx_preconfirmTx` JSON-RPC method by default and generates a dedicated signer key at:
+
+- `chain/.localnet/config/ynx_preconfirm.key`
+
+The node is started with:
+
+- `YNX_PRECONFIRM_ENABLED=1`
+- `YNX_PRECONFIRM_KEY_PATH=.../ynx_preconfirm.key`
+
+Example call:
+
+```bash
+curl -s http://127.0.0.1:8545 \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"ynx_preconfirmTx","params":["0x<txHash>"]}' | jq
+```
+
+Notes:
+
+- This is a **UX confirmation** signal, not finality.
+- The receipt is signed and verifiable (see `docs/en/Preconfirmations_v0.md`).
 
 ## Connect EVM tooling
 
@@ -56,6 +87,22 @@ The chain can deploy the v0 system contracts deterministically during `InitGenes
 ```bash
 ynxd query ynx system-contracts --home chain/.localnet
 ```
+
+The v0 system contracts include `domain_inbox` (execution-domain commitments inbox).
+
+## Protocol governance precompile (EVM)
+
+YNX exposes a chain-specific protocol precompile:
+
+- Address: `0x0000000000000000000000000000000000000810`
+- Interface: `IYNXProtocol`
+
+It provides:
+
+- `getParams()` / `getSystemContracts()` (views)
+- `updateParams(...)` (timelock-restricted transaction)
+
+See `docs/en/Protocol_Precompile_v0.md`.
 
 Optional: reference deploy script (not required for the chain devnet):
 

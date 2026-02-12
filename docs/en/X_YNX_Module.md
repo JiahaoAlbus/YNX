@@ -1,7 +1,7 @@
 # `x/ynx` Module (v0) — Protocol Splits + Genesis System Contracts
 
 Status: In progress  
-Last updated: 2026-02-11  
+Last updated: 2026-02-12  
 Canonical language: English
 
 ## 0. Purpose
@@ -52,6 +52,18 @@ The local devnet helper (`chain/scripts/localnet.sh`) uses a dedicated deployer 
 
 - `ynxd query ynx system-contracts ...`
 
+Current v0 system contracts include:
+
+- `nyxt` (ERC-20 + Votes)
+- `timelock`
+- `treasury`
+- `governor`
+- `team_vesting`
+- `org_registry`
+- `subject_registry`
+- `arbitration`
+- `domain_inbox` (execution-domain / rollup commitments inbox)
+
 ## 3. Protocol Enforcement
 
 ### 3.1 Transaction fee split
@@ -79,6 +91,10 @@ This relies on the mint module running before `x/ynx` in BeginBlock ordering.
 
 `x/ynx` parameters are updated via `MsgUpdateParams` and are restricted to the chain authority (`x/gov`).
 
+In addition, YNX provides an EVM-native governance bridge via a static precompile (`IYNXProtocol` at
+`0x0000000000000000000000000000000000000810`) so the v0 timelock system contract can update protocol params
+on-chain (see `docs/en/Protocol_Precompile_v0.md`).
+
 Core params:
 
 - `founder_address` (bech32; optional but RECOMMENDED for mainnet)
@@ -100,4 +116,3 @@ Queries:
 ynxd query ynx params
 ynxd query ynx system-contracts
 ```
-

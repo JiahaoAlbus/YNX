@@ -1,0 +1,53 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IYNXProtocol",
+  "sourceName": "solidity/precompiles/ynxprotocol/IYNXProtocol.sol",
+  "abi": [
+    {
+      "type": "function",
+      "name": "getParams",
+      "stateMutability": "view",
+      "inputs": [],
+      "outputs": [
+        { "name": "founder", "type": "address", "internalType": "address" },
+        { "name": "treasury", "type": "address", "internalType": "address" },
+        { "name": "feeBurnBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "feeTreasuryBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "feeFounderBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "inflationTreasuryBps", "type": "uint32", "internalType": "uint32" }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getSystemContracts",
+      "stateMutability": "view",
+      "inputs": [],
+      "outputs": [
+        { "name": "nyxt", "type": "address", "internalType": "address" },
+        { "name": "timelock", "type": "address", "internalType": "address" },
+        { "name": "treasury", "type": "address", "internalType": "address" },
+        { "name": "governor", "type": "address", "internalType": "address" },
+        { "name": "teamVesting", "type": "address", "internalType": "address" },
+        { "name": "orgRegistry", "type": "address", "internalType": "address" },
+        { "name": "subjectRegistry", "type": "address", "internalType": "address" },
+        { "name": "arbitration", "type": "address", "internalType": "address" },
+        { "name": "domainInbox", "type": "address", "internalType": "address" }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "updateParams",
+      "stateMutability": "nonpayable",
+      "inputs": [
+        { "name": "founder", "type": "address", "internalType": "address" },
+        { "name": "treasury", "type": "address", "internalType": "address" },
+        { "name": "feeBurnBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "feeTreasuryBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "feeFounderBps", "type": "uint32", "internalType": "uint32" },
+        { "name": "inflationTreasuryBps", "type": "uint32", "internalType": "uint32" }
+      ],
+      "outputs": [{ "name": "ok", "type": "bool", "internalType": "bool" }]
+    }
+  ],
+  "bytecode": "0x"
+}

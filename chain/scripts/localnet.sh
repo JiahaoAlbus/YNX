@@ -58,6 +58,23 @@ fi
 echo "Initializing chain..."
 "$BIN" init "$MONIKER" --chain-id "$CHAIN_ID" --home "$HOME_DIR" >/dev/null
 
+CONFIG_TOML="$HOME_DIR/config/config.toml"
+APP_TOML="$HOME_DIR/config/app.toml"
+
+echo "Tuning CometBFT for fast local blocks..."
+# Target ~1s blocks. These settings are for local development only.
+sed -i.bak 's/timeout_propose = "3s"/timeout_propose = "1s"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_propose_delta = "500ms"/timeout_propose_delta = "200ms"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_prevote = "1s"/timeout_prevote = "500ms"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_prevote_delta = "500ms"/timeout_prevote_delta = "200ms"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_precommit = "1s"/timeout_precommit = "500ms"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_precommit_delta = "500ms"/timeout_precommit_delta = "200ms"/' "$CONFIG_TOML"
+sed -i.bak 's/timeout_commit = "5s"/timeout_commit = "1s"/' "$CONFIG_TOML"
+sed -i.bak 's/skip_timeout_commit = false/skip_timeout_commit = true/' "$CONFIG_TOML"
+
+echo "Enabling app-side EVM mempool..."
+sed -i.bak 's/^max-txs = -1$/max-txs = 0/' "$APP_TOML"
+
 echo "Configuring client defaults..."
 "$BIN" config set client chain-id "$CHAIN_ID" --home "$HOME_DIR" >/dev/null
 "$BIN" config set client keyring-backend "$KEYRING" --home "$HOME_DIR" >/dev/null
@@ -76,6 +93,12 @@ fi
 
 VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 DEPLOYER_ADDR="$("$BIN" keys show "$DEPLOYER_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
+
+PRECONFIRM_KEY_PATH="$HOME_DIR/config/ynx_preconfirm.key"
+if [[ ! -f "$PRECONFIRM_KEY_PATH" ]]; then
+  echo "Generating preconfirm signer key..."
+  "$BIN" preconfirm keygen --home "$HOME_DIR" --out "$PRECONFIRM_KEY_PATH" >/dev/null
+fi
 
 echo "Configuring YNX module genesis..."
 "$BIN" genesis ynx set \
@@ -103,8 +126,11 @@ echo "  JSON-RPC: http://127.0.0.1:8545"
 echo "  Home:     $HOME_DIR"
 echo "  Chain ID: $CHAIN_ID"
 
+YNX_PRECONFIRM_ENABLED=1 \
+YNX_PRECONFIRM_KEY_PATH="$PRECONFIRM_KEY_PATH" \
 "$BIN" start \
   --home "$HOME_DIR" \
   --minimum-gas-prices "0$DENOM" \
   --json-rpc.enable \
+  --json-rpc.api "eth,net,web3,ynx" \
   --json-rpc.enable-indexer

@@ -135,6 +135,7 @@ import (
 	cosmosevmserver "github.com/cosmos/evm/server"
 
 	ynxconfig "github.com/JiahaoAlbus/YNX/chain/config"
+	"github.com/JiahaoAlbus/YNX/chain/precompiles/ynxprotocol"
 	ynxkeeper "github.com/JiahaoAlbus/YNX/chain/x/ynx/keeper"
 	ynxmodule "github.com/JiahaoAlbus/YNX/chain/x/ynx/module"
 	ynxmodtypes "github.com/JiahaoAlbus/YNX/chain/x/ynx/types"
@@ -565,6 +566,12 @@ func NewApp(
 		app.MintKeeper,
 		app.EVMKeeper,
 		app.FeeMarketKeeper,
+	)
+
+	// Chain-specific static precompiles (EVM extensions).
+	app.EVMKeeper.RegisterStaticPrecompile(
+		common.HexToAddress(ynxprotocol.PrecompileAddress),
+		ynxprotocol.NewPrecompile(app.YNXKeeper),
 	)
 
 	// NOTE: Any module instantiated in the module manager that is later modified

@@ -21,6 +21,7 @@ message SystemConfig {
   string team_beneficiary_address = 3;
 
   // community_recipient_address receives the community allocation.
+  // If unset, it defaults to the deployed treasury contract.
   // It MAY be provided as 0x... (hex) or a chain bech32 address.
   string community_recipient_address = 4;
 

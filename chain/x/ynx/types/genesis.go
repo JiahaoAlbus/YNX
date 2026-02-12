@@ -19,22 +19,22 @@ const (
 
 func DefaultSystemConfig() SystemConfig {
 	return SystemConfig{
-		Enabled:                 false,
-		DeployerAddress:         "",
-		TeamBeneficiaryAddress:  "",
+		Enabled:                   false,
+		DeployerAddress:           "",
+		TeamBeneficiaryAddress:    "",
 		CommunityRecipientAddress: "",
-		GenesisSupply:           DefaultGenesisSupply,
-		TeamPercent:             15,
-		TreasuryPercent:         40,
-		CommunityPercent:        45,
-		VotingDelayBlocks:       DefaultVotingDelayBlocks,
-		VotingPeriodBlocks:      DefaultVotingPeriodBlocks,
-		ProposalThreshold:       DefaultProposalThreshold,
-		ProposalDeposit:         DefaultProposalDeposit,
-		QuorumPercent:           DefaultQuorumPercent,
-		TimelockDelaySeconds:    DefaultTimelockDelaySeconds,
-		VestingCliffSeconds:     DefaultVestingCliffSeconds,
-		VestingDurationSeconds:  DefaultVestingDuration,
+		GenesisSupply:             DefaultGenesisSupply,
+		TeamPercent:               15,
+		TreasuryPercent:           40,
+		CommunityPercent:          45,
+		VotingDelayBlocks:         DefaultVotingDelayBlocks,
+		VotingPeriodBlocks:        DefaultVotingPeriodBlocks,
+		ProposalThreshold:         DefaultProposalThreshold,
+		ProposalDeposit:           DefaultProposalDeposit,
+		QuorumPercent:             DefaultQuorumPercent,
+		TimelockDelaySeconds:      DefaultTimelockDelaySeconds,
+		VestingCliffSeconds:       DefaultVestingCliffSeconds,
+		VestingDurationSeconds:    DefaultVestingDuration,
 	}
 }
 
@@ -67,9 +67,6 @@ func (cfg SystemConfig) Validate() error {
 	if cfg.TeamBeneficiaryAddress == "" {
 		return fmt.Errorf("system.team_beneficiary_address is required when enabled")
 	}
-	if cfg.CommunityRecipientAddress == "" {
-		return fmt.Errorf("system.community_recipient_address is required when enabled")
-	}
 
 	if sum := uint64(cfg.TeamPercent) + uint64(cfg.TreasuryPercent) + uint64(cfg.CommunityPercent); sum != 100 {
 		return fmt.Errorf("allocation percentages must sum to 100, got %d", sum)
@@ -87,4 +84,3 @@ func (cfg SystemConfig) Validate() error {
 
 	return nil
 }
-

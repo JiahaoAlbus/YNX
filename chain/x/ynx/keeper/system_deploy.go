@@ -68,15 +68,15 @@ func (d *evmGenesisDeployer) apply(msg core.Message) ([]byte, error) {
 func (d *evmGenesisDeployer) create(initCode []byte) (common.Address, []byte, error) {
 	created := crypto.CreateAddress(d.from, d.nonce)
 	_, err := d.apply(core.Message{
-		From:     d.from,
-		To:       nil,
-		Nonce:    d.nonce,
-		Value:    big.NewInt(0),
-		GasLimit: genesisDeployGasLimit,
-		GasPrice: big.NewInt(0),
+		From:      d.from,
+		To:        nil,
+		Nonce:     d.nonce,
+		Value:     big.NewInt(0),
+		GasLimit:  genesisDeployGasLimit,
+		GasPrice:  big.NewInt(0),
 		GasFeeCap: big.NewInt(0),
 		GasTipCap: big.NewInt(0),
-		Data:     initCode,
+		Data:      initCode,
 	})
 	if err != nil {
 		return common.Address{}, nil, err
@@ -87,15 +87,15 @@ func (d *evmGenesisDeployer) create(initCode []byte) (common.Address, []byte, er
 
 func (d *evmGenesisDeployer) call(to common.Address, data []byte) ([]byte, error) {
 	ret, err := d.apply(core.Message{
-		From:     d.from,
-		To:       &to,
-		Nonce:    d.nonce,
-		Value:    big.NewInt(0),
-		GasLimit: genesisDeployGasLimit,
-		GasPrice: big.NewInt(0),
+		From:      d.from,
+		To:        &to,
+		Nonce:     d.nonce,
+		Value:     big.NewInt(0),
+		GasLimit:  genesisDeployGasLimit,
+		GasPrice:  big.NewInt(0),
 		GasFeeCap: big.NewInt(0),
 		GasTipCap: big.NewInt(0),
-		Data:     data,
+		Data:      data,
 	})
 	if err != nil {
 		return nil, err
@@ -138,11 +138,17 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 
 	startNonce := k.accountKeeper.GetAccount(ctx, deployerAcc).GetSequence()
 
-	communityAcc, err := parseAnyAddress(ctx, cfg.CommunityRecipientAddress)
-	if err != nil {
-		return ynxtypes.SystemContracts{}, err
+	var community common.Address
+	if cfg.CommunityRecipientAddress != "" {
+		communityAcc, err := parseAnyAddress(ctx, cfg.CommunityRecipientAddress)
+		if err != nil {
+			return ynxtypes.SystemContracts{}, err
+		}
+		community = common.BytesToAddress(communityAcc.Bytes())
+		if community == (common.Address{}) {
+			return ynxtypes.SystemContracts{}, fmt.Errorf("invalid community_recipient_address: zero address")
+		}
 	}
-	community := common.BytesToAddress(communityAcc.Bytes())
 
 	teamAcc, err := parseAnyAddress(ctx, cfg.TeamBeneficiaryAddress)
 	if err != nil {
@@ -242,6 +248,9 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 	if err != nil {
 		return ynxtypes.SystemContracts{}, err
 	}
+	if community == (common.Address{}) {
+		community = treasuryAddr
+	}
 
 	governorInit, err := abiPackInitCode(
 		governorABI,
@@ -340,15 +349,15 @@ func (k Keeper) deploySystemContracts(ctx sdk.Context, cfg ynxtypes.SystemConfig
 	_ = authtypes.NewModuleAddress(ynxtypes.ModuleName)
 
 	return ynxtypes.SystemContracts{
-		Nyxt:           nyxtAddr.Hex(),
-		Timelock:       timelockAddr.Hex(),
-		Treasury:       treasuryAddr.Hex(),
-		Governor:       governorAddr.Hex(),
-		TeamVesting:    teamVestingAddr.Hex(),
-		OrgRegistry:    orgAddr.Hex(),
+		Nyxt:            nyxtAddr.Hex(),
+		Timelock:        timelockAddr.Hex(),
+		Treasury:        treasuryAddr.Hex(),
+		Governor:        governorAddr.Hex(),
+		TeamVesting:     teamVestingAddr.Hex(),
+		OrgRegistry:     orgAddr.Hex(),
 		SubjectRegistry: subjectAddr.Hex(),
-		Arbitration:    arbitrationAddr.Hex(),
-		DomainInbox:    domainInboxAddr.Hex(),
+		Arbitration:     arbitrationAddr.Hex(),
+		DomainInbox:     domainInboxAddr.Hex(),
 	}, nil
 }
 

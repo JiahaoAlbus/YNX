@@ -2,7 +2,7 @@
 
 Status: Draft  
 Version: v0.1  
-Last updated: 2026-02-11  
+Last updated: 2026-02-12  
 Canonical language: English
 
 ## 0. Normative Language
@@ -80,6 +80,7 @@ If `treasury_address` or `founder_address` is unset, the corresponding share MUS
 
 - **45%** (45,000,000,000 NYXT)
 - Distribution SHOULD prioritize real users, developers, and infrastructure contributors, using auditable programs.
+- Bootstrap note: if `system.community_recipient_address` is unset at genesis, the community allocation MUST be held by the on-chain treasury (governance-controlled) until governance-approved distributions begin.
 
 ## 5. Supply Notes
 

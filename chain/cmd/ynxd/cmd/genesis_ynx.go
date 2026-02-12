@@ -17,16 +17,28 @@ import (
 )
 
 const (
-	flagYNXSystemEnabled           = "ynx.system.enabled"
-	flagYNXSystemDeployer          = "ynx.system.deployer"
-	flagYNXSystemTeamBeneficiary   = "ynx.system.team-beneficiary"
-	flagYNXSystemCommunityRecipient = "ynx.system.community-recipient"
+	flagYNXSystemEnabled                = "ynx.system.enabled"
+	flagYNXSystemDeployer               = "ynx.system.deployer"
+	flagYNXSystemTeamBeneficiary        = "ynx.system.team-beneficiary"
+	flagYNXSystemCommunityRecipient     = "ynx.system.community-recipient"
+	flagYNXSystemGenesisSupply          = "ynx.system.genesis-supply"
+	flagYNXSystemTeamPercent            = "ynx.system.team-percent"
+	flagYNXSystemTreasuryPercent        = "ynx.system.treasury-percent"
+	flagYNXSystemCommunityPercent       = "ynx.system.community-percent"
+	flagYNXSystemVotingDelayBlocks      = "ynx.system.voting-delay-blocks"
+	flagYNXSystemVotingPeriodBlocks     = "ynx.system.voting-period-blocks"
+	flagYNXSystemProposalThreshold      = "ynx.system.proposal-threshold"
+	flagYNXSystemProposalDeposit        = "ynx.system.proposal-deposit"
+	flagYNXSystemQuorumPercent          = "ynx.system.quorum-percent"
+	flagYNXSystemTimelockDelaySeconds   = "ynx.system.timelock-delay-seconds"
+	flagYNXSystemVestingCliffSeconds    = "ynx.system.vesting-cliff-seconds"
+	flagYNXSystemVestingDurationSeconds = "ynx.system.vesting-duration-seconds"
 
-	flagYNXParamsFounder            = "ynx.params.founder"
-	flagYNXParamsTreasury           = "ynx.params.treasury"
-	flagYNXParamsFeeBurnBps         = "ynx.params.fee-burn-bps"
-	flagYNXParamsFeeTreasuryBps     = "ynx.params.fee-treasury-bps"
-	flagYNXParamsFeeFounderBps      = "ynx.params.fee-founder-bps"
+	flagYNXParamsFounder              = "ynx.params.founder"
+	flagYNXParamsTreasury             = "ynx.params.treasury"
+	flagYNXParamsFeeBurnBps           = "ynx.params.fee-burn-bps"
+	flagYNXParamsFeeTreasuryBps       = "ynx.params.fee-treasury-bps"
+	flagYNXParamsFeeFounderBps        = "ynx.params.fee-founder-bps"
 	flagYNXParamsInflationTreasuryBps = "ynx.params.inflation-treasury-bps"
 )
 
@@ -91,6 +103,54 @@ func ynxGenesisSetCmd() *cobra.Command {
 				v, _ := cmd.Flags().GetString(flagYNXSystemCommunityRecipient)
 				gs.System.CommunityRecipientAddress = v
 			}
+			if cmd.Flags().Changed(flagYNXSystemGenesisSupply) {
+				v, _ := cmd.Flags().GetString(flagYNXSystemGenesisSupply)
+				gs.System.GenesisSupply = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemTeamPercent) {
+				v, _ := cmd.Flags().GetUint32(flagYNXSystemTeamPercent)
+				gs.System.TeamPercent = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemTreasuryPercent) {
+				v, _ := cmd.Flags().GetUint32(flagYNXSystemTreasuryPercent)
+				gs.System.TreasuryPercent = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemCommunityPercent) {
+				v, _ := cmd.Flags().GetUint32(flagYNXSystemCommunityPercent)
+				gs.System.CommunityPercent = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemVotingDelayBlocks) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemVotingDelayBlocks)
+				gs.System.VotingDelayBlocks = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemVotingPeriodBlocks) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemVotingPeriodBlocks)
+				gs.System.VotingPeriodBlocks = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemProposalThreshold) {
+				v, _ := cmd.Flags().GetString(flagYNXSystemProposalThreshold)
+				gs.System.ProposalThreshold = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemProposalDeposit) {
+				v, _ := cmd.Flags().GetString(flagYNXSystemProposalDeposit)
+				gs.System.ProposalDeposit = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemQuorumPercent) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemQuorumPercent)
+				gs.System.QuorumPercent = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemTimelockDelaySeconds) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemTimelockDelaySeconds)
+				gs.System.TimelockDelaySeconds = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemVestingCliffSeconds) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemVestingCliffSeconds)
+				gs.System.VestingCliffSeconds = v
+			}
+			if cmd.Flags().Changed(flagYNXSystemVestingDurationSeconds) {
+				v, _ := cmd.Flags().GetUint64(flagYNXSystemVestingDurationSeconds)
+				gs.System.VestingDurationSeconds = v
+			}
 
 			// params
 			if cmd.Flags().Changed(flagYNXParamsFounder) {
@@ -148,6 +208,18 @@ func ynxGenesisSetCmd() *cobra.Command {
 	cmd.Flags().String(flagYNXSystemDeployer, "", "system contracts deployer address (0x... or bech32)")
 	cmd.Flags().String(flagYNXSystemTeamBeneficiary, "", "team vesting beneficiary address (0x... or bech32)")
 	cmd.Flags().String(flagYNXSystemCommunityRecipient, "", "community allocation recipient address (0x... or bech32)")
+	cmd.Flags().String(flagYNXSystemGenesisSupply, "", "NYXT ERC20 genesis supply (base-10 uint256 string)")
+	cmd.Flags().Uint32(flagYNXSystemTeamPercent, 0, "team allocation percent (0-100)")
+	cmd.Flags().Uint32(flagYNXSystemTreasuryPercent, 0, "treasury allocation percent (0-100)")
+	cmd.Flags().Uint32(flagYNXSystemCommunityPercent, 0, "community allocation percent (0-100)")
+	cmd.Flags().Uint64(flagYNXSystemVotingDelayBlocks, 0, "governor voting delay (in blocks)")
+	cmd.Flags().Uint64(flagYNXSystemVotingPeriodBlocks, 0, "governor voting period (in blocks)")
+	cmd.Flags().String(flagYNXSystemProposalThreshold, "", "governor proposal threshold votes (base-10 uint256 string)")
+	cmd.Flags().String(flagYNXSystemProposalDeposit, "", "governor proposal deposit (base-10 uint256 string)")
+	cmd.Flags().Uint64(flagYNXSystemQuorumPercent, 0, "governor quorum percent (0-100)")
+	cmd.Flags().Uint64(flagYNXSystemTimelockDelaySeconds, 0, "timelock delay (in seconds)")
+	cmd.Flags().Uint64(flagYNXSystemVestingCliffSeconds, 0, "team vesting cliff (in seconds)")
+	cmd.Flags().Uint64(flagYNXSystemVestingDurationSeconds, 0, "team vesting duration (in seconds)")
 
 	cmd.Flags().String(flagYNXParamsFounder, "", "founder fee recipient (bech32)")
 	cmd.Flags().String(flagYNXParamsTreasury, "", "treasury recipient (bech32; optional, defaults to deployed treasury contract)")
@@ -158,4 +230,3 @@ func ynxGenesisSetCmd() *cobra.Command {
 
 	return cmd
 }
-

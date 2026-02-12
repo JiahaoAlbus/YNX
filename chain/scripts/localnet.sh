@@ -40,6 +40,14 @@ DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-localtestnet}"
 MNEMONIC="${YNX_MNEMONIC:-test test test test test test test test test test test junk}"
 
+DEV_FAST_GOV="${YNX_DEV_FAST_GOV:-0}"
+DEV_VOTING_DELAY_BLOCKS="${YNX_DEV_VOTING_DELAY_BLOCKS:-1}"
+DEV_VOTING_PERIOD_BLOCKS="${YNX_DEV_VOTING_PERIOD_BLOCKS:-60}"
+DEV_TIMELOCK_DELAY_SECONDS="${YNX_DEV_TIMELOCK_DELAY_SECONDS:-30}"
+DEV_PROPOSAL_THRESHOLD="${YNX_DEV_PROPOSAL_THRESHOLD:-1000000000000000000}" # 1 NYXT (1e18)
+DEV_PROPOSAL_DEPOSIT="${YNX_DEV_PROPOSAL_DEPOSIT:-1000000000000000000}"     # 1 NYXT (1e18)
+DEV_QUORUM_PERCENT="${YNX_DEV_QUORUM_PERCENT:-1}"
+
 BIN="$ROOT_DIR/ynxd"
 
 mkdir -p "$ROOT_DIR"
@@ -101,12 +109,25 @@ if [[ ! -f "$PRECONFIRM_KEY_PATH" ]]; then
 fi
 
 echo "Configuring YNX module genesis..."
+FAST_GOV_FLAGS=()
+if [[ "$DEV_FAST_GOV" == "1" ]]; then
+  echo "Enabling fast governance mode (dev-only)..."
+  FAST_GOV_FLAGS+=(
+    --ynx.system.voting-delay-blocks "$DEV_VOTING_DELAY_BLOCKS"
+    --ynx.system.voting-period-blocks "$DEV_VOTING_PERIOD_BLOCKS"
+    --ynx.system.proposal-threshold "$DEV_PROPOSAL_THRESHOLD"
+    --ynx.system.proposal-deposit "$DEV_PROPOSAL_DEPOSIT"
+    --ynx.system.quorum-percent "$DEV_QUORUM_PERCENT"
+    --ynx.system.timelock-delay-seconds "$DEV_TIMELOCK_DELAY_SECONDS"
+  )
+fi
 "$BIN" genesis ynx set \
   --home "$HOME_DIR" \
   --ynx.system.enabled \
   --ynx.system.deployer "$DEPLOYER_ADDR" \
   --ynx.system.team-beneficiary "$VAL_ADDR" \
   --ynx.system.community-recipient "$VAL_ADDR" \
+  "${FAST_GOV_FLAGS[@]}" \
   --ynx.params.founder "$VAL_ADDR" >/dev/null
 
 echo "Funding validator account..."

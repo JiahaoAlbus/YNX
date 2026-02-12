@@ -69,6 +69,31 @@ Notes:
 - This is a **UX confirmation** signal, not finality.
 - The receipt is signed and verifiable (see `docs/en/Preconfirmations_v0.md`).
 
+## Fast governance (dev-only)
+
+By default, v0 governance parameters target production-like settings (7 day voting + 7 day timelock).
+
+For local iteration, `chain/scripts/localnet.sh` supports a fast governance mode:
+
+```bash
+YNX_DEV_FAST_GOV=1 ./scripts/localnet.sh --reset
+```
+
+Overrides (optional):
+
+- `YNX_DEV_VOTING_DELAY_BLOCKS` (default: `1`)
+- `YNX_DEV_VOTING_PERIOD_BLOCKS` (default: `60`)
+- `YNX_DEV_TIMELOCK_DELAY_SECONDS` (default: `30`)
+- `YNX_DEV_PROPOSAL_THRESHOLD` (default: `1e18`)
+- `YNX_DEV_PROPOSAL_DEPOSIT` (default: `1e18`)
+- `YNX_DEV_QUORUM_PERCENT` (default: `1`)
+
+E2E governance demo (proposal → vote → queue → execute `IYNXProtocol.updateParams(...)`):
+
+```bash
+npm --workspace @ynx/contracts run ynxdev:governance-e2e
+```
+
 ## Connect EVM tooling
 
 - Add a custom network in MetaMask / Rabby:
@@ -89,6 +114,12 @@ ynxd query ynx system-contracts --home chain/.localnet
 ```
 
 The v0 system contracts include `domain_inbox` (execution-domain commitments inbox).
+
+Demo: register a domain + submit a commitment to the system `domain_inbox`:
+
+```bash
+npm --workspace @ynx/contracts run ynxdev:domain-inbox-demo
+```
 
 ## Protocol governance precompile (EVM)
 

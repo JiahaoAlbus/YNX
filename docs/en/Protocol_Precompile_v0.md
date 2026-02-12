@@ -69,3 +69,13 @@ The intended v0 flow is:
 
 This provides a fully on-chain and auditable mechanism for protocol-economic changes.
 
+## 6. Devnet demo
+
+On a running local chain devnet (`chain/scripts/localnet.sh`), you can run an end-to-end governance flow (proposal → vote
+→ queue → execute) that calls `IYNXProtocol.updateParams(...)`:
+
+```bash
+npm --workspace @ynx/contracts run ynxdev:governance-e2e
+```
+
+See `docs/en/CHAIN_DEVNET.md` for the recommended fast-governance dev mode.

@@ -7,6 +7,8 @@
     "devnet:node": "hardhat node --hostname 127.0.0.1 --port 8545",
     "devnet:deploy": "hardhat run scripts/deploy.ts --network localhost",
     "ynxdev:deploy": "hardhat run scripts/deploy.ts --network ynxdev",
+    "ynxdev:governance-e2e": "hardhat run scripts/ynxdev/governance_e2e.ts --network ynxdev",
+    "ynxdev:domain-inbox-demo": "hardhat run scripts/ynxdev/domain_inbox_demo.ts --network ynxdev",
     "deploy:sim": "hardhat run scripts/deploy.ts --network default",
     "test": "hardhat test",
     "lint": "node ../../node_modules/eslint/bin/eslint.js .",

@@ -77,3 +77,8 @@ YNX ships v0 EVM “system contracts” (Governor + Timelock + Treasury) and a c
   - `updateParams(...)` MUST only be callable by the timelock (enforced by `msg.sender`).
 
 See `docs/en/Protocol_Precompile_v0.md`.
+
+## 9. Local development notes
+
+For fast iteration on a local single-node devnet, `chain/scripts/localnet.sh` supports a dev-only mode that reduces the
+voting period and timelock delay. See `docs/en/CHAIN_DEVNET.md`.

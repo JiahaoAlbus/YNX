@@ -45,6 +45,14 @@ Optional genesis address overrides (useful when testing fee revenue routing):
 - `YNX_TEAM_BENEFICIARY=ynx1...` (defaults to local validator)
 - `YNX_COMMUNITY_RECIPIENT=ynx1...` (defaults to local validator)
 
+You may also store these in a repo-local `.env` file (auto-loaded by the script):
+
+```
+YNX_FOUNDER_ADDRESS=ynx1...
+YNX_TEAM_BENEFICIARY=ynx1...
+YNX_COMMUNITY_RECIPIENT=ynx1...
+```
+
 ## Fast local blocks (dev-only)
 
 `chain/scripts/localnet.sh` tunes CometBFT timeouts for a fast single-node experience (target ~1s blocks).

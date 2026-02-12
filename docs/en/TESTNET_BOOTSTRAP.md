@@ -90,6 +90,8 @@ YNX_FOUNDER_ADDRESS=ynx1... \
 ./scripts/testnet_bootstrap.sh --reset
 ```
 
+You may also store these in a repo-local `.env` file (auto-loaded by the script).
+
 This creates:
 
 - `config/genesis.json`

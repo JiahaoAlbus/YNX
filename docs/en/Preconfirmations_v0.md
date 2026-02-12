@@ -75,6 +75,13 @@ To verify a receipt:
 
 If the chain operator publishes an allowlist of valid signer addresses, clients SHOULD also enforce that allowlist.
 
+### 3.1 Reference SDK helper
+
+The reference SDK (`@ynx/sdk`) exports v0 helpers:
+
+- `computePreconfirmDigestV0(...)`
+- `verifyPreconfirmReceiptV0(receipt, { allowlist? })`
+
 ## 4. Node configuration
 
 Preconfirmations are disabled by default.

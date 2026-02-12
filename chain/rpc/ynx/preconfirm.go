@@ -28,15 +28,18 @@ import (
 const txConfirmDigestPrefix = "YNX_TXCONFIRM_V0"
 
 type PreconfirmReceipt struct {
-	Status     string         `json:"status"`
-	ChainID    string         `json:"chainId"`
-	EVMChainID *hexutil.Big   `json:"evmChainId"`
-	TxHash     common.Hash    `json:"txHash"`
-	TargetBlock hexutil.Uint64 `json:"targetBlock"`
-	IssuedAt   hexutil.Uint64 `json:"issuedAt"`
-	Signer     common.Address `json:"signer"`
-	Digest     common.Hash    `json:"digest"`
-	Signature  hexutil.Bytes  `json:"signature"`
+	Status      string           `json:"status"`
+	ChainID     string           `json:"chainId"`
+	EVMChainID  *hexutil.Big     `json:"evmChainId"`
+	TxHash      common.Hash      `json:"txHash"`
+	TargetBlock hexutil.Uint64   `json:"targetBlock"`
+	IssuedAt    hexutil.Uint64   `json:"issuedAt"`
+	Signer      common.Address   `json:"signer"`
+	Digest      common.Hash      `json:"digest"`
+	Signature   hexutil.Bytes    `json:"signature"`
+	Signers     []common.Address `json:"signers,omitempty"`
+	Signatures  []hexutil.Bytes  `json:"signatures,omitempty"`
+	Threshold   uint32           `json:"threshold,omitempty"`
 }
 
 type PreconfirmSigner struct {
@@ -52,6 +55,54 @@ func LoadPreconfirmSignerFromEnv() (*PreconfirmSigner, error) {
 		return LoadPreconfirmSignerFromFile(keyPath)
 	}
 	return nil, fmt.Errorf("missing YNX_PRECONFIRM_PRIVKEY_HEX or YNX_PRECONFIRM_KEY_PATH")
+}
+
+func LoadPreconfirmSignersFromEnv() ([]*PreconfirmSigner, uint32, error) {
+	var signers []*PreconfirmSigner
+
+	if v := strings.TrimSpace(os.Getenv("YNX_PRECONFIRM_PRIVKEY_HEXES")); v != "" {
+		hexes := splitCommaList(v)
+		for _, hexKey := range hexes {
+			signer, err := LoadPreconfirmSignerFromHex(hexKey)
+			if err != nil {
+				return nil, 0, err
+			}
+			signers = append(signers, signer)
+		}
+	} else if v := strings.TrimSpace(os.Getenv("YNX_PRECONFIRM_KEY_PATHS")); v != "" {
+		paths := splitCommaList(v)
+		for _, p := range paths {
+			signer, err := LoadPreconfirmSignerFromFile(p)
+			if err != nil {
+				return nil, 0, err
+			}
+			signers = append(signers, signer)
+		}
+	} else {
+		signer, err := LoadPreconfirmSignerFromEnv()
+		if err != nil {
+			return nil, 0, err
+		}
+		signers = append(signers, signer)
+	}
+
+	if len(signers) == 0 {
+		return nil, 0, fmt.Errorf("no preconfirm signers configured")
+	}
+
+	threshold := uint32(len(signers))
+	if v := strings.TrimSpace(os.Getenv("YNX_PRECONFIRM_THRESHOLD")); v != "" {
+		parsed, err := strconv.Atoi(v)
+		if err != nil || parsed <= 0 {
+			return nil, 0, fmt.Errorf("invalid YNX_PRECONFIRM_THRESHOLD: %q", v)
+		}
+		if parsed > len(signers) {
+			return nil, 0, fmt.Errorf("YNX_PRECONFIRM_THRESHOLD=%d exceeds signer count=%d", parsed, len(signers))
+		}
+		threshold = uint32(parsed)
+	}
+
+	return signers, threshold, nil
 }
 
 func LoadPreconfirmSignerFromFile(path string) (*PreconfirmSigner, error) {
@@ -93,9 +144,10 @@ func (s *PreconfirmSigner) SignDigest(digest common.Hash) ([]byte, error) {
 }
 
 type PublicAPI struct {
-	logger log.Logger
-	backend *backend.Backend
-	signer  *PreconfirmSigner
+	logger    log.Logger
+	backend   *backend.Backend
+	signers   []*PreconfirmSigner
+	threshold uint32
 }
 
 func NewPublicAPI(logger log.Logger, backend *backend.Backend) *PublicAPI {
@@ -106,11 +158,34 @@ func NewPublicAPI(logger log.Logger, backend *backend.Backend) *PublicAPI {
 }
 
 func (api *PublicAPI) SetPreconfirmSigner(signer *PreconfirmSigner) {
-	api.signer = signer
+	if signer == nil {
+		api.signers = nil
+		api.threshold = 0
+		return
+	}
+	api.signers = []*PreconfirmSigner{signer}
+	api.threshold = 1
+}
+
+func (api *PublicAPI) SetPreconfirmSigners(signers []*PreconfirmSigner, threshold uint32) error {
+	if len(signers) == 0 {
+		api.signers = nil
+		api.threshold = 0
+		return nil
+	}
+	if threshold == 0 {
+		threshold = uint32(len(signers))
+	}
+	if int(threshold) > len(signers) {
+		return fmt.Errorf("threshold=%d exceeds signer count=%d", threshold, len(signers))
+	}
+	api.signers = signers
+	api.threshold = threshold
+	return nil
 }
 
 func (api *PublicAPI) PreconfirmTx(txHash common.Hash) (*PreconfirmReceipt, error) {
-	if api.signer == nil {
+	if len(api.signers) == 0 {
 		return nil, fmt.Errorf("preconfirm is disabled")
 	}
 	if api.backend == nil {
@@ -141,9 +216,16 @@ func (api *PublicAPI) PreconfirmTx(txHash common.Hash) (*PreconfirmReceipt, erro
 
 	evmChainIDHex := (*hexutil.Big)(new(big.Int).Set(api.backend.EvmChainID))
 	digest := txConfirmDigest(api.backend.ClientCtx.ChainID, api.backend.EvmChainID, txHash, status, targetBlock, issuedAt)
-	sig, err := api.signer.SignDigest(digest)
-	if err != nil {
-		return nil, err
+
+	signers := make([]common.Address, 0, len(api.signers))
+	signatures := make([]hexutil.Bytes, 0, len(api.signers))
+	for _, signer := range api.signers {
+		sig, err := signer.SignDigest(digest)
+		if err != nil {
+			return nil, err
+		}
+		signers = append(signers, signer.Address())
+		signatures = append(signatures, sig)
 	}
 
 	return &PreconfirmReceipt{
@@ -153,9 +235,12 @@ func (api *PublicAPI) PreconfirmTx(txHash common.Hash) (*PreconfirmReceipt, erro
 		TxHash:      txHash,
 		TargetBlock: hexutil.Uint64(targetBlock),
 		IssuedAt:    hexutil.Uint64(issuedAt),
-		Signer:      api.signer.Address(),
+		Signer:      signers[0],
 		Digest:      digest,
-		Signature:   sig,
+		Signature:   signatures[0],
+		Signers:     signers,
+		Signatures:  signatures,
+		Threshold:   api.threshold,
 	}, nil
 }
 
@@ -274,4 +359,17 @@ func WritePreconfirmKeyFile(path string, privKeyHex string, overwrite bool) erro
 		return err
 	}
 	return nil
+}
+
+func splitCommaList(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
 }

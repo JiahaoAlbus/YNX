@@ -38,6 +38,13 @@ The response is a JSON object with the following fields:
 - `signer` — EVM address of the preconfirm signer
 - `digest` — `keccak256` digest of the signed message
 - `signature` — 65-byte secp256k1 signature (`r || s || v` where `v ∈ {0,1}`)
+- `signers` — optional list of EVM signer addresses (multi-signer mode)
+- `signatures` — optional list of signatures, aligned with `signers`
+- `threshold` — optional signature threshold (multi-signer mode)
+
+Backwards-compatibility:
+
+- `signer` / `signature` are always set to the first entry of `signers` / `signatures` when multi-signer mode is used.
 
 ## 2. Digest format
 
@@ -81,6 +88,12 @@ Signer configuration (choose one):
 - `YNX_PRECONFIRM_PRIVKEY_HEX=...` (32-byte hex private key, optional `0x` prefix)
 - `YNX_PRECONFIRM_KEY_PATH=...` (file containing a hex private key)
 
+Multi-signer configuration (optional):
+
+- `YNX_PRECONFIRM_PRIVKEY_HEXES=hex1,hex2,...` (comma-separated)
+- `YNX_PRECONFIRM_KEY_PATHS=/path/1,/path/2,...` (comma-separated)
+- `YNX_PRECONFIRM_THRESHOLD=N` (default: number of configured signers)
+
 Optional performance control:
 
 - `YNX_PRECONFIRM_MEMPOOL_SCAN_LIMIT` (default: `2000`)
@@ -97,4 +110,3 @@ ynxd preconfirm keygen --home <node_home>
 - Finality is provided by consensus, not by preconfirmations.
 - v0 uses an operator-configured signer; decentralization of the preconfirm path (committee / threshold signatures) is a
   future milestone.
-

@@ -51,10 +51,25 @@ The localnet script enables the `ynx_preconfirmTx` JSON-RPC method by default an
 
 - `chain/.localnet/config/ynx_preconfirm.key`
 
+Multi-signer dev mode (optional):
+
+```bash
+YNX_DEV_PRECONFIRM_SIGNER_COUNT=3 YNX_DEV_PRECONFIRM_THRESHOLD=2 ./scripts/localnet.sh --reset
+```
+
+This generates:
+
+- `chain/.localnet/config/preconfirm/signer_1.key` ...
+
 The node is started with:
 
 - `YNX_PRECONFIRM_ENABLED=1`
 - `YNX_PRECONFIRM_KEY_PATH=.../ynx_preconfirm.key`
+
+In multi-signer mode, the script uses:
+
+- `YNX_PRECONFIRM_KEY_PATHS=.../signer_1.key,...`
+- `YNX_PRECONFIRM_THRESHOLD=...`
 
 Example call:
 

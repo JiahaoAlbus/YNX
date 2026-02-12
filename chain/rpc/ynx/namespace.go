@@ -34,10 +34,12 @@ func createAPIs(
 
 	enabled := strings.EqualFold(os.Getenv("YNX_PRECONFIRM_ENABLED"), "true") || os.Getenv("YNX_PRECONFIRM_ENABLED") == "1"
 	if enabled {
-		if signer, err := LoadPreconfirmSignerFromEnv(); err == nil {
-			api.SetPreconfirmSigner(signer)
+		if signers, threshold, err := LoadPreconfirmSignersFromEnv(); err == nil {
+			if err := api.SetPreconfirmSigners(signers, threshold); err != nil {
+				ctx.Logger.Error("failed to set preconfirm signers", "err", err)
+			}
 		} else {
-			ctx.Logger.Error("failed to load preconfirm signer", "err", err)
+			ctx.Logger.Error("failed to load preconfirm signers", "err", err)
 		}
 	}
 

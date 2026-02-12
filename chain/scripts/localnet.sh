@@ -47,6 +47,8 @@ DEV_TIMELOCK_DELAY_SECONDS="${YNX_DEV_TIMELOCK_DELAY_SECONDS:-30}"
 DEV_PROPOSAL_THRESHOLD="${YNX_DEV_PROPOSAL_THRESHOLD:-1000000000000000000}" # 1 NYXT (1e18)
 DEV_PROPOSAL_DEPOSIT="${YNX_DEV_PROPOSAL_DEPOSIT:-1000000000000000000}"     # 1 NYXT (1e18)
 DEV_QUORUM_PERCENT="${YNX_DEV_QUORUM_PERCENT:-1}"
+DEV_PRECONFIRM_SIGNER_COUNT="${YNX_DEV_PRECONFIRM_SIGNER_COUNT:-1}"
+DEV_PRECONFIRM_THRESHOLD="${YNX_DEV_PRECONFIRM_THRESHOLD:-0}"
 
 BIN="$ROOT_DIR/ynxd"
 
@@ -103,16 +105,51 @@ VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "
 DEPLOYER_ADDR="$("$BIN" keys show "$DEPLOYER_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 
 PRECONFIRM_KEY_PATH="$HOME_DIR/config/ynx_preconfirm.key"
-if [[ ! -f "$PRECONFIRM_KEY_PATH" ]]; then
-  echo "Generating preconfirm signer key..."
-  "$BIN" preconfirm keygen --home "$HOME_DIR" --out "$PRECONFIRM_KEY_PATH" >/dev/null
+PRECONFIRM_KEY_PATHS_CSV=""
+PRECONFIRM_THRESHOLD_VALUE=""
+
+if [[ -z "${YNX_PRECONFIRM_PRIVKEY_HEXES:-}" && -z "${YNX_PRECONFIRM_KEY_PATHS:-}" ]]; then
+  if [[ "$DEV_PRECONFIRM_SIGNER_COUNT" -gt 1 ]]; then
+    echo "Generating $DEV_PRECONFIRM_SIGNER_COUNT preconfirm signer keys..."
+    KEY_DIR="$HOME_DIR/config/preconfirm"
+    mkdir -p "$KEY_DIR"
+    for i in $(seq 1 "$DEV_PRECONFIRM_SIGNER_COUNT"); do
+      KEY_PATH="$KEY_DIR/signer_${i}.key"
+      if [[ ! -f "$KEY_PATH" ]]; then
+        "$BIN" preconfirm keygen --home "$HOME_DIR" --out "$KEY_PATH" >/dev/null
+      fi
+      if [[ -z "$PRECONFIRM_KEY_PATHS_CSV" ]]; then
+        PRECONFIRM_KEY_PATHS_CSV="$KEY_PATH"
+      else
+        PRECONFIRM_KEY_PATHS_CSV="$PRECONFIRM_KEY_PATHS_CSV,$KEY_PATH"
+      fi
+    done
+
+    PRECONFIRM_THRESHOLD_VALUE="$DEV_PRECONFIRM_THRESHOLD"
+    if [[ -z "$PRECONFIRM_THRESHOLD_VALUE" || "$PRECONFIRM_THRESHOLD_VALUE" -le 0 ]]; then
+      PRECONFIRM_THRESHOLD_VALUE="$DEV_PRECONFIRM_SIGNER_COUNT"
+    fi
+  else
+    if [[ ! -f "$PRECONFIRM_KEY_PATH" ]]; then
+      echo "Generating preconfirm signer key..."
+      "$BIN" preconfirm keygen --home "$HOME_DIR" --out "$PRECONFIRM_KEY_PATH" >/dev/null
+    fi
+  fi
 fi
 
 echo "Configuring YNX module genesis..."
-FAST_GOV_FLAGS=()
+GENESIS_ARGS=(
+  genesis ynx set
+  --home "$HOME_DIR"
+  --ynx.system.enabled
+  --ynx.system.deployer "$DEPLOYER_ADDR"
+  --ynx.system.team-beneficiary "$VAL_ADDR"
+  --ynx.system.community-recipient "$VAL_ADDR"
+  --ynx.params.founder "$VAL_ADDR"
+)
 if [[ "$DEV_FAST_GOV" == "1" ]]; then
   echo "Enabling fast governance mode (dev-only)..."
-  FAST_GOV_FLAGS+=(
+  GENESIS_ARGS+=(
     --ynx.system.voting-delay-blocks "$DEV_VOTING_DELAY_BLOCKS"
     --ynx.system.voting-period-blocks "$DEV_VOTING_PERIOD_BLOCKS"
     --ynx.system.proposal-threshold "$DEV_PROPOSAL_THRESHOLD"
@@ -121,14 +158,7 @@ if [[ "$DEV_FAST_GOV" == "1" ]]; then
     --ynx.system.timelock-delay-seconds "$DEV_TIMELOCK_DELAY_SECONDS"
   )
 fi
-"$BIN" genesis ynx set \
-  --home "$HOME_DIR" \
-  --ynx.system.enabled \
-  --ynx.system.deployer "$DEPLOYER_ADDR" \
-  --ynx.system.team-beneficiary "$VAL_ADDR" \
-  --ynx.system.community-recipient "$VAL_ADDR" \
-  "${FAST_GOV_FLAGS[@]}" \
-  --ynx.params.founder "$VAL_ADDR" >/dev/null
+"$BIN" "${GENESIS_ARGS[@]}" >/dev/null
 
 echo "Funding validator account..."
 "$BIN" genesis add-genesis-account "$VAL_ADDR" "1000000000000000000000000$DENOM" --home "$HOME_DIR" >/dev/null
@@ -147,9 +177,18 @@ echo "  JSON-RPC: http://127.0.0.1:8545"
 echo "  Home:     $HOME_DIR"
 echo "  Chain ID: $CHAIN_ID"
 
-YNX_PRECONFIRM_ENABLED=1 \
-YNX_PRECONFIRM_KEY_PATH="$PRECONFIRM_KEY_PATH" \
-"$BIN" start \
+PRECONFIRM_ENV=(YNX_PRECONFIRM_ENABLED=1)
+if [[ -n "${YNX_PRECONFIRM_PRIVKEY_HEXES:-}" || -n "${YNX_PRECONFIRM_KEY_PATHS:-}" ]]; then
+  # User-supplied signer config.
+  :
+elif [[ -n "$PRECONFIRM_KEY_PATHS_CSV" ]]; then
+  PRECONFIRM_ENV+=(YNX_PRECONFIRM_KEY_PATHS="$PRECONFIRM_KEY_PATHS_CSV")
+  PRECONFIRM_ENV+=(YNX_PRECONFIRM_THRESHOLD="$PRECONFIRM_THRESHOLD_VALUE")
+else
+  PRECONFIRM_ENV+=(YNX_PRECONFIRM_KEY_PATH="$PRECONFIRM_KEY_PATH")
+fi
+
+env "${PRECONFIRM_ENV[@]}" "$BIN" start \
   --home "$HOME_DIR" \
   --minimum-gas-prices "0$DENOM" \
   --json-rpc.enable \

@@ -17,6 +17,14 @@ NYXT is the native token of YNX and MUST be used for:
 - PoS staking/security
 - Governance voting power (see `docs/en/Governance_v0.md`)
 
+### 1.1 Denoms & Units (v0)
+
+The base chain uses an 18-decimal native coin:
+
+- Base denom (on-chain): `anyxt`
+- Display denom (UI): `nyxt`
+- Display exponent: `18` (`1 nyxt = 10^18 anyxt`)
+
 ## 2. Genesis Supply and Inflation
 
 - Genesis supply MUST be **100,000,000,000 NYXT**.

@@ -75,12 +75,21 @@ echo "Tuning CometBFT for fast local blocks..."
 # Target ~1s blocks. These settings are for local development only.
 sed -i.bak 's/timeout_propose = "3s"/timeout_propose = "1s"/' "$CONFIG_TOML"
 sed -i.bak 's/timeout_propose_delta = "500ms"/timeout_propose_delta = "200ms"/' "$CONFIG_TOML"
-sed -i.bak 's/timeout_prevote = "1s"/timeout_prevote = "500ms"/' "$CONFIG_TOML"
-sed -i.bak 's/timeout_prevote_delta = "500ms"/timeout_prevote_delta = "200ms"/' "$CONFIG_TOML"
-sed -i.bak 's/timeout_precommit = "1s"/timeout_precommit = "500ms"/' "$CONFIG_TOML"
-sed -i.bak 's/timeout_precommit_delta = "500ms"/timeout_precommit_delta = "200ms"/' "$CONFIG_TOML"
+if grep -q '^timeout_vote = ' "$CONFIG_TOML"; then
+  # CometBFT v2.x
+  sed -i.bak 's/timeout_vote = "1s"/timeout_vote = "500ms"/' "$CONFIG_TOML"
+  sed -i.bak 's/timeout_vote_delta = "500ms"/timeout_vote_delta = "200ms"/' "$CONFIG_TOML"
+else
+  # CometBFT v0.38.x
+  sed -i.bak 's/timeout_prevote = "1s"/timeout_prevote = "500ms"/' "$CONFIG_TOML"
+  sed -i.bak 's/timeout_prevote_delta = "500ms"/timeout_prevote_delta = "200ms"/' "$CONFIG_TOML"
+  sed -i.bak 's/timeout_precommit = "1s"/timeout_precommit = "500ms"/' "$CONFIG_TOML"
+  sed -i.bak 's/timeout_precommit_delta = "500ms"/timeout_precommit_delta = "200ms"/' "$CONFIG_TOML"
+fi
 sed -i.bak 's/timeout_commit = "5s"/timeout_commit = "1s"/' "$CONFIG_TOML"
-sed -i.bak 's/skip_timeout_commit = false/skip_timeout_commit = true/' "$CONFIG_TOML"
+if grep -q '^skip_timeout_commit = ' "$CONFIG_TOML"; then
+  sed -i.bak 's/skip_timeout_commit = false/skip_timeout_commit = true/' "$CONFIG_TOML"
+fi
 
 echo "Enabling app-side EVM mempool..."
 sed -i.bak 's/^max-txs = -1$/max-txs = 0/' "$APP_TOML"

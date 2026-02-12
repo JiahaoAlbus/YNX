@@ -39,6 +39,12 @@ Dev key (for local testing only):
   - `test test test test test test test test test test test junk`
 - Override via `YNX_MNEMONIC=...` when running the script.
 
+Optional genesis address overrides (useful when testing fee revenue routing):
+
+- `YNX_FOUNDER_ADDRESS=ynx1...` (defaults to local validator)
+- `YNX_TEAM_BENEFICIARY=ynx1...` (defaults to local validator)
+- `YNX_COMMUNITY_RECIPIENT=ynx1...` (defaults to local validator)
+
 ## Fast local blocks (dev-only)
 
 `chain/scripts/localnet.sh` tunes CometBFT timeouts for a fast single-node experience (target ~1s blocks).

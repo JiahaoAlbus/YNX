@@ -113,6 +113,10 @@ fi
 VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 DEPLOYER_ADDR="$("$BIN" keys show "$DEPLOYER_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 
+FOUNDER_ADDR="${YNX_FOUNDER_ADDRESS:-$VAL_ADDR}"
+TEAM_BENEFICIARY_ADDR="${YNX_TEAM_BENEFICIARY:-$VAL_ADDR}"
+COMMUNITY_RECIPIENT_ADDR="${YNX_COMMUNITY_RECIPIENT:-$VAL_ADDR}"
+
 PRECONFIRM_KEY_PATH="$HOME_DIR/config/ynx_preconfirm.key"
 PRECONFIRM_KEY_PATHS_CSV=""
 PRECONFIRM_THRESHOLD_VALUE=""
@@ -152,9 +156,9 @@ GENESIS_ARGS=(
   --home "$HOME_DIR"
   --ynx.system.enabled
   --ynx.system.deployer "$DEPLOYER_ADDR"
-  --ynx.system.team-beneficiary "$VAL_ADDR"
-  --ynx.system.community-recipient "$VAL_ADDR"
-  --ynx.params.founder "$VAL_ADDR"
+  --ynx.system.team-beneficiary "$TEAM_BENEFICIARY_ADDR"
+  --ynx.system.community-recipient "$COMMUNITY_RECIPIENT_ADDR"
+  --ynx.params.founder "$FOUNDER_ADDR"
 )
 if [[ "$DEV_FAST_GOV" == "1" ]]; then
   echo "Enabling fast governance mode (dev-only)..."

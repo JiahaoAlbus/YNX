@@ -50,4 +50,7 @@ YN address CLI:
 ```bash
 npx ynx address encode 0x0000000000000000000000000000000000000000
 npx ynx address decode <YN...>
+
+# Preconfirm receipt verification (v0)
+npx ynx preconfirm verify 0x<txHash> --rpc http://127.0.0.1:8545
 ```

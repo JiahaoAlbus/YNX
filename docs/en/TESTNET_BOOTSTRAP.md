@@ -53,6 +53,25 @@ cd chain
 ./scripts/testnet_bootstrap.sh --reset
 ```
 
+### 3.1 Generating founder / team / community addresses
+
+YNX uses bech32 account addresses with prefix `ynx1...`.
+
+If you need real addresses to set in genesis (recommended for public testnets), generate them with `ynxd`:
+
+```bash
+cd chain
+./ynxd keys add founder --keyring-backend os --key-type eth_secp256k1
+./ynxd keys show founder --keyring-backend os --bech acc -a
+```
+
+To convert between bech32 (`ynx1...`) and EVM hex (`0x...`):
+
+```bash
+./ynxd debug addr ynx1...
+./ynxd debug addr 0x...
+```
+
 Defaults:
 
 - Home: `chain/.testnet`
@@ -101,4 +120,3 @@ If you do not have a community recipient at genesis:
 - Document a governance plan to migrate that allocation to a governance-controlled recipient over time.
 
 See `docs/en/NYXT_Tokenomics_v0.md`.
-

@@ -23,5 +23,6 @@ Last updated: 2026-02-12
 - `docs/en/X_YNX_Module.md`
 - `docs/en/DEVNET.md`
 - `docs/en/CHAIN_DEVNET.md`
+- `docs/en/TESTNET_BOOTSTRAP.md`
 - `docs/en/Preconfirmations_v0.md`
 - `docs/en/Protocol_Precompile_v0.md`

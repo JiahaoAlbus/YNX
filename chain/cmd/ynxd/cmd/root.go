@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
@@ -154,9 +155,12 @@ func NewRootCmd() *cobra.Command {
 func initCometConfig() *cmtcfg.Config {
 	cfg := cmtcfg.DefaultConfig()
 
-	// these values put a higher strain on node memory
-	// cfg.P2P.MaxNumInboundPeers = 100
-	// cfg.P2P.MaxNumOutboundPeers = 40
+	// v0 defaults target ~1s blocks. Operators can override in config.toml.
+	cfg.Consensus.TimeoutPropose = 1 * time.Second
+	cfg.Consensus.TimeoutProposeDelta = 200 * time.Millisecond
+	cfg.Consensus.TimeoutVote = 500 * time.Millisecond
+	cfg.Consensus.TimeoutVoteDelta = 200 * time.Millisecond
+	cfg.Consensus.TimeoutCommit = 1 * time.Second
 
 	return cfg
 }

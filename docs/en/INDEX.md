@@ -8,6 +8,7 @@ Last updated: 2026-02-12
 - `docs/en/YNX_v0_Spec.md` — protocol goals, confirmation model, consensus/scaling approach
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
+- `docs/en/Parameters_v0.md` — canonical v0 parameter registry (locked defaults)
 - `docs/en/Address_Format_v0.md` — canonical `0x...` and human-friendly `YN...` addresses
 - `docs/en/Roadmap_v0.md` — phased launch plan
 

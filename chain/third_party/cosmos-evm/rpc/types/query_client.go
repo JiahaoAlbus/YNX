@@ -3,8 +3,8 @@ package types
 import (
 	"fmt"
 
-	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/proto/tendermint/crypto"
+	cryptov1 "github.com/cometbft/cometbft/api/cometbft/crypto/v1"
+	abci "github.com/cometbft/cometbft/v2/abci/types"
 
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -37,7 +37,7 @@ func NewQueryClient(clientCtx client.Context) *QueryClient {
 // performed at one below this height (at the IAVL version) in order to obtain the correct merkle
 // proof. Proof queries at height less than or equal to 2 are not supported.
 // Issue: https://github.com/cosmos/cosmos-sdk/issues/6567
-func (QueryClient) GetProof(clientCtx client.Context, storeKey string, key []byte) ([]byte, *crypto.ProofOps, error) {
+func (QueryClient) GetProof(clientCtx client.Context, storeKey string, key []byte) ([]byte, *cryptov1.ProofOps, error) {
 	height := clientCtx.Height
 	// ABCI queries at height less than or equal to 2 are not supported.
 	// Base app does not support queries for height less than or equal to 1.
@@ -46,7 +46,7 @@ func (QueryClient) GetProof(clientCtx client.Context, storeKey string, key []byt
 		return nil, nil, fmt.Errorf("proof queries at height <= 2 are not supported")
 	}
 
-	abciReq := abci.RequestQuery{
+	abciReq := abci.QueryRequest{
 		Path:   fmt.Sprintf("store/%s/key", storeKey),
 		Data:   key,
 		Height: height,

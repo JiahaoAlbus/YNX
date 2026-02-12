@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 
-	cmttypes "github.com/cometbft/cometbft/types"
+	cmttypes "github.com/cometbft/cometbft/v2/types"
 
 	antetypes "github.com/cosmos/evm/ante/types"
 	rpctypes "github.com/cosmos/evm/rpc/types"

@@ -13,10 +13,10 @@ import (
 	ethparams "github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 
-	abci "github.com/cometbft/cometbft/abci/types"
-	cmtrpcclient "github.com/cometbft/cometbft/rpc/client"
-	cmtrpccore "github.com/cometbft/cometbft/rpc/core/types"
-	cmttypes "github.com/cometbft/cometbft/types"
+	abci "github.com/cometbft/cometbft/v2/abci/types"
+	cmtrpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	cmtrpccore "github.com/cometbft/cometbft/v2/rpc/core/types"
+	cmttypes "github.com/cometbft/cometbft/v2/types"
 
 	feemarkettypes "github.com/cosmos/evm/x/feemarket/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"

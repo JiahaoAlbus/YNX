@@ -47,13 +47,13 @@ func (app *App) configureEVMMempool(appOpts servertypes.AppOptions, logger log.L
 	checkTxHandler := evmmempool.NewCheckTxHandler(evmMempool)
 	app.SetCheckTxHandler(checkTxHandler)
 
-	abciProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
-	abciProposalHandler.SetSignerExtractionAdapter(
-		evmmempool.NewEthSignerExtractionAdapter(
-			sdkmempool.NewDefaultSignerExtractionAdapter(),
-		),
-	)
+	signerExtAdapter := evmmempool.NewEthSignerExtractionAdapter(sdkmempool.NewDefaultSignerExtractionAdapter())
+	abciProposalHandler := NewEVMProposalHandler(evmMempool, app, signerExtAdapter)
 	app.SetPrepareProposal(abciProposalHandler.PrepareProposalHandler())
+
+	// ProcessProposal does not require a custom signer extraction adapter.
+	defaultProcessProposalHandler := baseapp.NewDefaultProposalHandler(evmMempool, app)
+	app.SetProcessProposal(defaultProcessProposalHandler.ProcessProposalHandler())
 
 	return nil
 }

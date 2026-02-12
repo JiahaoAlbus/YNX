@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cometbft/cometbft/proto/tendermint/crypto"
-	cmtrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cryptov1 "github.com/cometbft/cometbft/api/cometbft/crypto/v1"
+	abci "github.com/cometbft/cometbft/v2/abci/types"
+	cmtrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	"github.com/cosmos/evm/rpc/types"
 	"github.com/cosmos/evm/utils"
@@ -231,7 +231,7 @@ func (b *Backend) ProcessBlock(
 
 	// check cometTxs
 	cometTxs := cometBlock.Block.Txs
-	cometTxResults := cometBlockResult.TxsResults
+	cometTxResults := cometBlockResult.TxResults
 	CometTxCount := len(cometTxs)
 
 	var sorter sortGasAndReward
@@ -311,7 +311,7 @@ func GetLogsFromBlockResults(blockRes *cmtrpctypes.ResultBlockResults) ([][]*eth
 		return nil, err
 	}
 	blockLogs := [][]*ethtypes.Log{}
-	for _, txResult := range blockRes.TxsResults {
+	for _, txResult := range blockRes.TxResults {
 		logs, err := evmtypes.DecodeTxLogs(txResult.Data, height)
 		if err != nil {
 			return nil, err
@@ -322,7 +322,7 @@ func GetLogsFromBlockResults(blockRes *cmtrpctypes.ResultBlockResults) ([][]*eth
 }
 
 // GetHexProofs returns list of hex data of proof op
-func GetHexProofs(proof *crypto.ProofOps) []string {
+func GetHexProofs(proof *cryptov1.ProofOps) []string {
 	if proof == nil {
 		return []string{""}
 	}

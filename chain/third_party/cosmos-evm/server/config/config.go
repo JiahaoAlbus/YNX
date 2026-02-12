@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/cometbft/cometbft/libs/strings"
+	"github.com/cometbft/cometbft/v2/libs/strings"
 
 	errorsmod "cosmossdk.io/errors"
 

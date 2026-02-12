@@ -9,7 +9,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
 
-	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmtproto "github.com/cometbft/cometbft/api/cometbft/types/v2"
 	dbm "github.com/cosmos/cosmos-db"
 
 	"cosmossdk.io/log"

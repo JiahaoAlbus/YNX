@@ -36,7 +36,7 @@ func NewKeeper(
 ) Keeper {
 	// create the original IBC transfer keeper for embedding
 	transferKeeper := keeper.NewKeeper(
-		cdc, storeService, nil,
+		cdc, storeService,
 		ics4Wrapper, channelKeeper, msgRouter,
 		authKeeper, bankKeeper, authority,
 	)

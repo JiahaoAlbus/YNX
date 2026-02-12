@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	cmtrpctypes "github.com/cometbft/cometbft/rpc/core/types"
-	comettypes "github.com/cometbft/cometbft/types"
+	cmtrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
+	comettypes "github.com/cometbft/cometbft/v2/types"
 
 	filtermocks "github.com/cosmos/evm/rpc/namespaces/ethereum/eth/filters/mocks"
 	rpctypes "github.com/cosmos/evm/rpc/types"

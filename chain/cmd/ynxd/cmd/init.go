@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	cfg "github.com/cometbft/cometbft/config"
-	cmttypes "github.com/cometbft/cometbft/types"
+	cfg "github.com/cometbft/cometbft/v2/config"
+	cmttypes "github.com/cometbft/cometbft/v2/types"
 	"github.com/cosmos/go-bip39"
 	"github.com/spf13/cobra"
 
@@ -30,14 +30,14 @@ import (
 )
 
 const (
-	flagOverwrite         = "overwrite"
-	flagRecover           = "recover"
-	flagDefaultBondDenom  = "default-denom"
-	flagConsensusKeyAlgo  = "consensus-key-algo"
-	flagChainID           = flags.FlagChainID
-	flagInitHeight        = flags.FlagInitHeight
-	flagHome              = flags.FlagHome
-	defaultConsensusKey   = ed25519.KeyType
+	flagOverwrite        = "overwrite"
+	flagRecover          = "recover"
+	flagDefaultBondDenom = "default-denom"
+	flagConsensusKeyAlgo = "consensus-key-algo"
+	flagChainID          = flags.FlagChainID
+	flagInitHeight       = flags.FlagInitHeight
+	flagHome             = flags.FlagHome
+	defaultConsensusKey  = ed25519.KeyType
 )
 
 type initPrintInfo struct {
@@ -184,4 +184,3 @@ func initCmd(app *ynx.App, defaultNodeHome string) *cobra.Command {
 
 	return cmd
 }
-

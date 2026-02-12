@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
 
-	cmtrpcclient "github.com/cometbft/cometbft/rpc/client"
-	cmtrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmtrpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	cmtrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	"github.com/cosmos/evm/mempool/txpool"
 	rpctypes "github.com/cosmos/evm/rpc/types"
@@ -240,7 +240,7 @@ func (b *Backend) GetTransactionLogs(hash common.Hash) ([]*ethtypes.Log, error) 
 	// parse tx logs from events
 	index := int(res.MsgIndex) // #nosec G701
 	logs, err := evmtypes.DecodeMsgLogs(
-		resBlockResult.TxsResults[res.TxIndex].Data,
+		resBlockResult.TxResults[res.TxIndex].Data,
 		index,
 		height,
 	)

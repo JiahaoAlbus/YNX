@@ -3,7 +3,7 @@ package mempool
 import (
 	"errors"
 
-	abci "github.com/cometbft/cometbft/abci/types"
+	abci "github.com/cometbft/cometbft/v2/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -14,7 +14,7 @@ import (
 // transactions with higher tx sequence numbers to the mempool for potential future execution.
 // Returns a handler function that processes ABCI CheckTx requests and manages EVM transaction sequencing.
 func NewCheckTxHandler(mempool *ExperimentalEVMMempool) types.CheckTxHandler {
-	return func(runTx types.RunTx, request *abci.RequestCheckTx) (*abci.ResponseCheckTx, error) {
+	return func(runTx types.RunTx, request *abci.CheckTxRequest) (*abci.CheckTxResponse, error) {
 		gInfo, result, anteEvents, err := runTx(request.Tx, nil)
 		if err != nil {
 			// detect if there is a nonce gap error (only returned for EVM transactions)
@@ -29,7 +29,7 @@ func NewCheckTxHandler(mempool *ExperimentalEVMMempool) types.CheckTxHandler {
 			return sdkerrors.ResponseCheckTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, false), nil
 		}
 
-		return &abci.ResponseCheckTx{
+		return &abci.CheckTxResponse{
 			GasWanted: int64(gInfo.GasWanted), // #nosec G115 -- this is copied from the Cosmos SDK
 			GasUsed:   int64(gInfo.GasUsed),   // #nosec G115 -- this is copied from the Cosmos SDK
 			Log:       result.Log,

@@ -2,7 +2,7 @@ package ynx
 
 import (
 	storetypes "cosmossdk.io/store/types"
-	upgradetypes "cosmossdk.io/x/upgrade/types"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 )
 
 func (app *App) RegisterUpgradeHandlers() {

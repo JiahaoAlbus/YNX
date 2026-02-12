@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 
-	tmrpcclient "github.com/cometbft/cometbft/rpc/client"
-	tmrpctypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmrpcclient "github.com/cometbft/cometbft/v2/rpc/client"
+	tmrpctypes "github.com/cometbft/cometbft/v2/rpc/core/types"
 
 	rpctypes "github.com/cosmos/evm/rpc/types"
 	evmtypes "github.com/cosmos/evm/x/vm/types"
@@ -169,7 +169,7 @@ func (b *Backend) TraceBlock(height rpctypes.BlockNumber,
 
 	var txsMessages []*evmtypes.MsgEthereumTx
 	for i, tx := range txs {
-		if !rpctypes.TxSucessOrExpectedFailure(blockRes.TxsResults[i]) {
+		if !rpctypes.TxSucessOrExpectedFailure(blockRes.TxResults[i]) {
 			b.Logger.Debug("invalid tx result code", "cosmos-hash", hexutil.Encode(tx.Hash()))
 			continue
 		}

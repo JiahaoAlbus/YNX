@@ -152,6 +152,10 @@ if [[ "$FINALIZE" -eq 0 ]]; then
     sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = false/' "$APP_TOML" || true
   fi
 
+  sed -i.bak -E '/^\[json-rpc\]$/,/^\[/ s/^enable = .*/enable = true/' "$APP_TOML" || true
+  sed -i.bak -E "s#^address = \"127.0.0.1:8545\"#address = \"0.0.0.0:8545\"#" "$APP_TOML" || true
+  sed -i.bak -E "s#^ws-address = \"127.0.0.1:8546\"#ws-address = \"0.0.0.0:8546\"#" "$APP_TOML" || true
+
   if [[ "${YNX_FAST_BLOCKS:-1}" == "1" ]]; then
     echo "Tuning CometBFT timeouts (target ~1s blocks)..."
     sed -i.bak 's/timeout_propose = "3s"/timeout_propose = "1s"/' "$CONFIG_TOML"

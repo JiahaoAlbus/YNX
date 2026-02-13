@@ -287,6 +287,7 @@ set_ports() {
   sed -i.bak -E "s#^address = \"(0.0.0.0|127.0.0.1|localhost):9091\"#address = \"0.0.0.0:${grpc_web_port}\"#" "$app" || true
   sed -i.bak -E "s#^address = \"(0.0.0.0|127.0.0.1|localhost):8545\"#address = \"0.0.0.0:${jsonrpc_port}\"#" "$app" || true
   sed -i.bak -E "s#^ws-address = \"(0.0.0.0|127.0.0.1|localhost):8546\"#ws-address = \"0.0.0.0:${jsonrpc_ws_port}\"#" "$app" || true
+  sed -i.bak -E '/^\[json-rpc\]$/,/^\[/ s/^enable = .*/enable = true/' "$app" || true
   if [[ "$TELEMETRY_ENABLED" == "1" ]]; then
     sed -i.bak -E '/^\[telemetry\]$/,/^\[/ s/^enabled = .*/enabled = true/' "$app" || true
   else

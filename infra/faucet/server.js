@@ -44,6 +44,9 @@ const FAUCET_GAS_PRICES = process.env.FAUCET_GAS_PRICES || "0anyxt";
 const FAUCET_GAS_ADJUSTMENT = process.env.FAUCET_GAS_ADJUSTMENT || "1.2";
 const RATE_LIMIT_SECONDS = parseInt(process.env.FAUCET_RATE_LIMIT_SECONDS || "3600", 10);
 const MAX_PER_DAY = parseInt(process.env.FAUCET_MAX_PER_DAY || "3", 10);
+const IP_RATE_LIMIT_SECONDS = parseInt(process.env.FAUCET_IP_RATE_LIMIT_SECONDS || "60", 10);
+const IP_MAX_PER_DAY = parseInt(process.env.FAUCET_IP_MAX_PER_DAY || "10", 10);
+const TRUST_PROXY = process.env.FAUCET_TRUST_PROXY === "1";
 const MAX_INFLIGHT = parseInt(process.env.FAUCET_MAX_INFLIGHT || "1", 10);
 const YNXD = process.env.YNXD_PATH || path.resolve(__dirname, "../../chain/ynxd");
 
@@ -54,12 +57,12 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-let state = { addresses: {} };
+let state = { addresses: {}, ips: {} };
 if (fs.existsSync(statePath)) {
   try {
     state = JSON.parse(fs.readFileSync(statePath, "utf8"));
   } catch {
-    state = { addresses: {} };
+    state = { addresses: {}, ips: {} };
   }
 }
 
@@ -133,6 +136,35 @@ function checkRateLimit(address) {
   state.addresses[address] = list;
   saveState();
   return { ok: true };
+}
+
+function checkIpRateLimit(ip) {
+  if (!ip) return { ok: true };
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const list = (state.ips[ip] || []).filter((t) => t >= dayAgo);
+  if (list.length >= IP_MAX_PER_DAY) {
+    return { ok: false, reason: "ip_daily_limit" };
+  }
+  if (list.length > 0 && now - list[list.length - 1] < IP_RATE_LIMIT_SECONDS * 1000) {
+    return { ok: false, reason: "ip_rate_limited" };
+  }
+  list.push(now);
+  state.ips[ip] = list;
+  saveState();
+  return { ok: true };
+}
+
+function getClientIp(req) {
+  if (TRUST_PROXY) {
+    const header = req.headers["x-forwarded-for"];
+    if (header) {
+      const first = header.split(",")[0].trim();
+      if (first) return first;
+    }
+  }
+  const socketAddr = req.socket?.remoteAddress || "";
+  return socketAddr.replace(/^::ffff:/, "");
 }
 
 function sendTokens(toAddress) {
@@ -224,6 +256,11 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const address = await resolveBech32(addrInput.trim());
+      const ip = getClientIp(req);
+      const ipLimit = checkIpRateLimit(ip);
+      if (!ipLimit.ok) {
+        return json(res, 429, { ok: false, error: ipLimit.reason });
+      }
       const limit = checkRateLimit(address);
       if (!limit.ok) {
         return json(res, 429, { ok: false, error: limit.reason });

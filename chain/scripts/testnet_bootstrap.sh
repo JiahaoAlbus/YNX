@@ -36,6 +36,8 @@ Environment:
   YNX_DEPLOYER_KEY         Deployer key name (default: deployer)
   YNX_COMMUNITY_RECIPIENT  Optional community recipient address (0x hex or bech32)
   YNX_FOUNDER_ADDRESS      Optional founder fee recipient (bech32). Defaults to validator address.
+  YNX_TEAM_BENEFICIARY     Optional team beneficiary (bech32 or 0x hex). Defaults to validator address.
+  YNX_TREASURY_ADDRESS     Optional treasury recipient (bech32)
   YNX_PROMETHEUS           Enable CometBFT Prometheus metrics (default: 1)
   YNX_TELEMETRY            Enable Cosmos SDK telemetry (default: 1)
 
@@ -157,7 +159,9 @@ fi
 VAL_ADDR="$("$BIN" keys show "$VAL_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 DEPLOYER_ADDR="$("$BIN" keys show "$DEPLOYER_KEY" -a --keyring-backend "$KEYRING" --home "$HOME_DIR")"
 FOUNDER_ADDR="${YNX_FOUNDER_ADDRESS:-$VAL_ADDR}"
+TEAM_BENEFICIARY_ADDR="${YNX_TEAM_BENEFICIARY:-$VAL_ADDR}"
 COMMUNITY_RECIPIENT="${YNX_COMMUNITY_RECIPIENT:-}"
+TREASURY_ADDR="${YNX_TREASURY_ADDRESS:-}"
 
 echo "Configuring YNX module genesis (system contracts + splits)..."
 GENESIS_ARGS=(
@@ -165,11 +169,14 @@ GENESIS_ARGS=(
   --home "$HOME_DIR"
   --ynx.system.enabled
   --ynx.system.deployer "$DEPLOYER_ADDR"
-  --ynx.system.team-beneficiary "$VAL_ADDR"
+  --ynx.system.team-beneficiary "$TEAM_BENEFICIARY_ADDR"
   --ynx.params.founder "$FOUNDER_ADDR"
 )
 if [[ -n "$COMMUNITY_RECIPIENT" ]]; then
   GENESIS_ARGS+=(--ynx.system.community-recipient "$COMMUNITY_RECIPIENT")
+fi
+if [[ -n "$TREASURY_ADDR" ]]; then
+  GENESIS_ARGS+=(--ynx.params.treasury "$TREASURY_ADDR")
 fi
 "$BIN" "${GENESIS_ARGS[@]}" >/dev/null
 

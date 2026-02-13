@@ -118,6 +118,7 @@ Operational requirement:
 - `YNX_FOUNDER_ADDRESS`
 - `YNX_TEAM_BENEFICIARY`
 - `YNX_COMMUNITY_RECIPIENT`
+- `YNX_TREASURY_ADDRESS` (optional)
 
 2) Initialize base genesis:
 

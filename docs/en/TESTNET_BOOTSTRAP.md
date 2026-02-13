@@ -185,6 +185,22 @@ Notes:
 - This is a **local simulation**, not true decentralization.
 - For a public testnet, use the coordinator + validator workflow above.
 
+## 6. Seeds, peers, and health checks
+
+Update seeds and persistent peers:
+
+```bash
+cd chain
+./scripts/testnet_configure_seeds.sh
+```
+
+Run the healthcheck:
+
+```bash
+cd chain
+./scripts/testnet_healthcheck.sh
+```
+
 ## 5. Tokenomics bootstrap note (no community yet)
 
 In v0, NYXT ERC20 genesis allocation includes a “community & ecosystem” share.

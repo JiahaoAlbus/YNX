@@ -6,6 +6,21 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_DIR="${YNX_HOME:-$ROOT_DIR/.testnet}"
 CONFIG_TOML="$HOME_DIR/config/config.toml"
 
+ENV_FILE="${YNX_ENV_FILE:-}"
+if [[ -z "$ENV_FILE" ]]; then
+  if [[ -f "$ROOT_DIR/../.env" ]]; then
+    ENV_FILE="$ROOT_DIR/../.env"
+  elif [[ -f "$ROOT_DIR/.env" ]]; then
+    ENV_FILE="$ROOT_DIR/.env"
+  fi
+fi
+if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
 if [[ ! -f "$CONFIG_TOML" ]]; then
   echo "Missing config.toml: $CONFIG_TOML" >&2
   exit 1

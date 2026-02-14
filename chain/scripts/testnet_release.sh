@@ -53,6 +53,21 @@ HOME_DIR="${YNX_HOME:-$ROOT_DIR/.testnet}"
 DENOM="${YNX_DENOM:-anyxt}"
 BIN="$ROOT_DIR/ynxd"
 
+ENV_FILE="${YNX_ENV_FILE:-}"
+if [[ -z "$ENV_FILE" ]]; then
+  if [[ -f "$ROOT_DIR/../.env" ]]; then
+    ENV_FILE="$ROOT_DIR/../.env"
+  elif [[ -f "$ROOT_DIR/.env" ]]; then
+    ENV_FILE="$ROOT_DIR/.env"
+  fi
+fi
+if [[ -n "$ENV_FILE" && -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
 if [[ ! -x "$BIN" ]]; then
   echo "Building ynxd..."
   (
@@ -72,10 +87,15 @@ fi
 
 chain_id="${YNX_CHAIN_ID:-}"
 if [[ -z "$chain_id" && -f "$HOME_DIR/config/client.toml" ]]; then
-  chain_id="$(grep -E '^chain-id = ' "$HOME_DIR/config/client.toml" | head -n 1 | sed -E 's/chain-id = \"(.*)\"/\\1/')"
+  chain_id="$(grep -E '^chain-id = ' "$HOME_DIR/config/client.toml" | head -n 1 | sed -E 's/chain-id = "([^"]+)"/\1/')"
 fi
-if [[ -z "$chain_id" ]]; then
-  chain_id="$(grep -E '\"chain_id\"' "$GENESIS" | head -n 1 | sed -E 's/.*\"chain_id\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\\1/')"
+if [[ -z "$chain_id" && -f "$GENESIS" ]]; then
+  if command -v node >/dev/null 2>&1; then
+    chain_id="$(node -e "const fs=require('fs');const g=JSON.parse(fs.readFileSync(process.env.G,'utf8'));console.log(g.chain_id||'')" G="$GENESIS")"
+  fi
+fi
+if [[ -z "$chain_id" && -f "$GENESIS" ]]; then
+  chain_id="$(grep -E '\"chain_id\"' "$GENESIS" | head -n 1 | sed -E 's/.*\"chain_id\"[[:space:]]*:[[:space:]]*\"([^\"]+)\".*/\1/')"
 fi
 if [[ -z "$chain_id" ]]; then
   echo "Unable to determine chain id. Set YNX_CHAIN_ID." >&2

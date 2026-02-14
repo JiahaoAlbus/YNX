@@ -31,9 +31,11 @@ cd chain
 
 By default, the bundle is written under `chain/.release/` with the chain id and current date in the folder name.
 
+The script auto-loads `.env` from repo root or `chain/.env` unless `YNX_ENV_FILE` is set.
+
 ## 3. Add seeds / peers
 
-Export seed and peer lists as comma-separated strings:
+Export seed and peer lists as comma-separated strings (or set them in `.env`):
 
 ```bash
 export YNX_SEEDS="nodeid@ip:26656,nodeid@ip:26656"

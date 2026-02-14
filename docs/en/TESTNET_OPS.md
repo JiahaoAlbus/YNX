@@ -68,7 +68,7 @@ cd chain
 ./scripts/testnet_configure_seeds.sh
 ```
 
-The script uses:
+The script auto-loads `.env` from repo root or `chain/.env` unless `YNX_ENV_FILE` is set. It uses:
 
 - `YNX_HOME` (default `chain/.testnet`)
 - `YNX_SEEDS`

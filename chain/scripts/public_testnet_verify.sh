@@ -54,6 +54,12 @@ indexer_json="$(curl -fsS --max-time 8 "${INDEXER}/health")"
 indexer_last="$(echo "$indexer_json" | jq -r '.last_indexed')"
 [[ "$indexer_last" =~ ^[0-9]+$ ]] || { echo "Indexer last_indexed invalid: $indexer_last"; exit 1; }
 
+overview_json="$(curl -fsS --max-time 8 "${INDEXER}/ynx/overview")"
+overview_chain="$(echo "$overview_json" | jq -r '.chain_id')"
+overview_governance="$(echo "$overview_json" | jq -r '.value_proposition.onchain_governance')"
+[[ "$overview_chain" == "$CHAIN_ID" ]] || { echo "Overview chain id mismatch: $overview_chain"; exit 1; }
+[[ "$overview_governance" == "true" ]] || { echo "Overview governance flag invalid: $overview_governance"; exit 1; }
+
 explorer_head="$(curl -fsS --max-time 8 "${EXPLORER}" | head -c 200)"
 echo "$explorer_head" | grep -qi "<!DOCTYPE html>" || { echo "Explorer page invalid"; exit 1; }
 
@@ -64,4 +70,4 @@ echo "rpc_height=${rpc_height}"
 echo "rpc_catching_up=${rpc_syncing}"
 echo "evm_chain_id=${evm_chain}"
 echo "indexer_last_indexed=${indexer_last}"
-
+echo "overview_governance=${overview_governance}"

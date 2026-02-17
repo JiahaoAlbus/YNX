@@ -31,6 +31,7 @@ Last updated: 2026-02-17
 curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
 curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 curl -s http://43.134.23.58:8080/health
+curl -s http://43.134.23.58:8081/ynx/overview | jq
 ```
 
 Watch blocks in real time:
@@ -175,6 +176,13 @@ Live logs:
 
 ```bash
 sudo journalctl -u ynx-node -f
+```
+
+Controlled server upgrade (no auto-update by default):
+
+```bash
+cd ~/YNX
+./chain/scripts/server_upgrade_apply.sh ubuntu@43.134.23.58 /Users/huangjiahao/Downloads/Huang.pem
 ```
 
 ## Troubleshooting

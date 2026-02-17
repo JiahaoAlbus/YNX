@@ -31,6 +31,7 @@
 curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
 curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 curl -s http://43.134.23.58:8080/health
+curl -s http://43.134.23.58:8081/ynx/overview | jq
 ```
 
 实时看出块：
@@ -174,6 +175,13 @@ sudo systemctl status ynx-node ynx-faucet ynx-indexer ynx-explorer --no-pager
 
 ```bash
 sudo journalctl -u ynx-node -f
+```
+
+受控升级（默认不自动从 Git 更新）：
+
+```bash
+cd ~/YNX
+./chain/scripts/server_upgrade_apply.sh ubuntu@43.134.23.58 /Users/huangjiahao/Downloads/Huang.pem
 ```
 
 ## 故障排查

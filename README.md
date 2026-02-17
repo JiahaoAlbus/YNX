@@ -13,6 +13,11 @@ NYXT is the native token for gas, staking, and governance.
 - Explorer: `http://43.134.23.58:8082`
 - Peer bootstrap: `e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656`
 
+Mainnet-parity note:
+
+- Public testnet targets the same protocol logic as planned mainnet.
+- Primary difference is economic value (test assets vs real-value assets).
+
 ## Jump by need
 
 - I only want to check chain status → [Path A](#path-a-no-install-check-chain)
@@ -20,6 +25,7 @@ NYXT is the native token for gas, staking, and governance.
 - I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
 - I need validator application data → [Path D](#path-d-validator-application-data)
 - I need one-command health verification → [Path E](#path-e-operator-health-check)
+- I need upgrade/deploy to server safely → [Path F](#path-f-server-upgrade-deploy)
 
 ## Do I need to create a wallet first?
 
@@ -32,6 +38,7 @@ NYXT is the native token for gas, staking, and governance.
 curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
 curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 curl -s http://43.134.23.58:8080/health
+curl -s http://43.134.23.58:8081/ynx/overview | jq
 ```
 
 Watch blocks in real time:
@@ -150,11 +157,29 @@ On server local loopback:
 YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/public_testnet_verify.sh
 ```
 
+## Path F: Server upgrade deploy
+
+By default, server is **not** auto-updated from Git.  
+Use controlled rollout with pull/build/restart/verify:
+
+```bash
+cd ~/YNX
+./chain/scripts/server_upgrade_apply.sh ubuntu@43.134.23.58 /Users/huangjiahao/Downloads/Huang.pem
+```
+
+This script will:
+
+- pull latest code
+- rebuild `ynxd`
+- restart `ynx-node` / `ynx-faucet` / `ynx-indexer` / `ynx-explorer`
+- run full verification
+
 ## Full guides (3 languages)
 
 - English: `docs/en/PUBLIC_TESTNET_PLAYBOOK.md`
 - 中文: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
 - Slovensky: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
+- Mainnet parity & advantages: `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
 
 ## Repo modules
 

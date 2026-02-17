@@ -55,6 +55,21 @@ async function loadStatus() {
   networkMeta.textContent = `Chain ${health.chain_id || "unknown"} • RPC ${health.rpc || ""}`;
 }
 
+async function loadOverview() {
+  const overview = await fetchJson("/ynx/overview");
+  const gov = overview.governance || {};
+  const feeSplit = `${gov.fee_burn_bps || 0}/${gov.fee_treasury_bps || 0}/${gov.fee_founder_bps || 0}`;
+  const extra = [
+    `Founder: ${gov.founder_address || "n/a"}`,
+    `Treasury: ${gov.treasury_address || "n/a"}`,
+    `Team: ${gov.team_beneficiary_address || "n/a"}`,
+    `Community: ${gov.community_recipient_address || "n/a"}`,
+    `Fee split bps (burn/treasury/founder): ${feeSplit}`,
+    `No base fee: ${String(gov.no_base_fee)}`,
+  ];
+  statusPanel.innerHTML += extra.map((line) => `<div>${line}</div>`).join("");
+}
+
 async function loadBlocks() {
   const data = await fetchJson("/blocks?limit=15");
   const rows = data.items.map((b) => ({
@@ -94,6 +109,7 @@ async function loadTxs() {
 async function refreshAll() {
   try {
     await loadStatus();
+    await loadOverview();
     await loadBlocks();
     await loadTxs();
     searchResult.textContent = "";

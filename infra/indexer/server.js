@@ -112,6 +112,18 @@ const txsCache = [];
 let latestSeenHeight = 0;
 let indexing = false;
 let chainId = "";
+let governanceMeta = {
+  founder_address: "",
+  treasury_address: "",
+  team_beneficiary_address: "",
+  community_recipient_address: "",
+  fee_burn_bps: 0,
+  fee_treasury_bps: 0,
+  fee_founder_bps: 0,
+  inflation_treasury_bps: 0,
+  no_base_fee: null,
+  base_fee: "",
+};
 
 async function initChainId() {
   try {
@@ -119,6 +131,43 @@ async function initChainId() {
     chainId = status?.result?.node_info?.network || "";
   } catch {
     chainId = "";
+  }
+}
+
+async function initGovernanceMeta() {
+  try {
+    const genesis = await rpcRequest("/genesis");
+    const appState = genesis?.result?.genesis?.app_state || {};
+    const ynx = appState?.ynx || {};
+    const params = ynx?.params || {};
+    const system = ynx?.system || {};
+    const feemarket = appState?.feemarket?.params || {};
+
+    governanceMeta = {
+      founder_address: params.founder_address || "",
+      treasury_address: params.treasury_address || "",
+      team_beneficiary_address: system.team_beneficiary_address || "",
+      community_recipient_address: system.community_recipient_address || "",
+      fee_burn_bps: Number(params.fee_burn_bps || 0),
+      fee_treasury_bps: Number(params.fee_treasury_bps || 0),
+      fee_founder_bps: Number(params.fee_founder_bps || 0),
+      inflation_treasury_bps: Number(params.inflation_treasury_bps || 0),
+      no_base_fee: feemarket.no_base_fee ?? null,
+      base_fee: feemarket.base_fee || "",
+    };
+  } catch {
+    governanceMeta = {
+      founder_address: "",
+      treasury_address: "",
+      team_beneficiary_address: "",
+      community_recipient_address: "",
+      fee_burn_bps: 0,
+      fee_treasury_bps: 0,
+      fee_founder_bps: 0,
+      inflation_treasury_bps: 0,
+      no_base_fee: null,
+      base_fee: "",
+    };
   }
 }
 
@@ -366,6 +415,23 @@ const server = http.createServer(async (req, res) => {
     return res.end(body);
   }
 
+  if (url.pathname === "/ynx/overview") {
+    return json(res, 200, {
+      ok: true,
+      chain_id: chainId,
+      rpc: INDEXER_RPC,
+      latest_seen: latestSeenHeight || 0,
+      last_indexed: state.last_height || 0,
+      governance: governanceMeta,
+      value_proposition: {
+        evm_compatible: true,
+        onchain_governance: true,
+        open_validator_program: true,
+        public_testnet_live: true,
+      },
+    });
+  }
+
   if (url.pathname === "/blocks") {
     const limit = envNumber("INDEXER_API_LIMIT", 20);
     const requestedParam = url.searchParams.get("limit");
@@ -418,6 +484,7 @@ const server = http.createServer(async (req, res) => {
 
 async function start() {
   await initChainId();
+  await initGovernanceMeta();
   server.listen(INDEXER_PORT, () => {
     log(`YNX indexer listening on :${INDEXER_PORT}`);
     log(`RPC: ${INDEXER_RPC}`);

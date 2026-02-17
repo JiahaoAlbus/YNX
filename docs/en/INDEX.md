@@ -25,6 +25,7 @@ Last updated: 2026-02-12
 - `docs/en/CHAIN_DEVNET.md`
 - `docs/en/TESTNET_BOOTSTRAP.md`
 - `docs/en/TESTNET_RELEASE.md`
+- `docs/en/PUBLIC_TESTNET_FINAL_CHECKLIST.md`
 - `docs/en/TESTNET_OPS.md`
 - `docs/en/TESTNET_SERVICES.md`
 - `docs/en/FAUCET.md`

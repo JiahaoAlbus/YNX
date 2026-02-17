@@ -10,7 +10,7 @@ Canonical language: English
 - EVM Chain ID: `9002`
 - Denom: `anyxt`
 - Base Fee Mode: `no_base_fee = true`
-- Latest checked height (local observer): `205155`
+- Latest checked height (local observer): `222328`
 
 ## 2. Public Endpoints
 
@@ -38,9 +38,9 @@ Release directory:
 - `chain/.release/current`
 
 Publish bundle files:
-- `chain/.release/ynx_testnet_ynx_9002-1_20260217T020006Z.tar.gz`
-- `chain/.release/ynx_testnet_ynx_9002-1_20260217T020006Z.sha256`
-- `chain/.release/ynx_testnet_ynx_9002-1_20260217T020006Z_ANNOUNCEMENT.md`
+- `chain/.release/ynx_testnet_ynx_9002-1_20260217T070016Z.tar.gz`
+- `chain/.release/ynx_testnet_ynx_9002-1_20260217T070016Z.sha256`
+- `chain/.release/ynx_testnet_ynx_9002-1_20260217T070016Z_ANNOUNCEMENT.md`
 
 Bundle contents include:
 - `genesis.json`
@@ -55,9 +55,9 @@ Bundle contents include:
 
 Set these URLs after uploading artifacts (GitHub Releases or object storage):
 
-- Bundle URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T020006Z.tar.gz`
-- SHA256 URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T020006Z.sha256`
-- Announcement URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T020006Z_ANNOUNCEMENT.md`
+- Bundle URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z.tar.gz`
+- SHA256 URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z.sha256`
+- Announcement URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z_ANNOUNCEMENT.md`
 
 ## 6. Operator Verification Commands
 
@@ -70,7 +70,20 @@ curl -s http://38.98.191.10:8080/health
 curl -s http://38.98.191.10:8081/health
 ```
 
-## 7. Publish Sequence
+## 7. Public Open Ports (Inbound)
+
+Open these TCP ports on host firewall and cloud security group:
+
+- `26656` (P2P)
+- `26657` (CometBFT RPC)
+- `8545` (EVM JSON-RPC)
+- `8080` (Faucet)
+- `8081` (Indexer API)
+- `8082` (Explorer)
+- `9090` (gRPC, optional)
+- `1317` (REST, optional)
+
+## 8. Publish Sequence
 
 1. Upload the three files from section 4 to a public location.
 2. Replace link slots in section 5 with final URLs.

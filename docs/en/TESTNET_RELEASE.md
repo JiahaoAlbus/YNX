@@ -101,3 +101,12 @@ The script outputs:
 - `<archive>.tar.gz`
 - `<archive>.sha256`
 - `<archive>_ANNOUNCEMENT.md`
+
+## 8. One-command finalize
+
+To regenerate release artifacts and refresh the final public checklist in one run:
+
+```bash
+cd chain
+./scripts/testnet_finalize_public.sh
+```

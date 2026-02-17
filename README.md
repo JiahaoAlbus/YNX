@@ -55,9 +55,9 @@ npx ynx address decode <YN...>
 npx ynx preconfirm verify 0x<txHash> --rpc http://127.0.0.1:8545
 ```
 
-## Public Testnet Quickstart
+## Public Testnet (Beginner Friendly)
 
-### 1) Public endpoints (no setup needed)
+### Network
 
 - Chain ID: `ynx_9002-1`
 - RPC: `http://43.134.23.58:26657`
@@ -66,36 +66,29 @@ npx ynx preconfirm verify 0x<txHash> --rpc http://127.0.0.1:8545
 - Faucet: `http://43.134.23.58:8080`
 - Explorer: `http://43.134.23.58:8082`
 
-Check latest block height:
+### Do I need to create a wallet?
+
+- **Read/query only (check blocks, call RPC): NO**
+- **Run a full node only (non-validator): NO**
+- **Use faucet / send tx / become validator: YES**
+
+### A) Quick check only (no install, no wallet)
 
 ```bash
 curl -s http://43.134.23.58:26657/status | jq -r '.result.sync_info.latest_block_height'
+curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 ```
 
-Check EVM chain id:
+### B) Run your own full node (Ubuntu 22.04+, no wallet required)
 
-```bash
-curl -s http://43.134.23.58:8545 \
-  -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
-```
-
-Request faucet tokens:
-
-```bash
-curl -s "http://43.134.23.58:8080/faucet?address=<your_ynx1_address>"
-```
-
-### 2) Run your own node (copy/paste, Ubuntu 22.04+)
-
-Install dependencies:
+1) Install dependencies
 
 ```bash
 sudo apt update
 sudo apt install -y git curl jq build-essential
 ```
 
-Install Go (if missing):
+2) Install Go
 
 ```bash
 if ! command -v go >/dev/null 2>&1; then
@@ -108,7 +101,7 @@ fi
 go version
 ```
 
-Build `ynxd`:
+3) Build binary
 
 ```bash
 cd ~
@@ -117,7 +110,7 @@ cd ~/YNX/chain
 CGO_ENABLED=0 go build -o ynxd ./cmd/ynxd
 ```
 
-Download latest public testnet bundle:
+4) Download latest testnet config bundle
 
 ```bash
 REL_API="https://api.github.com/repos/JiahaoAlbus/YNX/releases/latest"
@@ -135,34 +128,44 @@ cp /tmp/ynx_bundle/config.toml ~/.ynx-testnet/config/config.toml
 cp /tmp/ynx_bundle/app.toml ~/.ynx-testnet/config/app.toml
 ```
 
-Set seed/persistent peer:
+5) Set peer and start
 
 ```bash
 PEER='e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656'
 sed -i -E "s#^seeds = .*#seeds = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
 sed -i -E "s#^persistent_peers = .*#persistent_peers = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
-```
 
-Start node:
-
-```bash
 cd ~/YNX/chain
 ./ynxd start --home ~/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt
 ```
 
-Verify your node:
+6) Verify sync
 
 ```bash
 curl -s http://127.0.0.1:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
 ```
 
-### 3) One-command full health check
+### C) Create wallet only when you need transactions/faucet/validator
+
+```bash
+cd ~/YNX/chain
+./ynxd keys add wallet --keyring-backend os --key-type eth_secp256k1
+./ynxd keys show wallet --keyring-backend os --bech acc -a
+```
+
+Faucet request:
+
+```bash
+curl -s "http://43.134.23.58:8080/faucet?address=<your_ynx1_address>"
+```
+
+### D) One-command full health check (for operators)
 
 ```bash
 ./chain/scripts/public_testnet_verify.sh
 ```
 
-Validator onboarding docs:
+More docs:
 
 - `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
 - `docs/en/PUBLIC_TESTNET_LAUNCHKIT.md`

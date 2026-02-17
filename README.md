@@ -195,6 +195,7 @@ This script will:
 - Mainnet parity & advantages: `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
 - Positioning (EN): `docs/en/YNX_POSITIONING.md`
 - 定位与卖点（中文）: `docs/zh/YNX_定位与卖点.md`
+- Releases 2 snapshot: `docs/en/RELEASES_2_CURRENT_STATUS.md`
 
 ## Repo modules
 

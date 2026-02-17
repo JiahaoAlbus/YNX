@@ -86,3 +86,18 @@ Node operators should verify:
 ```bash
 shasum -a 256 -c checksums.txt
 ```
+
+## 7. Generate publish package
+
+After generating `chain/.release/current`, create a publish-ready archive and announcement file:
+
+```bash
+cd chain
+./scripts/testnet_publish_bundle.sh --in ./.release/current --out ./.release
+```
+
+The script outputs:
+
+- `<archive>.tar.gz`
+- `<archive>.sha256`
+- `<archive>_ANNOUNCEMENT.md`

@@ -57,7 +57,7 @@ npx ynx preconfirm verify 0x<txHash> --rpc http://127.0.0.1:8545
 
 ## Public Testnet Quickstart
 
-Network:
+### 1) Public endpoints (no setup needed)
 
 - Chain ID: `ynx_9002-1`
 - RPC: `http://43.134.23.58:26657`
@@ -86,7 +86,77 @@ Request faucet tokens:
 curl -s "http://43.134.23.58:8080/faucet?address=<your_ynx1_address>"
 ```
 
-Full health verification (node operator):
+### 2) Run your own node (copy/paste, Ubuntu 22.04+)
+
+Install dependencies:
+
+```bash
+sudo apt update
+sudo apt install -y git curl jq build-essential
+```
+
+Install Go (if missing):
+
+```bash
+if ! command -v go >/dev/null 2>&1; then
+  curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
+  sudo rm -rf /usr/local/go
+  sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+  echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+  export PATH=/usr/local/go/bin:$PATH
+fi
+go version
+```
+
+Build `ynxd`:
+
+```bash
+cd ~
+git clone https://github.com/JiahaoAlbus/YNX.git
+cd ~/YNX/chain
+CGO_ENABLED=0 go build -o ynxd ./cmd/ynxd
+```
+
+Download latest public testnet bundle:
+
+```bash
+REL_API="https://api.github.com/repos/JiahaoAlbus/YNX/releases/latest"
+BUNDLE_URL="$(curl -fsSL "$REL_API" | jq -r '.assets[] | select(.name|endswith(".tar.gz")) | .browser_download_url' | head -n1)"
+SHA_URL="$(curl -fsSL "$REL_API" | jq -r '.assets[] | select(.name|endswith(".sha256")) | .browser_download_url' | head -n1)"
+
+mkdir -p ~/.ynx-testnet/config /tmp/ynx_bundle
+curl -fL "$BUNDLE_URL" -o /tmp/ynx_bundle.tar.gz
+curl -fL "$SHA_URL" -o /tmp/ynx_bundle.sha256
+(cd /tmp && shasum -a 256 -c ynx_bundle.sha256)
+tar -xzf /tmp/ynx_bundle.tar.gz -C /tmp/ynx_bundle
+
+cp /tmp/ynx_bundle/genesis.json ~/.ynx-testnet/config/genesis.json
+cp /tmp/ynx_bundle/config.toml ~/.ynx-testnet/config/config.toml
+cp /tmp/ynx_bundle/app.toml ~/.ynx-testnet/config/app.toml
+```
+
+Set seed/persistent peer:
+
+```bash
+PEER='e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656'
+sed -i -E "s#^seeds = .*#seeds = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
+sed -i -E "s#^persistent_peers = .*#persistent_peers = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
+```
+
+Start node:
+
+```bash
+cd ~/YNX/chain
+./ynxd start --home ~/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt
+```
+
+Verify your node:
+
+```bash
+curl -s http://127.0.0.1:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+```
+
+### 3) One-command full health check
 
 ```bash
 ./chain/scripts/public_testnet_verify.sh

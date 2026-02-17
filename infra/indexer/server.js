@@ -434,6 +434,20 @@ const server = http.createServer(async (req, res) => {
         open_validator_program: true,
         public_testnet_live: true,
       },
+      positioning: {
+        statement: "Governance-native EVM chain for real Web3 services",
+        target_users: [
+          "web3 builders",
+          "validator operators",
+          "onchain organizations",
+        ],
+        why_choose_ynx: [
+          "mainnet-parity public testnet workflow",
+          "machine-readable governance and fee-routing transparency",
+          "copy-paste operator onboarding and verification tooling",
+          "open validator onboarding with phased decentralization",
+        ],
+      },
     });
   }
 

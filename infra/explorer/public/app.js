@@ -58,8 +58,10 @@ async function loadStatus() {
 async function loadOverview() {
   const overview = await fetchJson("/ynx/overview");
   const gov = overview.governance || {};
+  const positioning = overview.positioning || {};
   const feeSplit = `${gov.fee_burn_bps || 0}/${gov.fee_treasury_bps || 0}/${gov.fee_founder_bps || 0}`;
   const extra = [
+    `Positioning: ${positioning.statement || "n/a"}`,
     `Founder: ${gov.founder_address || "n/a"}`,
     `Treasury: ${gov.treasury_address || "n/a"}`,
     `Team: ${gov.team_beneficiary_address || "n/a"}`,

@@ -18,6 +18,19 @@ Mainnet-parity note:
 - Public testnet targets the same protocol logic as planned mainnet.
 - Primary difference is economic value (test assets vs real-value assets).
 
+## Why choose YNX
+
+YNX positioning:
+
+- Governance-native EVM chain for real Web3 services.
+
+Practical reasons to build on YNX:
+
+- Mainnet-parity testnet workflow: what you test is what you launch.
+- Governance and fee-routing transparency: machine-readable via `GET /ynx/overview`.
+- Fast builder onboarding: copy/paste deployment playbooks and one-command verification.
+- Open validator growth: rolling onboarding model for progressive decentralization.
+
 ## Jump by need
 
 - I only want to check chain status → [Path A](#path-a-no-install-check-chain)
@@ -180,6 +193,8 @@ This script will:
 - 中文: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
 - Slovensky: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
 - Mainnet parity & advantages: `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
+- Positioning (EN): `docs/en/YNX_POSITIONING.md`
+- 定位与卖点（中文）: `docs/zh/YNX_定位与卖点.md`
 
 ## Repo modules
 

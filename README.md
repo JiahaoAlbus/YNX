@@ -57,6 +57,12 @@ npx ynx preconfirm verify 0x<txHash> --rpc http://127.0.0.1:8545
 
 ## Public Testnet (Beginner Friendly)
 
+### Choose your language
+
+- English: `docs/en/PUBLIC_TESTNET_PLAYBOOK.md`
+- 中文: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
+- Slovensky: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
+
 ### Network
 
 - Chain ID: `ynx_9002-1`

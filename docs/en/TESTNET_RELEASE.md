@@ -14,6 +14,8 @@ The release bundle includes:
 - `genesis.json`
 - `config.toml` / `app.toml`
 - network metadata (`network.json`)
+- public endpoint metadata (`endpoints.json`)
+- operator-ready access summary (`PUBLIC_TESTNET.md`)
 - optional seeds / persistent peers files
 - optional data snapshot
 
@@ -40,13 +42,23 @@ Export seed and peer lists as comma-separated strings (or set them in `.env`):
 ```bash
 export YNX_SEEDS="nodeid@ip:26656,nodeid@ip:26656"
 export YNX_PERSISTENT_PEERS="nodeid@ip:26656"
+export YNX_RPC_ENDPOINT="http://<public-ip>:26657"
+export YNX_JSONRPC_ENDPOINT="http://<public-ip>:8545"
+export YNX_FAUCET_URL="http://<public-ip>:8080"
+export YNX_FAUCET_ADDRESS="<bech32 faucet address>"
+export YNX_EXPLORER_URL="http://<public-ip>:8082"
+export YNX_INDEXER_URL="http://<public-ip>:8081"
 ./scripts/testnet_release.sh --reset
 ```
+
+If endpoint variables are omitted, the script derives defaults from `YNX_RPC_ENDPOINT` host.
 
 This writes:
 
 - `seeds.txt`
 - `persistent_peers.txt`
+- `endpoints.json`
+- `PUBLIC_TESTNET.md`
 
 ## 4. Create a snapshot (optional)
 
@@ -62,6 +74,7 @@ The snapshot tarball is created under the release directory and recorded in `sna
 ## 5. Recommended publication checklist
 
 - Publish `genesis.json` and `network.json`
+- Publish `endpoints.json` and `PUBLIC_TESTNET.md`
 - Publish `seeds.txt` / `persistent_peers.txt` if available
 - Publish checksums (`checksums.txt`)
 - Publish snapshot tarball if available

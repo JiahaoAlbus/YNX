@@ -27,11 +27,12 @@ Search order:
 
 Key variables:
 - `FAUCET_KEY` (keyring account name)
+- `YNX_FAUCET_ADDRESS` (optional faucet account bech32 address for ops checks)
 - `FAUCET_CHAIN_ID`
 - `FAUCET_NODE` (CometBFT RPC)
 - `FAUCET_DENOM`
 - `FAUCET_AMOUNT` (default `1000000000000000000`)
-- `FAUCET_GAS_PRICES` (default `0anyxt`)
+- `FAUCET_GAS_PRICES` (default `0.00000001anyxt`)
 - `FAUCET_GAS_ADJUSTMENT` (default `1.2`)
 - `FAUCET_RATE_LIMIT_SECONDS` (default `3600`)
 - `FAUCET_MAX_PER_DAY` (default `3`)

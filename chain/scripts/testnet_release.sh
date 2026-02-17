@@ -36,6 +36,14 @@ Environment:
   YNX_CHAIN_ID       Override chain id (optional)
   YNX_DENOM          Gas denom (default: anyxt)
   YNX_RPC            CometBFT RPC for snapshot height (e.g., http://127.0.0.1:26657)
+  YNX_RPC_ENDPOINT   Public CometBFT RPC endpoint (default: YNX_RPC or local)
+  YNX_JSONRPC_ENDPOINT Public EVM JSON-RPC endpoint (default: http://127.0.0.1:8545)
+  YNX_GRPC_ENDPOINT  Public gRPC endpoint (optional)
+  YNX_REST_ENDPOINT  Public REST endpoint (optional)
+  YNX_FAUCET_URL     Public faucet base URL (optional)
+  YNX_FAUCET_ADDRESS Faucet funding account bech32 address (optional)
+  YNX_EXPLORER_URL   Public explorer URL (optional)
+  YNX_INDEXER_URL    Public indexer URL (optional)
   YNX_SEEDS          Comma-separated seed list (nodeid@ip:port)
   YNX_PERSISTENT_PEERS Comma-separated peer list (nodeid@ip:port)
 EOF
@@ -91,7 +99,7 @@ if [[ -z "$chain_id" && -f "$HOME_DIR/config/client.toml" ]]; then
 fi
 if [[ -z "$chain_id" && -f "$GENESIS" ]]; then
   if command -v node >/dev/null 2>&1; then
-    chain_id="$(node -e "const fs=require('fs');const g=JSON.parse(fs.readFileSync(process.env.G,'utf8'));console.log(g.chain_id||'')" G="$GENESIS")"
+    chain_id="$(G="$GENESIS" node -e "const fs=require('fs');const g=JSON.parse(fs.readFileSync(process.env.G,'utf8'));console.log(g.chain_id||'')")"
   fi
 fi
 if [[ -z "$chain_id" && -f "$GENESIS" ]]; then
@@ -102,7 +110,13 @@ if [[ -z "$chain_id" ]]; then
   exit 1
 fi
 
-evm_chain_id="$(grep -E '^evm-chain-id = ' "$APP_TOML" | head -n 1 | sed -E 's/evm-chain-id = ([0-9]+)/\\1/')"
+evm_chain_id="$(grep -E '^evm-chain-id = ' "$APP_TOML" | head -n 1 | sed -E 's/evm-chain-id = ([0-9]+)/\1/')"
+if [[ -z "$evm_chain_id" && "$chain_id" =~ ^ynx_([0-9]+)- ]]; then
+  evm_chain_id="${BASH_REMATCH[1]}"
+fi
+if [[ -z "$evm_chain_id" ]]; then
+  evm_chain_id="9002"
+fi
 
 if [[ -z "$OUT_DIR" ]]; then
   OUT_DIR="$ROOT_DIR/.release/${chain_id}-$(date +%Y%m%d)"
@@ -125,6 +139,24 @@ if [[ -n "${YNX_PERSISTENT_PEERS:-}" ]]; then
   echo "$YNX_PERSISTENT_PEERS" > "$OUT_DIR/persistent_peers.txt"
 fi
 
+rpc_endpoint="${YNX_RPC_ENDPOINT:-${YNX_RPC:-http://127.0.0.1:26657}}"
+rpc_scheme="$(echo "$rpc_endpoint" | sed -E 's#^(https?)://.*#\1#')"
+rpc_host="$(echo "$rpc_endpoint" | sed -E 's#^https?://([^/:]+).*$#\1#')"
+if [[ -z "$rpc_scheme" || "$rpc_scheme" == "$rpc_endpoint" ]]; then
+  rpc_scheme="http"
+fi
+if [[ -z "$rpc_host" || "$rpc_host" == "$rpc_endpoint" ]]; then
+  rpc_host="127.0.0.1"
+fi
+
+jsonrpc_endpoint="${YNX_JSONRPC_ENDPOINT:-${rpc_scheme}://${rpc_host}:8545}"
+grpc_endpoint="${YNX_GRPC_ENDPOINT:-${rpc_host}:9090}"
+rest_endpoint="${YNX_REST_ENDPOINT:-${rpc_scheme}://${rpc_host}:1317}"
+faucet_url="${YNX_FAUCET_URL:-${rpc_scheme}://${rpc_host}:8080}"
+faucet_address="${YNX_FAUCET_ADDRESS:-}"
+explorer_url="${YNX_EXPLORER_URL:-${rpc_scheme}://${rpc_host}:8082}"
+indexer_url="${YNX_INDEXER_URL:-${rpc_scheme}://${rpc_host}:8081}"
+
 if command -v shasum >/dev/null 2>&1; then
   (
     cd "$OUT_DIR"
@@ -139,6 +171,47 @@ cat > "$OUT_DIR/network.json" <<EOF
   "denom": "${DENOM}",
   "genesis_sha256": "$(shasum -a 256 "$OUT_DIR/genesis.json" | awk '{print $1}')"
 }
+EOF
+
+cat > "$OUT_DIR/endpoints.json" <<EOF
+{
+  "generated_at_utc": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "chain_id": "${chain_id}",
+  "evm_chain_id": "${evm_chain_id}",
+  "rpc": "${rpc_endpoint}",
+  "jsonrpc": "${jsonrpc_endpoint}",
+  "grpc": "${grpc_endpoint}",
+  "rest": "${rest_endpoint}",
+  "seeds": "${YNX_SEEDS:-}",
+  "persistent_peers": "${YNX_PERSISTENT_PEERS:-}",
+  "faucet": {
+    "url": "${faucet_url}",
+    "address": "${faucet_address}",
+    "denom": "${DENOM}"
+  },
+  "explorer_url": "${explorer_url}",
+  "indexer_url": "${indexer_url}"
+}
+EOF
+
+cat > "$OUT_DIR/PUBLIC_TESTNET.md" <<EOF
+# YNX Public Testnet Access
+
+- Chain ID: \`${chain_id}\`
+- EVM Chain ID: \`${evm_chain_id}\`
+- Denom: \`${DENOM}\`
+- RPC: \`${rpc_endpoint}\`
+- JSON-RPC: \`${jsonrpc_endpoint}\`
+- gRPC: \`${grpc_endpoint}\`
+- REST: \`${rest_endpoint}\`
+- Seeds: \`${YNX_SEEDS:-}\`
+- Persistent Peers: \`${YNX_PERSISTENT_PEERS:-}\`
+- Faucet URL: \`${faucet_url}\`
+- Faucet Address: \`${faucet_address}\`
+- Explorer: \`${explorer_url}\`
+- Indexer: \`${indexer_url}\`
+
+Generated at: \`$(date -u +"%Y-%m-%dT%H:%M:%SZ")\`
 EOF
 
 if [[ "$SNAPSHOT" -eq 1 ]]; then

@@ -40,6 +40,7 @@ Environment:
   YNX_TREASURY_ADDRESS     Optional treasury recipient (bech32)
   YNX_PROMETHEUS           Enable CometBFT Prometheus metrics (default: 1)
   YNX_TELEMETRY            Enable Cosmos SDK telemetry (default: 1)
+  YNX_TESTNET_NO_BASE_FEE  Disable EIP-1559 base fee on testnet (default: 1)
 
 Notes:
   - The default keyring backend is "test" for non-interactive bootstrap.
@@ -66,6 +67,7 @@ DEPLOYER_KEY="${YNX_DEPLOYER_KEY:-deployer}"
 MONIKER="${YNX_MONIKER:-ynx-testnet}"
 PROMETHEUS_ENABLED="${YNX_PROMETHEUS:-1}"
 TELEMETRY_ENABLED="${YNX_TELEMETRY:-1}"
+NO_BASE_FEE="${YNX_TESTNET_NO_BASE_FEE:-1}"
 
 ENV_FILE="${YNX_ENV_FILE:-}"
 if [[ -z "$ENV_FILE" ]]; then
@@ -118,6 +120,23 @@ echo "Configuring client defaults..."
 
 echo "Setting EVM chain id: $EVM_CHAIN_ID"
 sed -i.bak -E "s/^evm-chain-id = .*/evm-chain-id = ${EVM_CHAIN_ID}/" "$APP_TOML"
+
+if [[ "$NO_BASE_FEE" == "1" ]]; then
+  GENESIS_JSON="$HOME_DIR/config/genesis.json"
+  if command -v jq >/dev/null 2>&1; then
+    echo "Disabling feemarket base fee for testnet..."
+    TMP_GENESIS="$(mktemp)"
+    jq '
+      .app_state.feemarket.params.no_base_fee = true
+      | .app_state.feemarket.params.base_fee = "0.000000000000000000"
+      | .app_state.feemarket.params.min_gas_price = "0.000000000000000000"
+      | .app_state.feemarket.params.min_gas_multiplier = "0.000000000000000000"
+    ' "$GENESIS_JSON" > "$TMP_GENESIS"
+    mv "$TMP_GENESIS" "$GENESIS_JSON"
+  else
+    echo "jq not found; skip no-base-fee genesis patch." >&2
+  fi
+fi
 
 if [[ "$PROMETHEUS_ENABLED" == "1" ]]; then
   sed -i.bak -E "s/^prometheus = .*/prometheus = true/" "$CONFIG_TOML" || true

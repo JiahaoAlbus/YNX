@@ -27,7 +27,6 @@ Last updated: 2026-02-12
 - `docs/en/TESTNET_RELEASE.md`
 - `docs/en/TESTNET_OPS.md`
 - `docs/en/TESTNET_SERVICES.md`
-- `docs/en/TESTNET_SERVICES.md`
 - `docs/en/FAUCET.md`
 - `docs/en/INDEXER.md`
 - `docs/en/EXPLORER.md`

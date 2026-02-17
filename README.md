@@ -1,9 +1,9 @@
 # YNX / NYXT
 
 YNX is an open, EVM-compatible chain.  
-NYXT is the native token used for gas, staking, and governance.
+NYXT is the native token for gas, staking, and governance.
 
-## Public testnet
+## Public testnet endpoints
 
 - Chain ID: `ynx_9002-1`
 - RPC: `http://43.134.23.58:26657`
@@ -11,60 +11,161 @@ NYXT is the native token used for gas, staking, and governance.
 - REST: `http://43.134.23.58:1317`
 - Faucet: `http://43.134.23.58:8080`
 - Explorer: `http://43.134.23.58:8082`
+- Peer bootstrap: `e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656`
 
-Quick status check:
+## Jump by need
+
+- I only want to check chain status → [Path A](#path-a-no-install-check-chain)
+- I want to deploy my own full node (beginner copy/paste) → [Path B](#path-b-deploy-your-own-full-node-ubuntu-2204)
+- I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
+- I need validator application data → [Path D](#path-d-validator-application-data)
+- I need one-command health verification → [Path E](#path-e-operator-health-check)
+
+## Do I need to create a wallet first?
+
+- Only query RPC / run non-validator full node: **No**
+- Faucet / send tx / validator operations: **Yes**
+
+## Path A: No install, check chain
 
 ```bash
 curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+curl -s http://43.134.23.58:8080/health
 ```
 
-## Choose your guide (jump by need)
+Watch blocks in real time:
 
-- English full playbook: `docs/en/PUBLIC_TESTNET_PLAYBOOK.md`
-- 中文完整手册: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
-- Slovenský kompletný návod: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
+```bash
+while true; do h=$(curl -s http://43.134.23.58:26657/status | jq -r .result.sync_info.latest_block_height); echo "$(date '+%F %T') height=$h"; sleep 1; done
+```
 
-## Do you need a wallet?
+## Path B: Deploy your own full node (Ubuntu 22.04+)
 
-- Only querying RPC / running a non-validator full node: **No**
-- Faucet / sending tx / validator operations: **Yes**
+Copy and run once:
 
-Create wallet only when needed:
+```bash
+cat <<'BASH' >/tmp/ynx_fullnode_bootstrap.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo apt update
+sudo apt install -y git curl jq build-essential
+
+if ! command -v go >/dev/null 2>&1; then
+  curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
+  sudo rm -rf /usr/local/go
+  sudo tar -C /usr/local -xzf /tmp/go.tar.gz
+fi
+export PATH=/usr/local/go/bin:$PATH
+grep -q '/usr/local/go/bin' ~/.bashrc || echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
+
+if [ ! -d "$HOME/YNX/.git" ]; then
+  git clone https://github.com/JiahaoAlbus/YNX.git "$HOME/YNX"
+fi
+cd "$HOME/YNX"
+git pull --ff-only || true
+
+cd "$HOME/YNX/chain"
+CGO_ENABLED=0 go build -o ynxd ./cmd/ynxd
+
+REL_API="https://api.github.com/repos/JiahaoAlbus/YNX/releases/latest"
+BUNDLE_URL="$(curl -fsSL "$REL_API" | jq -r '.assets[] | select(.name|endswith(".tar.gz")) | .browser_download_url' | head -n1)"
+SHA_URL="$(curl -fsSL "$REL_API" | jq -r '.assets[] | select(.name|endswith(".sha256")) | .browser_download_url' | head -n1)"
+
+mkdir -p "$HOME/.ynx-testnet/config" /tmp/ynx_bundle
+curl -fL "$BUNDLE_URL" -o /tmp/ynx_bundle.tar.gz
+curl -fL "$SHA_URL" -o /tmp/ynx_bundle.sha256
+(cd /tmp && shasum -a 256 -c ynx_bundle.sha256)
+tar -xzf /tmp/ynx_bundle.tar.gz -C /tmp/ynx_bundle
+
+cp /tmp/ynx_bundle/genesis.json "$HOME/.ynx-testnet/config/genesis.json"
+cp /tmp/ynx_bundle/config.toml "$HOME/.ynx-testnet/config/config.toml"
+cp /tmp/ynx_bundle/app.toml "$HOME/.ynx-testnet/config/app.toml"
+
+PEER='e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656'
+sed -i -E "s#^seeds = .*#seeds = \"$PEER\"#" "$HOME/.ynx-testnet/config/config.toml"
+sed -i -E "s#^persistent_peers = .*#persistent_peers = \"$PEER\"#" "$HOME/.ynx-testnet/config/config.toml"
+
+echo "Bootstrap complete."
+echo "Start node with:"
+echo "cd $HOME/YNX/chain && ./ynxd start --home $HOME/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt"
+BASH
+
+bash /tmp/ynx_fullnode_bootstrap.sh
+```
+
+Start node:
+
+```bash
+cd ~/YNX/chain
+./ynxd start --home ~/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt
+```
+
+Verify local node:
+
+```bash
+curl -s http://127.0.0.1:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+```
+
+## Path C: Create wallet and request faucet
 
 ```bash
 cd ~/YNX/chain
 ./ynxd keys add wallet --keyring-backend os --key-type eth_secp256k1
-./ynxd keys show wallet --keyring-backend os --bech acc -a
+ADDR=$(./ynxd keys show wallet --keyring-backend os --bech acc -a)
+echo "$ADDR"
+curl -s "http://43.134.23.58:8080/faucet?address=$ADDR"
+./ynxd query bank balances "$ADDR" --node http://43.134.23.58:26657 --output json
 ```
 
-## Repository structure
-
-- `chain/` — core chain implementation (`ynxd`, modules, scripts, proto)
-- `packages/contracts/` — system contracts
-- `packages/sdk/` — client SDK/CLI helpers
-- `infra/` — faucet, indexer, explorer, monitoring
-- `docs/en/` — canonical technical docs
-- `docs/zh/` — Chinese operator/user playbook
-- `docs/sk/` — Slovak operator/user playbook
-
-## Operator commands
-
-Full stack verification:
+## Path D: Validator application data
 
 ```bash
+cd ~/YNX/chain
+./ynxd keys add validator --keyring-backend os --key-type eth_secp256k1
+./ynxd keys show validator --keyring-backend os --bech acc -a
+./ynxd keys show validator --keyring-backend os --bech val -a
+./ynxd comet show-node-id --home ~/.ynx-testnet
+./ynxd comet show-validator --home ~/.ynx-testnet
+```
+
+Submit:
+
+- `node_id@public_ip:26656`
+- `ynxvaloper...`
+- `ynx1...`
+- region/provider/contact
+
+## Path E: Operator health check
+
+```bash
+cd ~/YNX
 ./chain/scripts/public_testnet_verify.sh
 ```
 
-Server-local verification:
+On server local loopback:
 
 ```bash
 YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/public_testnet_verify.sh
 ```
 
-## Security note
+## Full guides (3 languages)
 
-Keep secrets out of Git:
+- English: `docs/en/PUBLIC_TESTNET_PLAYBOOK.md`
+- 中文: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
+- Slovensky: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
 
-- do not commit mnemonic/private keys
-- do not commit `.env`
-- rotate any key that was ever exposed
+## Repo modules
+
+- `chain/` — core chain (`ynxd`, modules, scripts, proto)
+- `packages/contracts/` — contracts
+- `packages/sdk/` — SDK/CLI helpers
+- `infra/` — faucet, indexer, explorer, monitoring
+- `docs/` — docs and playbooks
+
+## Security notes
+
+- Never commit mnemonic/private keys.
+- Never commit `.env`.
+- Rotate any key that was exposed before.

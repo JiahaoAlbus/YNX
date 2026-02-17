@@ -51,6 +51,15 @@ const DATA_DIR = process.env.INDEXER_DATA_DIR || path.resolve(__dirname, "data")
 const STATE_PATH = path.join(DATA_DIR, "state.json");
 const BLOCKS_PATH = path.join(DATA_DIR, "blocks.jsonl");
 const TXS_PATH = path.join(DATA_DIR, "txs.jsonl");
+const YNX_FOUNDER_ADDRESS = process.env.YNX_FOUNDER_ADDRESS || "";
+const YNX_TREASURY_ADDRESS = process.env.YNX_TREASURY_ADDRESS || "";
+const YNX_TEAM_BENEFICIARY = process.env.YNX_TEAM_BENEFICIARY || "";
+const YNX_COMMUNITY_RECIPIENT = process.env.YNX_COMMUNITY_RECIPIENT || "";
+const YNX_FEE_BURN_BPS = envNumber("YNX_FEE_BURN_BPS", 4000);
+const YNX_FEE_TREASURY_BPS = envNumber("YNX_FEE_TREASURY_BPS", 1000);
+const YNX_FEE_FOUNDER_BPS = envNumber("YNX_FEE_FOUNDER_BPS", 1000);
+const YNX_INFLATION_TREASURY_BPS = envNumber("YNX_INFLATION_TREASURY_BPS", 3000);
+const YNX_NO_BASE_FEE = process.env.YNX_NO_BASE_FEE;
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -113,15 +122,15 @@ let latestSeenHeight = 0;
 let indexing = false;
 let chainId = "";
 let governanceMeta = {
-  founder_address: "",
-  treasury_address: "",
-  team_beneficiary_address: "",
-  community_recipient_address: "",
-  fee_burn_bps: 0,
-  fee_treasury_bps: 0,
-  fee_founder_bps: 0,
-  inflation_treasury_bps: 0,
-  no_base_fee: null,
+  founder_address: YNX_FOUNDER_ADDRESS,
+  treasury_address: YNX_TREASURY_ADDRESS,
+  team_beneficiary_address: YNX_TEAM_BENEFICIARY,
+  community_recipient_address: YNX_COMMUNITY_RECIPIENT,
+  fee_burn_bps: YNX_FEE_BURN_BPS,
+  fee_treasury_bps: YNX_FEE_TREASURY_BPS,
+  fee_founder_bps: YNX_FEE_FOUNDER_BPS,
+  inflation_treasury_bps: YNX_INFLATION_TREASURY_BPS,
+  no_base_fee: YNX_NO_BASE_FEE === undefined ? null : YNX_NO_BASE_FEE === "1" || YNX_NO_BASE_FEE === "true",
   base_fee: "",
 };
 
@@ -144,30 +153,19 @@ async function initGovernanceMeta() {
     const feemarket = appState?.feemarket?.params || {};
 
     governanceMeta = {
-      founder_address: params.founder_address || "",
-      treasury_address: params.treasury_address || "",
-      team_beneficiary_address: system.team_beneficiary_address || "",
-      community_recipient_address: system.community_recipient_address || "",
-      fee_burn_bps: Number(params.fee_burn_bps || 0),
-      fee_treasury_bps: Number(params.fee_treasury_bps || 0),
-      fee_founder_bps: Number(params.fee_founder_bps || 0),
-      inflation_treasury_bps: Number(params.inflation_treasury_bps || 0),
-      no_base_fee: feemarket.no_base_fee ?? null,
-      base_fee: feemarket.base_fee || "",
+      founder_address: params.founder_address || governanceMeta.founder_address,
+      treasury_address: params.treasury_address || governanceMeta.treasury_address,
+      team_beneficiary_address: system.team_beneficiary_address || governanceMeta.team_beneficiary_address,
+      community_recipient_address: system.community_recipient_address || governanceMeta.community_recipient_address,
+      fee_burn_bps: Number(params.fee_burn_bps ?? governanceMeta.fee_burn_bps),
+      fee_treasury_bps: Number(params.fee_treasury_bps ?? governanceMeta.fee_treasury_bps),
+      fee_founder_bps: Number(params.fee_founder_bps ?? governanceMeta.fee_founder_bps),
+      inflation_treasury_bps: Number(params.inflation_treasury_bps ?? governanceMeta.inflation_treasury_bps),
+      no_base_fee: feemarket.no_base_fee ?? governanceMeta.no_base_fee,
+      base_fee: feemarket.base_fee || governanceMeta.base_fee,
     };
   } catch {
-    governanceMeta = {
-      founder_address: "",
-      treasury_address: "",
-      team_beneficiary_address: "",
-      community_recipient_address: "",
-      fee_burn_bps: 0,
-      fee_treasury_bps: 0,
-      fee_founder_bps: 0,
-      inflation_treasury_bps: 0,
-      no_base_fee: null,
-      base_fee: "",
-    };
+    return;
   }
 }
 

@@ -51,13 +51,12 @@ Bundle contents include:
 - `PUBLIC_TESTNET.md`
 - `checksums.txt`
 
-## 5. Download Link Slots (for public posting)
+## 5. Published Download URLs
 
-Set these URLs after uploading artifacts (GitHub Releases or object storage):
-
-- Bundle URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z.tar.gz`
-- SHA256 URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z.sha256`
-- Announcement URL: `<UPLOAD_URL>/ynx_testnet_ynx_9002-1_20260217T070016Z_ANNOUNCEMENT.md`
+- Release page: `https://github.com/JiahaoAlbus/YNX/releases/tag/testnet-ynx_testnet_ynx_9002-1_20260217T070016Z`
+- Bundle URL: `https://github.com/JiahaoAlbus/YNX/releases/download/testnet-ynx_testnet_ynx_9002-1_20260217T070016Z/ynx_testnet_ynx_9002-1_20260217T070016Z.tar.gz`
+- SHA256 URL: `https://github.com/JiahaoAlbus/YNX/releases/download/testnet-ynx_testnet_ynx_9002-1_20260217T070016Z/ynx_testnet_ynx_9002-1_20260217T070016Z.sha256`
+- Announcement URL: `https://github.com/JiahaoAlbus/YNX/releases/download/testnet-ynx_testnet_ynx_9002-1_20260217T070016Z/ynx_testnet_ynx_9002-1_20260217T070016Z_ANNOUNCEMENT.md`
 
 ## 6. Operator Verification Commands
 

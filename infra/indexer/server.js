@@ -236,9 +236,16 @@ async function poll() {
 
   try {
     const status = await rpcRequest("/status");
+    if (!chainId) {
+      chainId = status?.result?.node_info?.network || chainId;
+    }
     const latest = parseInt(status?.result?.sync_info?.latest_block_height || "0", 10);
     if (latest > latestSeenHeight) {
       latestSeenHeight = latest;
+    }
+
+    if (!governanceMeta.founder_address && latest > 0) {
+      await initGovernanceMeta();
     }
 
     if (!state.last_height || state.last_height === 0) {

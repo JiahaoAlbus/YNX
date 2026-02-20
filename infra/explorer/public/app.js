@@ -8,6 +8,8 @@ const searchResult = document.getElementById("searchResult");
 const blocksTable = document.getElementById("blocksTable");
 const txsTable = document.getElementById("txsTable");
 const statusPanel = document.getElementById("statusPanel");
+const validatorsSummary = document.getElementById("validatorsSummary");
+const validatorsTable = document.getElementById("validatorsTable");
 
 async function fetchJson(path) {
   const res = await fetch(`${indexerBase}${path}`);
@@ -108,12 +110,36 @@ async function loadTxs() {
   ]);
 }
 
+async function loadValidators() {
+  const data = await fetchJson("/validators");
+  const rows = (data.validators || []).map((item) => ({
+    address: item.address,
+    voting_power: item.voting_power,
+    proposer_priority: item.proposer_priority,
+    signed_last_block: item.signed_last_block ? "yes" : "no",
+  }));
+  validatorsSummary.innerHTML = [
+    `Height: ${data.latest_height || 0}`,
+    `Validators: ${data.total || 0}`,
+    `Signed(last block): ${data.signed_count || 0}`,
+  ]
+    .map((line) => `<div>${line}</div>`)
+    .join("");
+  renderTable(validatorsTable, rows, [
+    { key: "address", label: "Consensus Address" },
+    { key: "voting_power", label: "Voting Power" },
+    { key: "proposer_priority", label: "Proposer Priority" },
+    { key: "signed_last_block", label: "Signed Last Block" },
+  ]);
+}
+
 async function refreshAll() {
   try {
     await loadStatus();
     await loadOverview();
     await loadBlocks();
     await loadTxs();
+    await loadValidators();
     searchResult.textContent = "";
   } catch (err) {
     searchResult.textContent = `Error: ${err.message}`;
@@ -171,3 +197,4 @@ searchInput.addEventListener("keydown", (event) => {
 });
 
 init();
+setInterval(refreshAll, 5000);

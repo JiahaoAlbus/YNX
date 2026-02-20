@@ -370,6 +370,57 @@ function metrics() {
   return lines.join("\n") + "\n";
 }
 
+async function fetchValidatorsSnapshot() {
+  const status = await rpcRequest("/status");
+  const latestHeight = parseInt(status?.result?.sync_info?.latest_block_height || "0", 10);
+  if (!latestHeight) {
+    return {
+      latest_height: 0,
+      total: 0,
+      signed_count: 0,
+      validators: [],
+    };
+  }
+
+  const validators = [];
+  let page = 1;
+  let total = 0;
+
+  while (true) {
+    const pageData = await rpcRequest(`/validators?height=${latestHeight}&page=${page}&per_page=100`);
+    const result = pageData?.result || {};
+    const items = result.validators || [];
+    total = parseInt(result.total || "0", 10) || items.length;
+    validators.push(...items);
+    if (!items.length || validators.length >= total) break;
+    page += 1;
+  }
+
+  const blockData = await rpcRequest(`/block?height=${latestHeight}`);
+  const signatures = blockData?.result?.block?.last_commit?.signatures || [];
+  const signedSet = new Set(
+    signatures
+      .filter((s) => s && Number(s.block_id_flag) === 2 && s.validator_address)
+      .map((s) => s.validator_address)
+  );
+
+  const rows = validators.map((validator) => ({
+    address: validator.address || "",
+    voting_power: parseInt(validator.voting_power || "0", 10),
+    proposer_priority: parseInt(validator.proposer_priority || "0", 10),
+    signed_last_block: signedSet.has(validator.address || ""),
+  }));
+
+  rows.sort((a, b) => b.voting_power - a.voting_power);
+
+  return {
+    latest_height: latestHeight,
+    total: rows.length,
+    signed_count: rows.filter((row) => row.signed_last_block).length,
+    validators: rows,
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -449,6 +500,15 @@ const server = http.createServer(async (req, res) => {
         ],
       },
     });
+  }
+
+  if (url.pathname === "/validators") {
+    try {
+      const snapshot = await fetchValidatorsSnapshot();
+      return json(res, 200, { ok: true, ...snapshot });
+    } catch (err) {
+      return json(res, 500, { ok: false, error: "validators_fetch_failed", detail: err.message });
+    }
   }
 
   if (url.pathname === "/blocks") {

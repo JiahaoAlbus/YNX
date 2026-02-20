@@ -53,6 +53,7 @@ curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .re
 curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 curl -s http://43.134.23.58:8080/health
 curl -s http://43.134.23.58:8081/ynx/overview | jq
+curl -s http://43.134.23.58:8081/validators | jq '.latest_height, .total, .signed_count'
 ```
 
 Watch blocks in real time:

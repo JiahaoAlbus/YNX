@@ -37,6 +37,7 @@ Practical reasons to build on YNX:
 - I want to deploy my own full node (beginner copy/paste) → [Path B](#path-b-deploy-your-own-full-node-ubuntu-2204)
 - I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
 - I need validator application data → [Path D](#path-d-validator-application-data)
+- I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
 - I need one-command health verification → [Path E](#path-e-operator-health-check)
 - I need upgrade/deploy to server safely → [Path F](#path-f-server-upgrade-deploy)
 
@@ -156,6 +157,39 @@ Submit:
 - `ynxvaloper...`
 - `ynx1...`
 - region/provider/contact
+
+## Path G: Safe validator onboarding (for scale)
+
+Use this flow for adding many validators without repeatedly hitting `jailed/unbonding`.
+
+Rule:
+- Do **not** create-validator before local node is fully synced (`catching_up=false`).
+
+Run:
+
+```bash
+cd ~/YNX/chain
+./scripts/validator_onboard_safe.sh
+```
+
+Common production usage:
+
+```bash
+cd ~/YNX/chain
+YNX_HOME=/root/.ynx-testnet2 \
+YNX_KEY_NAME=validator2 \
+YNX_KEYRING=test \
+YNX_MONIKER=ynx-public-sg-2 \
+YNX_NODE_RPC=http://43.134.23.58:26657 \
+YNX_LOCAL_RPC=http://127.0.0.1:26657 \
+./scripts/validator_onboard_safe.sh
+```
+
+What it enforces automatically:
+- Waits until local sync completes.
+- Verifies validator account is funded.
+- Sends create-validator only after checks pass.
+- Waits until validator becomes `BOND_STATUS_BONDED`.
 
 ## Path E: Operator health check
 

@@ -84,7 +84,7 @@ while true; do
   fi
 
   height="$(echo "$status_json" | jq -r '.result.sync_info.latest_block_height // empty')"
-  catching_up="$(echo "$status_json" | jq -r '.result.sync_info.catching_up // empty')"
+  catching_up="$(echo "$status_json" | jq -r '.result.sync_info.catching_up // false')"
 
   if [[ -z "$height" ]]; then
     send_alert "ERROR" "RPC status parse failed"
@@ -106,12 +106,14 @@ while true; do
   fi
 
   validators_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/validators?per_page=100" 2>/dev/null || true)"
+  [[ -z "$validators_json" ]] && validators_json='{}'
   total="$(echo "$validators_json" | jq -r '.result.validators | length // 0' 2>/dev/null || echo 0)"
   if [[ "$total" -eq 0 ]]; then
     send_alert "WARN" "No validators returned by RPC"
   fi
 
   signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" 2>/dev/null || true)"
+  [[ -z "$signed_json" ]] && signed_json='{}'
   signed_count="$(echo "$signed_json" | jq -r '.signed_count // 0' 2>/dev/null || echo 0)"
   signed_total="$(echo "$signed_json" | jq -r '.total // 0' 2>/dev/null || echo 0)"
   if [[ "$signed_total" -gt 0 ]]; then

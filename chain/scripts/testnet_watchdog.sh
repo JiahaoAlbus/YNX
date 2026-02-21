@@ -138,6 +138,11 @@ while true; do
     fi
   fi
 
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) OK height=$height catching_up=$catching_up signed=${signed_count}/${signed_total}"
+  if [[ -n "$INDEXER_URL" ]]; then
+    signed_summary="${signed_count}/${signed_total}"
+  else
+    signed_summary="n/a"
+  fi
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) OK height=$height catching_up=$catching_up signed=${signed_summary}"
   sleep "$CHECK_INTERVAL_SEC"
 done

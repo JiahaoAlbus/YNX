@@ -39,6 +39,7 @@ Practical reasons to build on YNX:
 - I need validator application data → [Path D](#path-d-validator-application-data)
 - I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
 - I need one-command consensus profile switch (speed/stability) → [Path H](#path-h-consensus-profile-switch-speedstability)
+- I need freeze/tag + watchdog automation → [Path I](#path-i-freezetag-and-watchdog-automation)
 - I need one-command health verification → [Path E](#path-e-operator-health-check)
 - I need upgrade/deploy to server safely → [Path F](#path-f-server-upgrade-deploy)
 
@@ -227,6 +228,36 @@ cd ~/YNX/chain
 ./scripts/consensus_profile_cluster_apply.sh stable-fast
 ```
 
+## Path I: Freeze/tag and watchdog automation
+
+Freeze current public testnet state and create a timestamped git tag:
+
+```bash
+cd ~/YNX/chain
+./scripts/testnet_freeze_tag.sh
+```
+
+Push the freeze tag:
+
+```bash
+cd ~/YNX/chain
+PUSH_TAG=1 ./scripts/testnet_freeze_tag.sh
+```
+
+Run continuous health watchdog (stdout alerts):
+
+```bash
+cd ~/YNX/chain
+./scripts/testnet_watchdog.sh
+```
+
+Run watchdog with webhook alerting:
+
+```bash
+cd ~/YNX/chain
+ALERT_WEBHOOK_URL="https://your-webhook-endpoint" ./scripts/testnet_watchdog.sh
+```
+
 ## Path E: Operator health check
 
 ```bash
@@ -266,6 +297,8 @@ This script will:
 - Positioning (EN): `docs/en/YNX_POSITIONING.md`
 - 定位与卖点（中文）: `docs/zh/YNX_定位与卖点.md`
 - Releases 2 snapshot: `docs/en/RELEASES_2_CURRENT_STATUS.md`
+- Next-step execution plan: `docs/en/OPEN_TESTNET_NEXT_STEPS.md`
+- Validator recruitment post (EN+中文): `docs/en/VALIDATOR_RECRUITMENT_POST.md`
 
 ## Repo modules
 

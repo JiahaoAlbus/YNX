@@ -32,8 +32,10 @@ Last updated: 2026-02-12
 - `docs/en/YNX_POSITIONING.md`
 - `docs/en/RELEASES_2_CURRENT_STATUS.md`
 - `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
+- `docs/en/VALIDATOR_RECRUITMENT_POST.md`
 - `docs/en/VALIDATOR_SIGNUP_REVIEW_TEMPLATE.md`
 - `docs/en/VALIDATOR_GOOGLE_FORM_TEMPLATE.md`
+- `docs/en/OPEN_TESTNET_NEXT_STEPS.md`
 - `docs/en/TESTNET_OPS.md`
 - `docs/en/TESTNET_SERVICES.md`
 - `docs/en/FAUCET.md`

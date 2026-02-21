@@ -18,6 +18,8 @@ Environment:
   MIN_SIGNED_RATIO           default: 0.66  (from /validators signed_count / total)
   ALERT_WEBHOOK_URL          optional; if set, POST JSON payload
   ALERT_COOLDOWN_SEC         default: 120
+  HTTP_CONNECT_TIMEOUT_SEC   default: 5
+  HTTP_MAX_TIME_SEC          default: 8
 
 Example:
   ./scripts/testnet_watchdog.sh
@@ -41,6 +43,8 @@ ALERT_COOLDOWN_SEC="${ALERT_COOLDOWN_SEC:-120}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHAIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 YNXD_BIN="${YNXD_BIN:-$CHAIN_DIR/ynxd}"
+HTTP_CONNECT_TIMEOUT_SEC="${HTTP_CONNECT_TIMEOUT_SEC:-5}"
+HTTP_MAX_TIME_SEC="${HTTP_MAX_TIME_SEC:-8}"
 
 last_height=""
 last_height_at="$(date +%s)"
@@ -61,7 +65,7 @@ send_alert() {
   echo "[$ts] [$level] $message"
 
   if [[ -n "$ALERT_WEBHOOK_URL" ]]; then
-    curl -fsSL -X POST "$ALERT_WEBHOOK_URL" \
+    curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" -X POST "$ALERT_WEBHOOK_URL" \
       -H 'content-type: application/json' \
       --data "{\"ts\":\"$ts\",\"level\":\"$level\",\"message\":\"$message\"}" >/dev/null || true
   fi
@@ -72,7 +76,7 @@ echo "RPC_URL=$RPC_URL INDEXER_URL=$INDEXER_URL interval=${CHECK_INTERVAL_SEC}s"
 
 while true; do
   now="$(date +%s)"
-  status_json="$(curl -fsSL "$RPC_URL/status" || true)"
+  status_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/status" || true)"
   if [[ -z "$status_json" ]]; then
     send_alert "ERROR" "RPC unreachable: $RPC_URL"
     sleep "$CHECK_INTERVAL_SEC"
@@ -101,13 +105,13 @@ while true; do
     send_alert "WARN" "RPC catching_up=true"
   fi
 
-  validators_json="$(curl -fsSL "$RPC_URL/validators?per_page=100" || true)"
+  validators_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/validators?per_page=100" || true)"
   total="$(echo "$validators_json" | jq -r '.result.validators | length // 0' 2>/dev/null || echo 0)"
   if [[ "$total" -eq 0 ]]; then
     send_alert "WARN" "No validators returned by RPC"
   fi
 
-  signed_json="$(curl -fsSL "$INDEXER_URL/validators" || true)"
+  signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" || true)"
   signed_count="$(echo "$signed_json" | jq -r '.signed_count // 0' 2>/dev/null || echo 0)"
   signed_total="$(echo "$signed_json" | jq -r '.total // 0' 2>/dev/null || echo 0)"
   if [[ "$signed_total" -gt 0 ]]; then

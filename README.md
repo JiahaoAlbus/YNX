@@ -220,6 +220,13 @@ ssh -i ~/.ssh/ynx_tmp_key root@43.162.100.54 \
 'cd /root/YNX/chain && YNX_HOME=/root/.ynx-testnet2 YNX_SERVICE=ynx-node2 ./scripts/consensus_profile_apply.sh stable-fast --restart'
 ```
 
+Cluster one-command (apply both nodes + auto verify signed rate):
+
+```bash
+cd ~/YNX/chain
+./scripts/consensus_profile_cluster_apply.sh stable-fast
+```
+
 ## Path E: Operator health check
 
 ```bash

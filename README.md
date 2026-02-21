@@ -258,6 +258,13 @@ cd ~/YNX/chain
 ALERT_WEBHOOK_URL="https://your-webhook-endpoint" ./scripts/testnet_watchdog.sh
 ```
 
+Install watchdog as systemd service (auto-start):
+
+```bash
+cd ~/YNX/chain
+./scripts/install_watchdog_systemd.sh
+```
+
 ## Path E: Operator health check
 
 ```bash

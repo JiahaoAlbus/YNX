@@ -76,7 +76,7 @@ echo "RPC_URL=$RPC_URL INDEXER_URL=$INDEXER_URL interval=${CHECK_INTERVAL_SEC}s"
 
 while true; do
   now="$(date +%s)"
-  status_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/status" || true)"
+  status_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/status" 2>/dev/null || true)"
   if [[ -z "$status_json" ]]; then
     send_alert "ERROR" "RPC unreachable: $RPC_URL"
     sleep "$CHECK_INTERVAL_SEC"
@@ -105,13 +105,13 @@ while true; do
     send_alert "WARN" "RPC catching_up=true"
   fi
 
-  validators_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/validators?per_page=100" || true)"
+  validators_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$RPC_URL/validators?per_page=100" 2>/dev/null || true)"
   total="$(echo "$validators_json" | jq -r '.result.validators | length // 0' 2>/dev/null || echo 0)"
   if [[ "$total" -eq 0 ]]; then
     send_alert "WARN" "No validators returned by RPC"
   fi
 
-  signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" || true)"
+  signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" 2>/dev/null || true)"
   signed_count="$(echo "$signed_json" | jq -r '.signed_count // 0' 2>/dev/null || echo 0)"
   signed_total="$(echo "$signed_json" | jq -r '.total // 0' 2>/dev/null || echo 0)"
   if [[ "$signed_total" -gt 0 ]]; then

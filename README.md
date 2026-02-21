@@ -38,6 +38,7 @@ Practical reasons to build on YNX:
 - I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
 - I need validator application data → [Path D](#path-d-validator-application-data)
 - I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
+- I need one-command consensus profile switch (speed/stability) → [Path H](#path-h-consensus-profile-switch-speedstability)
 - I need one-command health verification → [Path E](#path-e-operator-health-check)
 - I need upgrade/deploy to server safely → [Path F](#path-f-server-upgrade-deploy)
 
@@ -191,6 +192,33 @@ What it enforces automatically:
 - Verifies validator account is funded.
 - Sends create-validator only after checks pass.
 - Waits until validator becomes `BOND_STATUS_BONDED`.
+
+## Path H: Consensus profile switch (speed/stability)
+
+Use a profile to quickly switch between stable cross-continent settings and fast settings.
+
+Profiles:
+- `stable-fast` → `1s / 500ms / 1s`
+- `cross-continent-safe` → `3s / 2s / 5s`
+
+Local example:
+
+```bash
+cd ~/YNX/chain
+./scripts/consensus_profile_apply.sh stable-fast
+```
+
+Server examples:
+
+```bash
+# node 1
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.134.23.58 \
+'cd ~/YNX/chain && YNX_HOME=/home/ubuntu/.ynx-testnet YNX_SERVICE=ynx-node sudo -E ./scripts/consensus_profile_apply.sh stable-fast --restart'
+
+# node 2
+ssh -i ~/.ssh/ynx_tmp_key root@43.162.100.54 \
+'cd /root/YNX/chain && YNX_HOME=/root/.ynx-testnet2 YNX_SERVICE=ynx-node2 ./scripts/consensus_profile_apply.sh stable-fast --restart'
+```
 
 ## Path E: Operator health check
 

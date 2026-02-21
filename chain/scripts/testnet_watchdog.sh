@@ -11,7 +11,7 @@ Continuously checks public testnet health and emits alerts to stdout/webhook.
 
 Environment:
   RPC_URL                    default: http://43.134.23.58:26657
-  INDEXER_URL                default: http://43.134.23.58:8081
+  INDEXER_URL                default: http://43.134.23.58:8081 (set empty to disable signed check)
   CHECK_INTERVAL_SEC         default: 15
   HEIGHT_STALL_THRESHOLD_SEC default: 45
   REQUIRE_BONDED             default: 1
@@ -33,7 +33,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 RPC_URL="${RPC_URL:-http://43.134.23.58:26657}"
-INDEXER_URL="${INDEXER_URL:-http://43.134.23.58:8081}"
+INDEXER_URL="${INDEXER_URL-http://43.134.23.58:8081}"
 CHECK_INTERVAL_SEC="${CHECK_INTERVAL_SEC:-15}"
 HEIGHT_STALL_THRESHOLD_SEC="${HEIGHT_STALL_THRESHOLD_SEC:-45}"
 REQUIRE_BONDED="${REQUIRE_BONDED:-1}"
@@ -112,15 +112,19 @@ while true; do
     send_alert "WARN" "No validators returned by RPC"
   fi
 
-  signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" 2>/dev/null || true)"
-  [[ -z "$signed_json" ]] && signed_json='{}'
-  signed_count="$(echo "$signed_json" | jq -r '.signed_count // 0' 2>/dev/null || echo 0)"
-  signed_total="$(echo "$signed_json" | jq -r '.total // 0' 2>/dev/null || echo 0)"
-  if [[ "$signed_total" -gt 0 ]]; then
-    ratio="$(awk -v a="$signed_count" -v b="$signed_total" 'BEGIN { if (b==0) print 0; else printf "%.4f", a/b }')"
-    below="$(awk -v r="$ratio" -v m="$MIN_SIGNED_RATIO" 'BEGIN { if (r < m) print 1; else print 0 }')"
-    if [[ "$below" -eq 1 ]]; then
-      send_alert "WARN" "Signed ratio low: ${signed_count}/${signed_total} (${ratio})"
+  signed_count="n/a"
+  signed_total="n/a"
+  if [[ -n "$INDEXER_URL" ]]; then
+    signed_json="$(curl -fsSL --connect-timeout "$HTTP_CONNECT_TIMEOUT_SEC" --max-time "$HTTP_MAX_TIME_SEC" "$INDEXER_URL/validators" 2>/dev/null || true)"
+    [[ -z "$signed_json" ]] && signed_json='{}'
+    signed_count="$(echo "$signed_json" | jq -r '.signed_count // 0' 2>/dev/null || echo 0)"
+    signed_total="$(echo "$signed_json" | jq -r '.total // 0' 2>/dev/null || echo 0)"
+    if [[ "$signed_total" -gt 0 ]]; then
+      ratio="$(awk -v a="$signed_count" -v b="$signed_total" 'BEGIN { if (b==0) print 0; else printf "%.4f", a/b }')"
+      below="$(awk -v r="$ratio" -v m="$MIN_SIGNED_RATIO" 'BEGIN { if (r < m) print 1; else print 0 }')"
+      if [[ "$below" -eq 1 ]]; then
+        send_alert "WARN" "Signed ratio low: ${signed_count}/${signed_total} (${ratio})"
+      fi
     fi
   fi
 

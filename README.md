@@ -265,6 +265,13 @@ cd ~/YNX/chain
 ./scripts/install_watchdog_systemd.sh
 ```
 
+If a node has no local indexer, disable signed-check for that node:
+
+```bash
+cd ~/YNX/chain
+INDEXER_URL= ./scripts/install_watchdog_systemd.sh
+```
+
 ## Path E: Operator health check
 
 ```bash

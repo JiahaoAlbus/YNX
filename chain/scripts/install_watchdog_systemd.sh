@@ -13,7 +13,7 @@ Environment:
   YNX_CHAIN_DIR         default: $HOME/YNX/chain
   YNX_SERVICE_NAME      default: ynx-watchdog
   RPC_URL               default: http://127.0.0.1:26657
-  INDEXER_URL           default: http://127.0.0.1:8081
+  INDEXER_URL           default: http://127.0.0.1:8081 (set empty to disable signed check)
   CHECK_INTERVAL_SEC    default: 15
   HEIGHT_STALL_THRESHOLD_SEC default: 45
   REQUIRE_BONDED        default: 1
@@ -37,7 +37,7 @@ fi
 YNX_CHAIN_DIR="${YNX_CHAIN_DIR:-$HOME/YNX/chain}"
 YNX_SERVICE_NAME="${YNX_SERVICE_NAME:-ynx-watchdog}"
 RPC_URL="${RPC_URL:-http://127.0.0.1:26657}"
-INDEXER_URL="${INDEXER_URL:-http://127.0.0.1:8081}"
+INDEXER_URL="${INDEXER_URL-http://127.0.0.1:8081}"
 CHECK_INTERVAL_SEC="${CHECK_INTERVAL_SEC:-15}"
 HEIGHT_STALL_THRESHOLD_SEC="${HEIGHT_STALL_THRESHOLD_SEC:-45}"
 REQUIRE_BONDED="${REQUIRE_BONDED:-1}"

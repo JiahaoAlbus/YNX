@@ -40,6 +40,7 @@ Practical reasons to build on YNX:
 - I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
 - I need one-command consensus profile switch (speed/stability) → [Path H](#path-h-consensus-profile-switch-speedstability)
 - I need freeze/tag + watchdog automation → [Path I](#path-i-freezetag-and-watchdog-automation)
+- I need centralized monitoring panel deploy → [Path J](#path-j-centralized-monitoring-panel)
 - I need one-command health verification → [Path E](#path-e-operator-health-check)
 - I need upgrade/deploy to server safely → [Path F](#path-f-server-upgrade-deploy)
 
@@ -271,6 +272,19 @@ If a node has no local indexer, disable signed-check for that node:
 cd ~/YNX/chain
 INDEXER_URL= ./scripts/install_watchdog_systemd.sh
 ```
+
+## Path J: Centralized monitoring panel
+
+Deploy Prometheus + Grafana on monitor node and auto-open local tunnel:
+
+```bash
+cd ~/YNX/chain
+./scripts/monitoring_stack_deploy.sh
+```
+
+After deployment:
+- Grafana: `http://127.0.0.1:13000`
+- Prometheus: `http://127.0.0.1:19090`
 
 ## Path E: Operator health check
 

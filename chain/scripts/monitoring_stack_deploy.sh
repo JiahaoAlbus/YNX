@@ -47,7 +47,10 @@ ssh -o ConnectTimeout=12 -o StrictHostKeyChecking=no -i "$MONITOR_SSH_KEY" "${MO
 
 echo "[2/3] Verify Prometheus and Grafana health on remote host"
 ssh -o ConnectTimeout=12 -o StrictHostKeyChecking=no -i "$MONITOR_SSH_KEY" "${MONITOR_USER}@${MONITOR_HOST}" \
-  "curl -fsSL --max-time 8 http://127.0.0.1:19090/-/healthy >/dev/null && echo prometheus=healthy; \
+  "set -e; \
+   for i in \$(seq 1 10); do curl -fsSL --max-time 8 http://127.0.0.1:19090/-/healthy >/dev/null && break; sleep 2; done; \
+   for i in \$(seq 1 10); do curl -fsSL --max-time 8 http://127.0.0.1:13000/api/health >/dev/null && break; sleep 2; done; \
+   echo prometheus=healthy; \
    curl -fsSL --max-time 8 http://127.0.0.1:13000/api/health | jq -r '.database'"
 
 if [[ "$OPEN_TUNNEL" == "1" ]]; then

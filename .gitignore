@@ -11,8 +11,13 @@ chain/.localnet
 chain/.localnet.log
 chain/.testnet
 chain/.testnet.log
+chain/.testnet-v2
+chain/.testnet-v2.log
 chain/.testnet-multi
 chain/.release
+chain/.release-v2
 chain/build
 chain/ynxd
+chain/ynxd-*
 infra/**/data
+ops-logs

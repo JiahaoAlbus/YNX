@@ -36,6 +36,7 @@ const FAUCET_PORT = parseInt(process.env.FAUCET_PORT || "8080", 10);
 const FAUCET_HOME = process.env.FAUCET_HOME || path.resolve(__dirname, "../../chain/.testnet");
 const FAUCET_KEY = process.env.FAUCET_KEY || "faucet";
 const FAUCET_KEYRING = process.env.FAUCET_KEYRING || "os";
+const FAUCET_KEYRING_DIR = process.env.FAUCET_KEYRING_DIR || "";
 const FAUCET_CHAIN_ID = process.env.FAUCET_CHAIN_ID || "ynx_9002-1";
 const FAUCET_NODE = process.env.FAUCET_NODE || "http://127.0.0.1:26657";
 const FAUCET_DENOM = process.env.FAUCET_DENOM || "anyxt";
@@ -183,6 +184,7 @@ function sendTokens(toAddress) {
       FAUCET_NODE,
       "--keyring-backend",
       FAUCET_KEYRING,
+      ...(FAUCET_KEYRING_DIR ? ["--keyring-dir", FAUCET_KEYRING_DIR] : []),
       "--home",
       FAUCET_HOME,
       "--gas",

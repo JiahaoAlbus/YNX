@@ -61,8 +61,12 @@ async function loadOverview() {
   const overview = await fetchJson("/ynx/overview");
   const gov = overview.governance || {};
   const positioning = overview.positioning || {};
+  const valueProp = overview.value_proposition || {};
+  const aiSettlement = overview.ai_settlement || {};
+  const web4 = overview.web4 || {};
   const feeSplit = `${gov.fee_burn_bps || 0}/${gov.fee_treasury_bps || 0}/${gov.fee_founder_bps || 0}`;
   const extra = [
+    `Track: ${overview.track || "n/a"}`,
     `Positioning: ${positioning.statement || "n/a"}`,
     `Founder: ${gov.founder_address || "n/a"}`,
     `Treasury: ${gov.treasury_address || "n/a"}`,
@@ -70,6 +74,10 @@ async function loadOverview() {
     `Community: ${gov.community_recipient_address || "n/a"}`,
     `Fee split bps (burn/treasury/founder): ${feeSplit}`,
     `No base fee: ${String(gov.no_base_fee)}`,
+    `AI settlement: ${String(aiSettlement.enabled)}`,
+    `Web4 hub: ${String(web4.enabled)}`,
+    `AA track: ${String(valueProp.account_abstraction_track)}`,
+    `Parallel execution track: ${String(valueProp.parallel_execution_track)}`,
   ];
   statusPanel.innerHTML += extra.map((line) => `<div>${line}</div>`).join("");
 }

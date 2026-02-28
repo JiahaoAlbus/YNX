@@ -6,6 +6,13 @@ Last updated: 2026-02-12
 ## Core Specs
 
 - `docs/en/YNX_v0_Spec.md` — protocol goals, confirmation model, consensus/scaling approach
+- `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 target architecture and protocol requirements
+- `docs/en/YNX_v2_EXECUTION_PLAN.md` — v2 delivery plan and milestones
+- `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — v2 public testnet deployment and operations
+- `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — v2 validator bootstrap quickstart
+- `docs/en/V2_SMOKE_AND_VERIFY.md` — v2 verification and write-path smoke testing
+- `docs/en/WEB4_FOR_YNX.md` — Web4 definition and primitives used by YNX
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
 - `docs/en/Parameters_v0.md` — canonical v0 parameter registry (locked defaults)

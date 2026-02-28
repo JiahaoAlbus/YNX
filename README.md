@@ -3,7 +3,28 @@
 YNX is an open, EVM-compatible chain.  
 NYXT is the native token for gas, staking, and governance.
 
+## v2 Web4 track (active)
+
+- Track name: `v2-web4`
+- Product direction: AI-native Web4 chain
+- Delivery mode: new chain-id + new genesis + separate rollout from v1
+- Core docs: `docs/en/YNX_v2_WEB4_SPEC.md`, `docs/en/YNX_v2_EXECUTION_PLAN.md`, `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+
 ## Public testnet endpoints
+
+v2 Web4 public testnet (recommended):
+
+- Chain ID: `ynx_9102-1`
+- RPC: `http://<V2_SERVER_IP>:36657`
+- EVM RPC: `http://<V2_SERVER_IP>:38545`
+- REST: `http://<V2_SERVER_IP>:31317`
+- Faucet: `http://<V2_SERVER_IP>:38080`
+- Indexer: `http://<V2_SERVER_IP>:38081`
+- Explorer: `http://<V2_SERVER_IP>:38082`
+- AI Gateway: `http://<V2_SERVER_IP>:38090`
+- Web4 Hub: `http://<V2_SERVER_IP>:38091`
+
+v1 public testnet (legacy track):
 
 - Chain ID: `ynx_9002-1`
 - RPC: `http://43.134.23.58:26657`
@@ -22,19 +43,26 @@ Mainnet-parity note:
 
 YNX positioning:
 
-- Governance-native EVM chain for real Web3 services.
+- AI-native Web4 chain: Ethereum-grade developer UX with high-performance execution targets.
 
 Practical reasons to build on YNX:
 
-- Mainnet-parity testnet workflow: what you test is what you launch.
-- Governance and fee-routing transparency: machine-readable via `GET /ynx/overview`.
-- Fast builder onboarding: copy/paste deployment playbooks and one-command verification.
-- Open validator growth: rolling onboarding model for progressive decentralization.
+- EVM-compatible developer flow with low-latency profile options.
+- AI settlement lifecycle API (`/ai/*`) with vault-based machine payments.
+- Machine-readable governance and positioning via `GET /ynx/overview`.
+- Operator-ready bootstrap scripts for faster network scaling.
+- Web4 sovereignty model: `owner > policy > session key`.
 
 ## Jump by need
 
 - I only want to check chain status → [Path A](#path-a-no-install-check-chain)
 - I want to deploy my own full node (beginner copy/paste) → [Path B](#path-b-deploy-your-own-full-node-ubuntu-2204)
+- I have no Linux server and want Docker on my own machine → [Path K](#path-k-run-a-full-node-with-docker-macoslinux)
+- I want to bootstrap full YNX v2 Web4 stack locally → [Path L](#path-l-build-and-run-ynx-v2-web4-locally)
+- I want production-style v2 public testnet deployment → [Path M](#path-m-v2-public-testnet-deploy-to-server)
+- I want a one-command v2 validator bootstrap (public join) → [Path N](#path-n-v2-validator-bootstrap-public-join)
+- I want end-to-end v2 write smoke test (AI + Web4) → [Path O](#path-o-v2-api-write-smoke-test)
+- I want v2 watchdog as systemd auto-start service → [Path P](#path-p-v2-watchdog-systemd-auto-start)
 - I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
 - I need validator application data → [Path D](#path-d-validator-application-data)
 - I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
@@ -131,6 +159,150 @@ Verify local node:
 
 ```bash
 curl -s http://127.0.0.1:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+```
+
+## Path K: Run a full node with Docker (macOS/Linux)
+
+If you do not have a Linux VPS yet, run a synced YNX full node in Docker locally:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/public_testnet_docker_node.sh up --reset
+```
+
+Check status:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/public_testnet_docker_node.sh status
+```
+
+Follow logs:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/public_testnet_docker_node.sh logs
+```
+
+Stop node:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/public_testnet_docker_node.sh down
+```
+
+## Path L: Build and run YNX v2 Web4 locally
+
+Bootstrap v2 chain runtime:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_testnet_bootstrap.sh --reset
+```
+
+Start full v2 local stack (`ynxd + faucet + indexer + explorer + ai-gateway + web4-hub`):
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_services_start.sh
+```
+
+Check v2 chain + AI endpoints:
+
+```bash
+curl -s http://127.0.0.1:36657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height'
+curl -s http://127.0.0.1:38081/ynx/overview | jq
+curl -s http://127.0.0.1:38090/health | jq
+curl -s http://127.0.0.1:38090/ai/stats | jq
+curl -s http://127.0.0.1:38091/web4/overview | jq
+```
+
+Stop v2 local stack:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_services_stop.sh
+```
+
+## Path M: v2 public testnet deploy to server
+
+Deploy full v2 stack to a Linux server:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset
+```
+
+Run deploy + write smoke in one pass:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset --smoke-write
+```
+
+Optional strict mode (force policy/session for write APIs):
+
+```bash
+ssh -i /path/to/key.pem ubuntu@<SERVER_IP> "echo 'WEB4_ENFORCE_POLICY=1' | sudo tee -a /etc/ynx-v2/env && sudo systemctl restart ynx-v2-web4-hub"
+```
+
+Run post-deploy verification:
+
+```bash
+cd ~/YNX/chain
+ssh -i /path/to/key.pem ubuntu@<SERVER_IP> 'cd ~/YNX/chain && YNX_PUBLIC_HOST=127.0.0.1 ./scripts/v2_public_testnet_verify.sh'
+```
+
+Build validator bootstrap package:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_testnet_release.sh
+```
+
+## Path N: v2 validator bootstrap (public join)
+
+Bootstrap a new validator node from an existing public RPC:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_validator_bootstrap.sh \
+  --rpc http://<V2_RPC_IP>:36657 \
+  --home ~/.ynx-v2-validator \
+  --moniker <YOUR_MONIKER> \
+  --seeds '<seed_node_id@seed_ip:36656>' \
+  --reset
+```
+
+Start node immediately after bootstrap:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_validator_bootstrap.sh --rpc http://<V2_RPC_IP>:36657 --start
+```
+
+## Path O: v2 API write smoke test
+
+Run full write-path checks (AI job lifecycle + Web4 intent lifecycle):
+
+```bash
+cd ~/YNX/chain
+YNX_PUBLIC_HOST=<V2_SERVER_IP> ./scripts/v2_public_testnet_smoke.sh
+```
+
+## Path P: v2 watchdog systemd auto-start
+
+Install v2 watchdog as a long-running service:
+
+```bash
+cd ~/YNX/chain
+./scripts/install_v2_watchdog_systemd.sh
+```
+
+Follow watchdog logs:
+
+```bash
+sudo journalctl -u ynx-v2-watchdog -f --no-pager
 ```
 
 ## Path C: Create wallet and request faucet
@@ -321,6 +493,16 @@ This script will:
 - English: `docs/en/PUBLIC_TESTNET_PLAYBOOK.md`
 - 中文: `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`
 - Slovensky: `docs/sk/PUBLIC_TESTNET_PLAYBOOK.md`
+- v2 protocol spec: `docs/en/YNX_v2_WEB4_SPEC.md`
+- v2 execution plan: `docs/en/YNX_v2_EXECUTION_PLAN.md`
+- v2 AI settlement API: `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+- v2 public testnet playbook: `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
+- v2 validator bootstrap: `docs/en/V2_VALIDATOR_BOOTSTRAP.md`
+- v2 verify + smoke: `docs/en/V2_SMOKE_AND_VERIFY.md`
+- Web4 definition (EN): `docs/en/WEB4_FOR_YNX.md`
+- v2 中文蓝图: `docs/zh/YNX_v2_WEB4_蓝图.md`
+- v2 中文公测手册: `docs/zh/V2_公开测试网手册.md`
+- Web4 定义（中文）: `docs/zh/WEB4_在YNX中的定义.md`
 - Mainnet parity & advantages: `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
 - Positioning (EN): `docs/en/YNX_POSITIONING.md`
 - 定位与卖点（中文）: `docs/zh/YNX_定位与卖点.md`
@@ -333,7 +515,7 @@ This script will:
 - `chain/` — core chain (`ynxd`, modules, scripts, proto)
 - `packages/contracts/` — contracts
 - `packages/sdk/` — SDK/CLI helpers
-- `infra/` — faucet, indexer, explorer, monitoring
+- `infra/` — faucet, indexer, explorer, monitoring, ai-gateway
 - `docs/` — docs and playbooks
 
 ## Security notes

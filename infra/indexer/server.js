@@ -60,6 +60,10 @@ const YNX_FEE_TREASURY_BPS = envNumber("YNX_FEE_TREASURY_BPS", 1000);
 const YNX_FEE_FOUNDER_BPS = envNumber("YNX_FEE_FOUNDER_BPS", 1000);
 const YNX_INFLATION_TREASURY_BPS = envNumber("YNX_INFLATION_TREASURY_BPS", 3000);
 const YNX_NO_BASE_FEE = process.env.YNX_NO_BASE_FEE;
+const YNX_OVERVIEW_TRACK = process.env.YNX_OVERVIEW_TRACK || "v2-web4";
+const YNX_POSITIONING_STATEMENT =
+  process.env.YNX_POSITIONING_STATEMENT ||
+  "AI-native Web4 chain: Ethereum-grade developer UX with Solana-class performance targets";
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -476,6 +480,7 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       chain_id: chainId,
       rpc: INDEXER_RPC,
+      track: YNX_OVERVIEW_TRACK,
       latest_seen: latestSeenHeight || 0,
       last_indexed: state.last_height || 0,
       governance: governanceMeta,
@@ -484,19 +489,60 @@ const server = http.createServer(async (req, res) => {
         onchain_governance: true,
         open_validator_program: true,
         public_testnet_live: true,
+        ai_native_settlement: true,
+        web4_orientation: true,
+        account_abstraction_track: true,
+        parallel_execution_track: true,
+        owner_policy_session_sovereignty: true,
+        machine_payment_x402_ready: true,
+        controlled_self_replication: true,
       },
       positioning: {
-        statement: "Governance-native EVM chain for real Web3 services",
+        statement: YNX_POSITIONING_STATEMENT,
         target_users: [
-          "web3 builders",
+          "ai dapp teams",
+          "agent developers",
+          "web4 builders",
           "validator operators",
-          "onchain organizations",
+          "onchain organizations and protocols",
         ],
         why_choose_ynx: [
-          "mainnet-parity public testnet workflow",
-          "machine-readable governance and fee-routing transparency",
-          "copy-paste operator onboarding and verification tooling",
-          "open validator onboarding with phased decentralization",
+          "EVM compatibility without sacrificing low-latency goals",
+          "AI job settlement and challenge workflow with vault budget controls",
+          "machine-readable governance, economics, and positioning metadata",
+          "operator-first onboarding with fast profile switching for scale",
+          "Web4 sovereignty model: owner > policy > session key",
+        ],
+        design_principles: [
+          "performance with transparent decentralization path",
+          "developer productivity before complexity",
+          "ai verification and settlement as protocol-level primitive",
+        ],
+      },
+      ai_settlement: {
+        enabled: true,
+        api_prefix: "/ai",
+        states: ["created", "committed", "challenged", "finalized", "slashed"],
+        machine_payment: {
+          x402_shape: true,
+          vault_budget_control: true,
+        },
+      },
+      web4: {
+        enabled: true,
+        api_prefix: "/web4",
+        primitives: [
+          "wallet-bootstrap",
+          "policy",
+          "session",
+          "identity",
+          "agent",
+          "intent",
+          "claim",
+          "challenge",
+          "finalize",
+          "replicate",
+          "audit",
         ],
       },
     });

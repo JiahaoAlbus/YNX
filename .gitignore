@@ -21,3 +21,6 @@ chain/ynxd
 chain/ynxd-*
 infra/**/data
 ops-logs
+.idea
+ops/social/.sessions
+ops/

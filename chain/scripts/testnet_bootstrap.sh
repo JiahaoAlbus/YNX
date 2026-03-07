@@ -97,11 +97,15 @@ BIN="$ROOT_DIR/ynxd"
 
 mkdir -p "$ROOT_DIR"
 
-echo "Building ynxd..."
-(
-  cd "$ROOT_DIR"
-  CGO_ENABLED="${YNX_CGO_ENABLED:-0}" go build -o "$BIN" ./cmd/ynxd
-)
+if [[ ! -x "$BIN" || "${YNX_FORCE_BUILD:-0}" == "1" ]]; then
+  echo "Building ynxd..."
+  (
+    cd "$ROOT_DIR"
+    CGO_ENABLED="${YNX_CGO_ENABLED:-0}" go build -buildvcs=false -o "$BIN" ./cmd/ynxd
+  )
+else
+  echo "Using existing ynxd binary: $BIN"
+fi
 
 if [[ "$RESET" -eq 1 ]]; then
   echo "Resetting home dir: $HOME_DIR"

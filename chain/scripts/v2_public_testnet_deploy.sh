@@ -95,12 +95,15 @@ REMOTE_SMOKE_WRITE="$SMOKE_WRITE"
 LOCAL_REPO_DIR="${LOCAL_REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 REMOTE_REPO_DIR="${YNX_REPO_DIR:-~/YNX}"
 PUBLIC_HOST="${YNX_PUBLIC_HOST_OVERRIDE:-${REMOTE_HOST##*@}}"
+LOCAL_LINUX_BIN=""
 
 if [[ "$SYNC_MODE" == "local" ]]; then
   if [[ ! -d "$LOCAL_REPO_DIR/chain" || ! -f "$LOCAL_REPO_DIR/README.md" ]]; then
     echo "Invalid LOCAL_REPO_DIR: $LOCAL_REPO_DIR" >&2
     exit 1
   fi
+  echo "Building local Linux ynxd artifact..."
+  LOCAL_LINUX_BIN="$("$LOCAL_REPO_DIR/chain/scripts/build_linux_ynxd.sh")"
   if command -v gtar >/dev/null 2>&1; then
     TAR_BIN="gtar"
     TAR_FLAGS=(--no-xattrs --no-acls --warning=no-unknown-keyword)
@@ -118,9 +121,12 @@ if [[ "$SYNC_MODE" == "local" ]]; then
     --exclude chain/.testnet \
     --exclude chain/.testnet-v2 \
     --exclude chain/.release-v2 \
+    --exclude chain/.artifacts \
     --exclude "*/data" \
     --exclude "*/data/*" \
     . | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$REMOTE_HOST" "mkdir -p $REMOTE_REPO_DIR && tar -xzf - -C $REMOTE_REPO_DIR"
+  echo "Uploading prebuilt Linux ynxd..."
+  scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$LOCAL_LINUX_BIN" "$REMOTE_HOST:$REMOTE_REPO_DIR/chain/ynxd"
 fi
 
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$REMOTE_HOST" "bash -s" <<EOF
@@ -200,6 +206,10 @@ if ! command -v go >/dev/null 2>&1; then
 fi
 export PATH=/usr/local/go/bin:\$PATH
 grep -q '/usr/local/go/bin' ~/.bashrc || echo 'export PATH=/usr/local/go/bin:\$PATH' >> ~/.bashrc
+export GOTOOLCHAIN=local
+export GOPROXY=\${GOPROXY:-https://proxy.golang.org,direct}
+export GOSUMDB=\${GOSUMDB:-sum.golang.org}
+export GIT_TERMINAL_PROMPT=0
 
 mkdir -p "\$REPO_DIR"
 if [[ "\$SYNC_MODE" == "remote-git" ]]; then
@@ -213,7 +223,13 @@ if [[ "\$SYNC_MODE" == "remote-git" ]]; then
 fi
 
 cd "\$REPO_DIR/chain"
-CGO_ENABLED=0 go build -o ynxd ./cmd/ynxd
+chmod +x ynxd >/dev/null 2>&1 || true
+if [[ ! -x ynxd || "\$SYNC_MODE" == "remote-git" ]]; then
+  echo "Building remote ynxd..."
+  CGO_ENABLED=0 go build -buildvcs=false -o ynxd ./cmd/ynxd
+else
+  echo "Using uploaded prebuilt ynxd"
+fi
 
 for svc in faucet indexer explorer ai-gateway web4-hub; do
   (cd "\$REPO_DIR/infra/\$svc" && npm install --omit=dev >/dev/null)

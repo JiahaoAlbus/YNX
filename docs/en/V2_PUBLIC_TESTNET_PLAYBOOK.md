@@ -82,11 +82,17 @@ What this command does:
 
 - installs required dependencies,
 - pulls latest repo,
-- builds `ynxd`,
+- uploads a prebuilt Linux `ynxd` from the operator machine by default,
 - installs infra dependencies,
 - bootstraps v2 chain home,
 - installs systemd stack services,
 - runs v2 full verification.
+
+Why prebuilt binary is the default:
+
+- it avoids fresh-server Go module resolution failures,
+- it avoids Debian/Ubuntu toolchain drift,
+- it keeps the deployed binary exactly aligned with the operator source tree.
 
 ## 5. Post-Deploy Verification
 

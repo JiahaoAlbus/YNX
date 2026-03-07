@@ -10,6 +10,11 @@ if [[ -z "$REMOTE_HOST" || -z "$SSH_KEY" ]]; then
   exit 1
 fi
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOCAL_LINUX_BIN="$("$ROOT_DIR/scripts/build_linux_ynxd.sh")"
+
+scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$LOCAL_LINUX_BIN" "$REMOTE_HOST:~/YNX/chain/ynxd"
+
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$REMOTE_HOST" 'bash -s' <<'EOF'
 set -euo pipefail
 
@@ -17,8 +22,7 @@ cd ~/YNX
 git pull --ff-only
 
 cd ~/YNX/chain
-export PATH=/usr/local/go/bin:$PATH
-CGO_ENABLED=0 go build -o ynxd ./cmd/ynxd
+chmod +x ynxd
 
 cd ~/YNX
 (cd infra/faucet && npm install --omit=dev >/dev/null)
@@ -32,4 +36,3 @@ sudo systemctl --no-pager --full status ynx-indexer | head -n 12
 
 YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/public_testnet_verify.sh
 EOF
-

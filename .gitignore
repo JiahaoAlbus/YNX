@@ -18,6 +18,7 @@ chain/.testnet-multi
 chain/.release
 chain/.release-v2
 chain/.company-v2
+chain/.artifacts
 chain/build
 chain/ynxd
 chain/ynxd-*

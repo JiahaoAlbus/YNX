@@ -96,6 +96,11 @@ LOCAL_REPO_DIR="${LOCAL_REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." &&
 REMOTE_REPO_DIR="${YNX_REPO_DIR:-~/YNX}"
 PUBLIC_HOST="${YNX_PUBLIC_HOST_OVERRIDE:-${REMOTE_HOST##*@}}"
 LOCAL_LINUX_BIN=""
+REMOTE_REPO_DIR_SCP="$REMOTE_REPO_DIR"
+
+if [[ "$REMOTE_REPO_DIR_SCP" == "\$HOME"* ]]; then
+  REMOTE_REPO_DIR_SCP="~${REMOTE_REPO_DIR_SCP#\$HOME}"
+fi
 
 if [[ "$SYNC_MODE" == "local" ]]; then
   if [[ ! -d "$LOCAL_REPO_DIR/chain" || ! -f "$LOCAL_REPO_DIR/README.md" ]]; then
@@ -126,7 +131,7 @@ if [[ "$SYNC_MODE" == "local" ]]; then
     --exclude "*/data/*" \
     . | ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$REMOTE_HOST" "mkdir -p $REMOTE_REPO_DIR && tar -xzf - -C $REMOTE_REPO_DIR"
   echo "Uploading prebuilt Linux ynxd..."
-  scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$LOCAL_LINUX_BIN" "$REMOTE_HOST:$REMOTE_REPO_DIR/chain/ynxd"
+  scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$LOCAL_LINUX_BIN" "$REMOTE_HOST:$REMOTE_REPO_DIR_SCP/chain/ynxd"
 fi
 
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$REMOTE_HOST" "bash -s" <<EOF

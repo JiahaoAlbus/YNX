@@ -1,55 +1,23 @@
 # YNX / NYXT
 
-English · 中文 · Slovenčina · Français
-
-## Project Overview
-
-### English
-
 YNX is an AI-native Web4 execution chain with an EVM-first developer surface.  
 NYXT is the native asset for gas, staking, and governance.
 
-- Web3 sovereignty model: `owner > policy > session key`
+## Overview
+
+- Sovereignty model: `owner > policy > session key`
 - AI settlement plane: `/ai/*`
 - Web4 control plane: `/web4/*`
-- Operator-oriented bootstrap, release bundle, and public node onboarding
-
-### 中文
-
-YNX 是一条面向 AI 和 Web4 的执行链，开发体验以 EVM 兼容为优先。  
-NYXT 是原生代币，用于 gas、质押和治理。
-
-- Web3 主权模型：`owner > policy > session key`
-- AI 结算平面：`/ai/*`
-- Web4 控制平面：`/web4/*`
-- 面向节点运营者的发布包、自举脚本和标准化接入流程
-
-### Slovenčina
-
-YNX je AI-native Web4 execution chain s vývojárskym rozhraním orientovaným na EVM.  
-NYXT je natívne aktívum pre gas, staking a governance.
-
-- model suverenity Web3: `owner > policy > session key`
-- AI settlement vrstva: `/ai/*`
-- Web4 control vrstva: `/web4/*`
-- release bundle, bootstrap a štandardizované onboarding flow pre operátorov uzlov
-
-### Français
-
-YNX est une chaîne d’exécution Web4 orientée IA avec une surface développeur compatible EVM.  
-NYXT est l’actif natif pour le gas, le staking et la gouvernance.
-
-- modèle de souveraineté Web3 : `owner > policy > session key`
-- couche de règlement IA : `/ai/*`
-- couche de contrôle Web4 : `/web4/*`
-- bundle de release, bootstrap et onboarding standardisé pour les opérateurs de nœuds
+- Operator-ready bootstrap, release bundle, and public node onboarding
+- Public testnet track: `v2-web4`
 
 ## Canonical Docs
 
 - Canonical technical specs and operator runbooks are English-first.
-- English index: `docs/en/INDEX.md`
-- Chinese Web4 overview: `docs/zh/WEB4_在YNX中的定义.md`
-- Chinese public v2 playbook: `docs/zh/V2_公开测试网手册.md`
+- Documentation index: `docs/en/INDEX.md`
+- Core spec: `docs/en/YNX_v2_WEB4_SPEC.md`
+- Execution plan: `docs/en/YNX_v2_EXECUTION_PLAN.md`
+- Public testnet playbook: `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
 
 ## v2 Web4 track (active)
 
@@ -63,14 +31,14 @@ NYXT est l’actif natif pour le gas, le staking et la gouvernance.
 v2 Web4 public testnet (recommended):
 
 - Chain ID: `ynx_9102-1`
-- RPC: `http://<V2_SERVER_IP>:36657`
-- EVM RPC: `http://<V2_SERVER_IP>:38545`
-- REST: `http://<V2_SERVER_IP>:31317`
-- Faucet: `http://<V2_SERVER_IP>:38080`
-- Indexer: `http://<V2_SERVER_IP>:38081`
-- Explorer: `http://<V2_SERVER_IP>:38082`
-- AI Gateway: `http://<V2_SERVER_IP>:38090`
-- Web4 Hub: `http://<V2_SERVER_IP>:38091`
+- RPC: `http://43.134.23.58:36657`
+- EVM RPC: `http://43.134.23.58:38545`
+- REST: `http://43.134.23.58:31317`
+- Faucet: `http://43.134.23.58:38080`
+- Indexer: `http://43.134.23.58:38081`
+- Explorer: `http://43.134.23.58:38082`
+- AI Gateway: `http://43.134.23.58:38090`
+- Web4 Hub: `http://43.134.23.58:38091`
 
 v1 public testnet (legacy track):
 

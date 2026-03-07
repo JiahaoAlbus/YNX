@@ -40,53 +40,8 @@ if [[ ! -f "$CONFIG_TOML" || ! -f "$APP_TOML" ]]; then
   exit 1
 fi
 
-set_section_key() {
-  local file="$1"
-  local section="$2"
-  local key="$3"
-  local value="$4"
-  awk -v section="$section" -v key="$key" -v value="$value" '
-    BEGIN { in_section=0; done=0 }
-    /^\[/ {
-      if ($0 == "["section"]") {
-        in_section=1
-      } else {
-        if (in_section && done==0) {
-          print key" = "value
-          done=1
-        }
-        in_section=0
-      }
-      print
-      next
-    }
-    {
-      if (in_section && $0 ~ "^[[:space:]]*"key"[[:space:]]*=" && done==0) {
-        print key" = "value
-        done=1
-      } else {
-        print
-      }
-    }
-    END {
-      if (in_section && done==0) {
-        print key" = "value
-      }
-    }
-  ' "$file" >"$file.tmp"
-  mv "$file.tmp" "$file"
-}
-
 echo "Applying port config to v2 home: $HOME_DIR"
-set_section_key "$CONFIG_TOML" "rpc" "laddr" "\"tcp://0.0.0.0:${YNX_RPC_PORT}\""
-set_section_key "$CONFIG_TOML" "rpc" "pprof_laddr" "\"localhost:${YNX_PPROF_PORT}\""
-set_section_key "$CONFIG_TOML" "p2p" "laddr" "\"tcp://0.0.0.0:${YNX_P2P_PORT}\""
-set_section_key "$CONFIG_TOML" "instrumentation" "prometheus_listen_addr" "\":${YNX_PROM_PORT}\""
-set_section_key "$APP_TOML" "api" "address" "\"tcp://0.0.0.0:${YNX_REST_PORT}\""
-set_section_key "$APP_TOML" "grpc" "address" "\"0.0.0.0:${YNX_GRPC_PORT}\""
-set_section_key "$APP_TOML" "json-rpc" "address" "\"0.0.0.0:${YNX_EVM_PORT}\""
-set_section_key "$APP_TOML" "json-rpc" "ws-address" "\"0.0.0.0:${YNX_EVM_WS_PORT}\""
-set_section_key "$APP_TOML" "evm" "geth-metrics-address" "\"127.0.0.1:${YNX_GETH_METRICS_PORT}\""
+"$ROOT_DIR/scripts/v2_ports_apply.sh"
 
 screen -dmS ynx-v2-ynxd "$ROOT_DIR/ynxd" start \
   --home "$HOME_DIR" \
@@ -113,6 +68,23 @@ screen -dmS ynx-v2-faucet env \
 screen -dmS ynx-v2-indexer env \
   INDEXER_RPC="http://127.0.0.1:${YNX_RPC_PORT}" \
   INDEXER_PORT="${YNX_INDEXER_PORT:-38081}" \
+  YNX_DENOM="$DENOM" \
+  YNX_MIN_GAS_PRICES="0.000000007${DENOM}" \
+  YNX_PUBLIC_RPC="${YNX_PUBLIC_RPC:-http://127.0.0.1:${YNX_RPC_PORT}}" \
+  YNX_PUBLIC_EVM_RPC="${YNX_PUBLIC_EVM_RPC:-http://127.0.0.1:${YNX_EVM_PORT}}" \
+  YNX_PUBLIC_EVM_WS="${YNX_PUBLIC_EVM_WS:-ws://127.0.0.1:${YNX_EVM_WS_PORT}}" \
+  YNX_PUBLIC_REST="${YNX_PUBLIC_REST:-http://127.0.0.1:${YNX_REST_PORT}}" \
+  YNX_PUBLIC_GRPC="${YNX_PUBLIC_GRPC:-http://127.0.0.1:${YNX_GRPC_PORT}}" \
+  YNX_PUBLIC_FAUCET="${YNX_PUBLIC_FAUCET:-http://127.0.0.1:${YNX_FAUCET_PORT:-38080}}" \
+  YNX_PUBLIC_INDEXER="${YNX_PUBLIC_INDEXER:-http://127.0.0.1:${YNX_INDEXER_PORT:-38081}}" \
+  YNX_PUBLIC_EXPLORER="${YNX_PUBLIC_EXPLORER:-http://127.0.0.1:${YNX_EXPLORER_PORT:-38082}}" \
+  YNX_PUBLIC_AI_GATEWAY="${YNX_PUBLIC_AI_GATEWAY:-http://127.0.0.1:${AI_GATEWAY_PORT}}" \
+  YNX_PUBLIC_WEB4_HUB="${YNX_PUBLIC_WEB4_HUB:-http://127.0.0.1:${WEB4_PORT}}" \
+  YNX_SEEDS="${YNX_SEEDS:-}" \
+  YNX_PERSISTENT_PEERS="${YNX_PERSISTENT_PEERS:-}" \
+  YNX_BINARY_VERSION="${YNX_BINARY_VERSION:-local-build}" \
+  YNX_RELEASE_URL="${YNX_RELEASE_URL:-}" \
+  YNX_DESCRIPTOR_URL="${YNX_DESCRIPTOR_URL:-}" \
   YNX_OVERVIEW_TRACK="v2-web4" \
   INDEXER_DATA_DIR="$HOME_DIR/indexer-data" \
   "$NODE_BIN" "$PROJECT_ROOT/infra/indexer/server.js"

@@ -1,0 +1,295 @@
+openapi: 3.1.0
+info:
+  title: YNX v2 Web4 API
+  version: 2.0.0
+  description: Wallet bootstrap, sovereignty policies, session delegation, agents, intents, and audit surfaces.
+servers:
+  - url: http://127.0.0.1:38091
+paths:
+  /health:
+    get:
+      summary: Web4 hub health
+      responses:
+        "200":
+          description: OK
+  /web4/overview:
+    get:
+      summary: Web4 overview and positioning
+      responses:
+        "200":
+          description: OK
+  /web4/audit:
+    get:
+      summary: Web4 audit stream
+      responses:
+        "200":
+          description: OK
+  /web4/wallet/bootstrap:
+    post:
+      summary: Start wallet bootstrap
+      responses:
+        "201":
+          description: Created
+  /web4/wallet/verify:
+    post:
+      summary: Complete wallet bootstrap
+      responses:
+        "200":
+          description: OK
+  /web4/policies:
+    get:
+      summary: List policies
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create sovereignty policy
+      parameters:
+        - in: header
+          name: x-ynx-owner
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/policies/{policy_id}:
+    get:
+      summary: Get policy detail
+      parameters:
+        - in: path
+          name: policy_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/policies/{policy_id}/sessions:
+    post:
+      summary: Issue session token
+      parameters:
+        - in: path
+          name: policy_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/policies/{policy_id}/pause:
+    post:
+      summary: Pause policy
+      parameters:
+        - in: path
+          name: policy_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/policies/{policy_id}/resume:
+    post:
+      summary: Resume policy
+      parameters:
+        - in: path
+          name: policy_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/policies/{policy_id}/revoke:
+    post:
+      summary: Revoke policy and sessions
+      parameters:
+        - in: path
+          name: policy_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/identities:
+    get:
+      summary: List identities
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create identity
+      parameters:
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/agents:
+    get:
+      summary: List agents
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create agent
+      parameters:
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/agents/{agent_id}:
+    get:
+      summary: Get agent detail
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/agents/{agent_id}/self-update:
+    post:
+      summary: Update allowlisted agent fields
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/agents/{agent_id}/replicate:
+    post:
+      summary: Replicate child agent under policy constraints
+      parameters:
+        - in: path
+          name: agent_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/intents:
+    get:
+      summary: List intents
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create intent
+      parameters:
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/intents/{intent_id}:
+    get:
+      summary: Get intent detail
+      parameters:
+        - in: path
+          name: intent_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/intents/{intent_id}/claim:
+    post:
+      summary: Claim intent execution
+      parameters:
+        - in: path
+          name: intent_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+  /web4/intents/{intent_id}/challenge:
+    post:
+      summary: Challenge intent result
+      parameters:
+        - in: path
+          name: intent_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/intents/{intent_id}/finalize:
+    post:
+      summary: Finalize intent
+      parameters:
+        - in: path
+          name: intent_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-session
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK

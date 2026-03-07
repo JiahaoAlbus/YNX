@@ -5,22 +5,27 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  v2_validator_bootstrap.sh --rpc <rpc_url> [options]
+  v2_validator_bootstrap.sh [--rpc <rpc_url> | --bundle <bundle_path_or_url> | --descriptor <descriptor_path_or_url>] [options]
 
-Bootstrap a new validator/full-node home for YNX v2 public testnet.
+Bootstrap a new validator, full-node, or public-RPC home for YNX v2.
 
-Required:
-  --rpc <url>                 Example: http://43.134.23.58:36657
+Input sources:
+  --rpc <url>                 Live RPC endpoint (example: http://43.134.23.58:36657)
+  --bundle <path|url>         Release bundle directory or .tar.gz
+  --descriptor <path|url>     Network descriptor JSON
 
 Options:
   --home <path>               Default: $HOME/.ynx-v2-validator
-  --chain-id <id>             Default: from RPC status
+  --chain-id <id>             Default: from descriptor/bundle/RPC
+  --genesis-file <path>       Optional local genesis.json path
   --moniker <name>            Default: ynx-v2-validator
-  --seeds <seed_list>         Default: empty
-  --persistent-peers <list>   Default: empty
+  --role <name>               validator | full-node | public-rpc (default: validator)
+  --seeds <seed_list>         Default: from descriptor/bundle
+  --persistent-peers <list>   Default: from descriptor/bundle
   --trust-offset <n>          Default: 2000
-  --minimum-gas-prices <val>  Default: 0.000000007anyxt
+  --minimum-gas-prices <val>  Default: from descriptor or 0.000000007anyxt
   --no-statesync              Disable state sync setup
+  --force-blocksync           Alias for --no-statesync
   --reset                     Delete existing home before bootstrap
   --start                     Start node at the end
 
@@ -30,13 +35,17 @@ EOF
 }
 
 RPC_URL=""
+BUNDLE_SOURCE=""
+DESCRIPTOR_SOURCE=""
 HOME_DIR="${HOME}/.ynx-v2-validator"
 CHAIN_ID=""
+GENESIS_FILE=""
 MONIKER="ynx-v2-validator"
+ROLE="validator"
 SEEDS=""
 PERSISTENT_PEERS=""
 TRUST_OFFSET=2000
-MIN_GAS_PRICES="0.000000007anyxt"
+MIN_GAS_PRICES=""
 ENABLE_STATESYNC=1
 RESET=0
 START=0
@@ -47,6 +56,14 @@ while [[ $# -gt 0 ]]; do
       RPC_URL="${2:-}"
       shift 2
       ;;
+    --bundle)
+      BUNDLE_SOURCE="${2:-}"
+      shift 2
+      ;;
+    --descriptor)
+      DESCRIPTOR_SOURCE="${2:-}"
+      shift 2
+      ;;
     --home)
       HOME_DIR="${2:-}"
       shift 2
@@ -55,8 +72,16 @@ while [[ $# -gt 0 ]]; do
       CHAIN_ID="${2:-}"
       shift 2
       ;;
+    --genesis-file)
+      GENESIS_FILE="${2:-}"
+      shift 2
+      ;;
     --moniker)
       MONIKER="${2:-}"
+      shift 2
+      ;;
+    --role)
+      ROLE="${2:-}"
       shift 2
       ;;
     --seeds)
@@ -75,7 +100,7 @@ while [[ $# -gt 0 ]]; do
       MIN_GAS_PRICES="${2:-}"
       shift 2
       ;;
-    --no-statesync)
+    --no-statesync|--force-blocksync)
       ENABLE_STATESYNC=0
       shift
       ;;
@@ -99,13 +124,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "$RPC_URL" ]]; then
-  echo "--rpc is required" >&2
-  usage
-  exit 1
-fi
-
-for bin in curl jq; do
+for bin in curl jq tar mktemp; do
   if ! command -v "$bin" >/dev/null 2>&1; then
     echo "$bin is required" >&2
     exit 1
@@ -116,8 +135,34 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="${YNX_BIN:-$ROOT_DIR/ynxd}"
 if [[ ! -x "$BIN" ]]; then
   echo "Building ynxd..."
-  (cd "$ROOT_DIR" && CGO_ENABLED=0 go build -o "$BIN" ./cmd/ynxd)
+  (cd "$ROOT_DIR" && CGO_ENABLED=0 go build -buildvcs=false -o "$BIN" ./cmd/ynxd)
 fi
+
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+download_to() {
+  local src="$1"
+  local dst="$2"
+  if [[ "$src" =~ ^https?:// ]]; then
+    curl -fsSL "$src" -o "$dst"
+  else
+    cp "$src" "$dst"
+  fi
+}
+
+resolve_json_source() {
+  local src="$1"
+  local dst="$2"
+  if [[ "$src" =~ ^https?:// ]]; then
+    curl -fsSL "$src" -o "$dst"
+  else
+    cp "$src" "$dst"
+  fi
+}
 
 rpc_get() {
   local path="$1"
@@ -180,6 +225,64 @@ set_section_key() {
   mv "$file.tmp" "$file"
 }
 
+BUNDLE_DIR=""
+if [[ -n "$BUNDLE_SOURCE" ]]; then
+  if [[ -d "$BUNDLE_SOURCE" ]]; then
+    BUNDLE_DIR="$BUNDLE_SOURCE"
+  else
+    bundle_file="$TMP_DIR/bundle.tar.gz"
+    download_to "$BUNDLE_SOURCE" "$bundle_file"
+    BUNDLE_DIR="$TMP_DIR/bundle"
+    mkdir -p "$BUNDLE_DIR"
+    tar -xzf "$bundle_file" -C "$BUNDLE_DIR"
+  fi
+fi
+
+DESCRIPTOR_FILE=""
+if [[ -n "$DESCRIPTOR_SOURCE" ]]; then
+  DESCRIPTOR_FILE="$TMP_DIR/descriptor.json"
+  resolve_json_source "$DESCRIPTOR_SOURCE" "$DESCRIPTOR_FILE"
+elif [[ -n "$BUNDLE_DIR" && -f "$BUNDLE_DIR/descriptor.json" ]]; then
+  DESCRIPTOR_FILE="$BUNDLE_DIR/descriptor.json"
+fi
+
+if [[ -n "$BUNDLE_DIR" && -z "$GENESIS_FILE" && -f "$BUNDLE_DIR/genesis.json" ]]; then
+  GENESIS_FILE="$BUNDLE_DIR/genesis.json"
+fi
+
+descriptor_get() {
+  local query="$1"
+  if [[ -z "$DESCRIPTOR_FILE" ]]; then
+    return 1
+  fi
+  jq -r "$query // empty" "$DESCRIPTOR_FILE"
+}
+
+if [[ -z "$RPC_URL" ]]; then
+  RPC_URL="$(descriptor_get '.network.rpc')"
+fi
+if [[ -z "$CHAIN_ID" ]]; then
+  CHAIN_ID="$(descriptor_get '.chain_id')"
+fi
+if [[ -z "$SEEDS" ]]; then
+  SEEDS="$(descriptor_get '.network.seeds')"
+fi
+if [[ -z "$PERSISTENT_PEERS" ]]; then
+  PERSISTENT_PEERS="$(descriptor_get '.network.persistent_peers')"
+fi
+if [[ -z "$MIN_GAS_PRICES" ]]; then
+  MIN_GAS_PRICES="$(descriptor_get '.minimum_gas_prices')"
+fi
+if [[ -z "$MIN_GAS_PRICES" ]]; then
+  MIN_GAS_PRICES="0.000000007anyxt"
+fi
+
+if [[ -z "$RPC_URL" ]]; then
+  echo "Need one of --rpc, --bundle, or --descriptor with a usable RPC endpoint" >&2
+  usage
+  exit 1
+fi
+
 status_json="$(rpc_get "/status")"
 rpc_chain_id="$(echo "$status_json" | jq -r '.result.node_info.network')"
 latest_height="$(echo "$status_json" | jq -r '.result.sync_info.latest_block_height')"
@@ -205,34 +308,50 @@ if [[ ! -f "$HOME_DIR/config/config.toml" ]]; then
   "$BIN" init "$MONIKER" --chain-id "$CHAIN_ID" --home "$HOME_DIR" >/dev/null
 fi
 
-rpc_get "/genesis" | jq -r '.result.genesis' >"$HOME_DIR/config/genesis.json"
+if [[ -n "$GENESIS_FILE" ]]; then
+  if [[ ! -f "$GENESIS_FILE" ]]; then
+    echo "Genesis file not found: $GENESIS_FILE" >&2
+    exit 1
+  fi
+  cp "$GENESIS_FILE" "$HOME_DIR/config/genesis.json"
+else
+  if ! rpc_get "/genesis" | jq -r '.result.genesis' >"$HOME_DIR/config/genesis.json"; then
+    echo "Failed to fetch /genesis from RPC and no local bundle/genesis was provided" >&2
+    exit 1
+  fi
+fi
 
 CONFIG_TOML="$HOME_DIR/config/config.toml"
 APP_TOML="$HOME_DIR/config/app.toml"
 
+set_top_level_key "$CONFIG_TOML" "moniker" "\"$MONIKER\""
 set_top_level_key "$CONFIG_TOML" "seeds" "\"$SEEDS\""
 set_top_level_key "$CONFIG_TOML" "persistent_peers" "\"$PERSISTENT_PEERS\""
 set_top_level_key "$CONFIG_TOML" "addr_book_strict" "false"
+set_section_key "$CONFIG_TOML" "p2p" "pex" "true"
 
+statesync_mode="disabled"
 if [[ "$ENABLE_STATESYNC" -eq 1 ]]; then
-  if ! [[ "$latest_height" =~ ^[0-9]+$ ]]; then
-    echo "Invalid latest height from RPC: $latest_height" >&2
-    exit 1
+  if [[ "$latest_height" =~ ^[0-9]+$ ]]; then
+    trust_height=$((latest_height - TRUST_OFFSET))
+    if (( trust_height < 2 )); then
+      trust_height=2
+    fi
+    trust_hash="$(rpc_get "/block?height=${trust_height}" | jq -r '.result.block_id.hash' || true)"
+    if [[ -n "$trust_hash" && "$trust_hash" != "null" ]]; then
+      set_section_key "$CONFIG_TOML" "statesync" "enable" "true"
+      set_section_key "$CONFIG_TOML" "statesync" "rpc_servers" "\"${RPC_URL},${RPC_URL}\""
+      set_section_key "$CONFIG_TOML" "statesync" "trust_height" "$trust_height"
+      set_section_key "$CONFIG_TOML" "statesync" "trust_hash" "\"$trust_hash\""
+      statesync_mode="enabled"
+    else
+      set_section_key "$CONFIG_TOML" "statesync" "enable" "false"
+      statesync_mode="fallback-blocksync"
+    fi
+  else
+    set_section_key "$CONFIG_TOML" "statesync" "enable" "false"
+    statesync_mode="fallback-blocksync"
   fi
-  trust_height=$((latest_height - TRUST_OFFSET))
-  if (( trust_height < 2 )); then
-    trust_height=2
-  fi
-  trust_hash="$(rpc_get "/block?height=${trust_height}" | jq -r '.result.block_id.hash')"
-  if [[ -z "$trust_hash" || "$trust_hash" == "null" ]]; then
-    echo "Failed to fetch trust hash at height $trust_height" >&2
-    exit 1
-  fi
-
-  set_section_key "$CONFIG_TOML" "statesync" "enable" "true"
-  set_section_key "$CONFIG_TOML" "statesync" "rpc_servers" "\"${RPC_URL},${RPC_URL}\""
-  set_section_key "$CONFIG_TOML" "statesync" "trust_height" "$trust_height"
-  set_section_key "$CONFIG_TOML" "statesync" "trust_hash" "\"$trust_hash\""
 else
   set_section_key "$CONFIG_TOML" "statesync" "enable" "false"
 fi
@@ -240,15 +359,22 @@ fi
 set_section_key "$APP_TOML" "api" "enable" "true"
 set_section_key "$APP_TOML" "json-rpc" "enable" "true"
 
+"$ROOT_DIR/scripts/v2_role_apply.sh" "$ROLE" >/dev/null
+
 echo
 echo "Bootstrap complete"
 echo "home=$HOME_DIR"
+echo "role=$ROLE"
 echo "chain_id=$CHAIN_ID"
 echo "rpc=$RPC_URL"
-if [[ "$ENABLE_STATESYNC" -eq 1 ]]; then
-  echo "statesync=enabled"
-else
-  echo "statesync=disabled"
+echo "statesync=$statesync_mode"
+echo "seeds=$SEEDS"
+echo "persistent_peers=$PERSISTENT_PEERS"
+if [[ -n "$BUNDLE_DIR" ]]; then
+  echo "bundle=$BUNDLE_DIR"
+fi
+if [[ -n "$DESCRIPTOR_FILE" ]]; then
+  echo "descriptor=$DESCRIPTOR_FILE"
 fi
 echo
 echo "Create validator key:"

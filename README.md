@@ -1,7 +1,55 @@
 # YNX / NYXT
 
-YNX is an open, EVM-compatible chain.  
-NYXT is the native token for gas, staking, and governance.
+English · 中文 · Slovenčina · Français
+
+## Project Overview
+
+### English
+
+YNX is an AI-native Web4 execution chain with an EVM-first developer surface.  
+NYXT is the native asset for gas, staking, and governance.
+
+- Web3 sovereignty model: `owner > policy > session key`
+- AI settlement plane: `/ai/*`
+- Web4 control plane: `/web4/*`
+- Operator-oriented bootstrap, release bundle, and public node onboarding
+
+### 中文
+
+YNX 是一条面向 AI 和 Web4 的执行链，开发体验以 EVM 兼容为优先。  
+NYXT 是原生代币，用于 gas、质押和治理。
+
+- Web3 主权模型：`owner > policy > session key`
+- AI 结算平面：`/ai/*`
+- Web4 控制平面：`/web4/*`
+- 面向节点运营者的发布包、自举脚本和标准化接入流程
+
+### Slovenčina
+
+YNX je AI-native Web4 execution chain s vývojárskym rozhraním orientovaným na EVM.  
+NYXT je natívne aktívum pre gas, staking a governance.
+
+- model suverenity Web3: `owner > policy > session key`
+- AI settlement vrstva: `/ai/*`
+- Web4 control vrstva: `/web4/*`
+- release bundle, bootstrap a štandardizované onboarding flow pre operátorov uzlov
+
+### Français
+
+YNX est une chaîne d’exécution Web4 orientée IA avec une surface développeur compatible EVM.  
+NYXT est l’actif natif pour le gas, le staking et la gouvernance.
+
+- modèle de souveraineté Web3 : `owner > policy > session key`
+- couche de règlement IA : `/ai/*`
+- couche de contrôle Web4 : `/web4/*`
+- bundle de release, bootstrap et onboarding standardisé pour les opérateurs de nœuds
+
+## Canonical Docs
+
+- Canonical technical specs and operator runbooks are English-first.
+- English index: `docs/en/INDEX.md`
+- Chinese Web4 overview: `docs/zh/WEB4_在YNX中的定义.md`
+- Chinese public v2 playbook: `docs/zh/V2_公开测试网手册.md`
 
 ## v2 Web4 track (active)
 
@@ -63,6 +111,10 @@ Practical reasons to build on YNX:
 - I want a one-command v2 validator bootstrap (public join) → [Path N](#path-n-v2-validator-bootstrap-public-join)
 - I want end-to-end v2 write smoke test (AI + Web4) → [Path O](#path-o-v2-api-write-smoke-test)
 - I want v2 watchdog as systemd auto-start service → [Path P](#path-p-v2-watchdog-systemd-auto-start)
+- I want local-only complete v2 buildout (no server) → [Path Q](#path-q-local-only-complete-v2-buildout-no-server)
+- I want local multi-validator v2 simulation → [Path R](#path-r-local-multi-validator-v2-simulation)
+- I want Docker Compose for the full local v2 stack → [Path S](#path-s-local-v2-stack-with-docker-compose)
+- I want a company-ready local handoff package → [Path T](#path-t-company-ready-local-handoff-package)
 - I need a wallet + faucet tokens → [Path C](#path-c-create-wallet-and-request-faucet)
 - I need validator application data → [Path D](#path-d-validator-application-data)
 - I need safe validator onboarding (sync first, then join) → [Path G](#path-g-safe-validator-onboarding-for-scale)
@@ -262,12 +314,25 @@ cd ~/YNX/chain
 
 ## Path N: v2 validator bootstrap (public join)
 
-Bootstrap a new validator node from an existing public RPC:
+Preferred bootstrap from the public network descriptor:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_validator_bootstrap.sh \
+  --descriptor http://<V2_INDEXER_IP>:38081/ynx/network-descriptor \
+  --role validator \
+  --home ~/.ynx-v2-validator \
+  --moniker <YOUR_MONIKER> \
+  --reset
+```
+
+Direct RPC fallback:
 
 ```bash
 cd ~/YNX/chain
 ./scripts/v2_validator_bootstrap.sh \
   --rpc http://<V2_RPC_IP>:36657 \
+  --role validator \
   --home ~/.ynx-v2-validator \
   --moniker <YOUR_MONIKER> \
   --seeds '<seed_node_id@seed_ip:36656>' \
@@ -304,6 +369,72 @@ Follow watchdog logs:
 ```bash
 sudo journalctl -u ynx-v2-watchdog -f --no-pager
 ```
+
+## Path Q: local-only complete v2 buildout (no server)
+
+Run full local completion pipeline:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_local_complete.sh all
+```
+
+This includes:
+
+- bootstrap
+- full stack start
+- verify + smoke
+- release package build
+- company handoff bundle
+
+## Path R: local multi-validator v2 simulation
+
+Run local multi-validator simulation before public expansion:
+
+```bash
+cd ~/YNX/chain
+YNX_VALIDATOR_COUNT=6 ./scripts/v2_local_complete.sh multinode
+```
+
+## Path S: local v2 stack with Docker Compose
+
+Build the local Linux binary/image and start the full v2 stack with Compose:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_local_compose.sh up
+```
+
+Follow logs:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_local_compose.sh logs
+```
+
+Stop the Compose stack:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_local_compose.sh down
+```
+
+## Path T: company-ready local handoff package
+
+Build the local package that is intended for later company-operated rollout:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_company_pack.sh
+```
+
+Package contents:
+
+- release artifacts
+- canonical English docs
+- OpenAPI contracts
+- environment template
+- orchestration scripts
 
 ## Path C: Create wallet and request faucet
 
@@ -496,13 +627,20 @@ This script will:
 - v2 protocol spec: `docs/en/YNX_v2_WEB4_SPEC.md`
 - v2 execution plan: `docs/en/YNX_v2_EXECUTION_PLAN.md`
 - v2 AI settlement API: `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+- v2 Web4 API reference: `docs/en/YNX_v2_WEB4_API.md`
 - v2 public testnet playbook: `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
 - v2 validator bootstrap: `docs/en/V2_VALIDATOR_BOOTSTRAP.md`
 - v2 verify + smoke: `docs/en/V2_SMOKE_AND_VERIFY.md`
+- v2 local complete runbook: `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md`
+- v2 all files/functions map: `docs/en/V2_ALL_FILES_AND_FUNCTIONS.md`
+- v2 current status + node onboarding: `docs/en/V2_WEB4_STATUS_AND_NODE_ONBOARDING.md`
 - Web4 definition (EN): `docs/en/WEB4_FOR_YNX.md`
 - v2 中文蓝图: `docs/zh/YNX_v2_WEB4_蓝图.md`
 - v2 中文公测手册: `docs/zh/V2_公开测试网手册.md`
 - Web4 定义（中文）: `docs/zh/WEB4_在YNX中的定义.md`
+- v2 Web4 API（中文）: `docs/zh/YNX_v2_WEB4_API_接口说明.md`
+- v2 本地完整开发手册（中文）: `docs/zh/V2_本地完整开发运行手册.md`
+- v2 全部文件与功能说明（中文）: `docs/zh/V2_全部文件与功能说明.md`
 - Mainnet parity & advantages: `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
 - Positioning (EN): `docs/en/YNX_POSITIONING.md`
 - 定位与卖点（中文）: `docs/zh/YNX_定位与卖点.md`

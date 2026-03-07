@@ -1,0 +1,127 @@
+services:
+  ynx-v2-node:
+    image: ynx/ynxd:local
+    container_name: ynx-v2-node
+    command:
+      - start
+      - --home
+      - /ynx-home
+      - --chain-id
+      - ${YNX_CHAIN_ID:-ynx_9102-1}
+      - --minimum-gas-prices
+      - 0.000000007${YNX_DENOM:-anyxt}
+      - --api.enable
+      - --grpc.enable
+      - --grpc.address
+      - 0.0.0.0:${YNX_GRPC_PORT:-39090}
+      - --json-rpc.enable
+      - --json-rpc.address
+      - 0.0.0.0:${YNX_EVM_PORT:-38545}
+      - --json-rpc.ws-address
+      - 0.0.0.0:${YNX_EVM_WS_PORT:-38546}
+    ports:
+      - "${YNX_P2P_PORT:-36656}:36656"
+      - "${YNX_RPC_PORT:-36657}:36657"
+      - "${YNX_REST_PORT:-31317}:31317"
+      - "${YNX_GRPC_PORT:-39090}:39090"
+      - "${YNX_EVM_PORT:-38545}:38545"
+      - "${YNX_EVM_WS_PORT:-38546}:38546"
+    volumes:
+      - ../chain/.testnet-v2:/ynx-home
+    restart: unless-stopped
+
+  ynx-v2-faucet:
+    image: node:20-alpine
+    container_name: ynx-v2-faucet
+    working_dir: /workspace/infra/faucet
+    command: ["node", "/workspace/infra/faucet/server.js"]
+    environment:
+      FAUCET_HOME: /workspace/chain/.testnet-v2
+      FAUCET_CHAIN_ID: ${YNX_CHAIN_ID:-ynx_9102-1}
+      FAUCET_DENOM: ${YNX_DENOM:-anyxt}
+      FAUCET_GAS_PRICES: 0.000000007${YNX_DENOM:-anyxt}
+      FAUCET_PORT: ${FAUCET_PORT:-38080}
+      FAUCET_NODE: http://ynx-v2-node:36657
+      FAUCET_DATA_DIR: /workspace/chain/.testnet-v2/faucet-data
+      FAUCET_KEYRING_DIR: /workspace/chain/.testnet-v2
+      YNXD_PATH: /workspace/chain/ynxd-linux-amd64
+    ports:
+      - "${FAUCET_PORT:-38080}:38080"
+    volumes:
+      - ..:/workspace
+    depends_on:
+      - ynx-v2-node
+    restart: unless-stopped
+
+  ynx-v2-indexer:
+    image: node:20-alpine
+    container_name: ynx-v2-indexer
+    working_dir: /workspace/infra/indexer
+    command: ["node", "/workspace/infra/indexer/server.js"]
+    environment:
+      INDEXER_RPC: http://ynx-v2-node:36657
+      INDEXER_PORT: ${INDEXER_PORT:-38081}
+      YNX_OVERVIEW_TRACK: v2-web4
+      INDEXER_DATA_DIR: /workspace/chain/.testnet-v2/indexer-data
+    ports:
+      - "${INDEXER_PORT:-38081}:38081"
+    volumes:
+      - ..:/workspace
+    depends_on:
+      - ynx-v2-node
+    restart: unless-stopped
+
+  ynx-v2-explorer:
+    image: node:20-alpine
+    container_name: ynx-v2-explorer
+    working_dir: /workspace/infra/explorer
+    command: ["node", "/workspace/infra/explorer/server.js"]
+    environment:
+      EXPLORER_INDEXER: http://ynx-v2-indexer:38081
+      EXPLORER_PORT: ${EXPLORER_PORT:-38082}
+    ports:
+      - "${EXPLORER_PORT:-38082}:38082"
+    volumes:
+      - ..:/workspace
+    depends_on:
+      - ynx-v2-indexer
+    restart: unless-stopped
+
+  ynx-v2-ai-gateway:
+    image: node:20-alpine
+    container_name: ynx-v2-ai-gateway
+    working_dir: /workspace/infra/ai-gateway
+    command: ["node", "/workspace/infra/ai-gateway/server.js"]
+    environment:
+      AI_CHAIN_ID: ${YNX_CHAIN_ID:-ynx_9102-1}
+      AI_GATEWAY_PORT: ${AI_GATEWAY_PORT:-38090}
+      AI_DATA_DIR: /workspace/chain/.testnet-v2/ai-gateway-data
+      AI_DEFAULT_CHALLENGE_BLOCKS: ${AI_DEFAULT_CHALLENGE_BLOCKS:-120}
+      AI_X402_UNIT_PRICE: ${AI_X402_UNIT_PRICE:-1}
+      AI_X402_DENOM: ${AI_X402_DENOM:-usdc}
+    ports:
+      - "${AI_GATEWAY_PORT:-38090}:38090"
+    volumes:
+      - ..:/workspace
+    restart: unless-stopped
+
+  ynx-v2-web4-hub:
+    image: node:20-alpine
+    container_name: ynx-v2-web4-hub
+    working_dir: /workspace/infra/web4-hub
+    command: ["node", "/workspace/infra/web4-hub/server.js"]
+    environment:
+      WEB4_CHAIN_ID: ${YNX_CHAIN_ID:-ynx_9102-1}
+      WEB4_PORT: ${WEB4_PORT:-38091}
+      WEB4_TRACK: ${WEB4_TRACK:-v2-web4}
+      WEB4_DATA_DIR: /workspace/chain/.testnet-v2/web4-hub-data
+      WEB4_ENFORCE_POLICY: ${WEB4_ENFORCE_POLICY:-0}
+      WEB4_INTENT_TTL_SEC: ${WEB4_INTENT_TTL_SEC:-900}
+      WEB4_DEFAULT_SESSION_TTL_SEC: ${WEB4_DEFAULT_SESSION_TTL_SEC:-900}
+      WEB4_DEFAULT_MAX_OPS: ${WEB4_DEFAULT_MAX_OPS:-50}
+      WEB4_DEFAULT_MAX_SPEND: ${WEB4_DEFAULT_MAX_SPEND:-10000}
+    ports:
+      - "${WEB4_PORT:-38091}:38091"
+    volumes:
+      - ..:/workspace
+    restart: unless-stopped

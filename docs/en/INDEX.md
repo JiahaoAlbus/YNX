@@ -9,9 +9,15 @@ Last updated: 2026-02-12
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 target architecture and protocol requirements
 - `docs/en/YNX_v2_EXECUTION_PLAN.md` — v2 delivery plan and milestones
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API endpoint reference
 - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — v2 public testnet deployment and operations
+- `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md` — local-only complete runbook
+- `docs/en/V2_SECURITY_MODEL.md` — v2 control, key, payment, and mutation boundaries
+- `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
 - `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — v2 validator bootstrap quickstart
 - `docs/en/V2_SMOKE_AND_VERIFY.md` — v2 verification and write-path smoke testing
+- `docs/en/V2_ALL_FILES_AND_FUNCTIONS.md` — full file/function map
+- `docs/en/V2_WEB4_STATUS_AND_NODE_ONBOARDING.md` — current v2 status, selling points, AI integration, and generic node onboarding target
 - `docs/en/WEB4_FOR_YNX.md` — Web4 definition and primitives used by YNX
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
@@ -49,5 +55,7 @@ Last updated: 2026-02-12
 - `docs/en/INDEXER.md`
 - `docs/en/EXPLORER.md`
 - `docs/en/MONITORING.md`
+- `infra/openapi/ynx-v2-ai.yaml`
+- `infra/openapi/ynx-v2-web4.yaml`
 - `docs/en/Preconfirmations_v0.md`
 - `docs/en/Protocol_Precompile_v0.md`

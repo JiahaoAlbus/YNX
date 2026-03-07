@@ -1,0 +1,187 @@
+openapi: 3.1.0
+info:
+  title: YNX v2 AI Settlement API
+  version: 2.0.0
+  description: AI jobs, machine-payment vaults, programmable charges, and x402-style protected resources.
+servers:
+  - url: http://127.0.0.1:38090
+paths:
+  /health:
+    get:
+      summary: AI gateway health
+      responses:
+        "200":
+          description: OK
+  /ai/stats:
+    get:
+      summary: AI gateway aggregate stats
+      responses:
+        "200":
+          description: OK
+  /ai/jobs:
+    get:
+      summary: List jobs
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create AI job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJob"
+      responses:
+        "201":
+          description: Created
+  /ai/jobs/{job_id}:
+    get:
+      summary: Get job detail
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/jobs/{job_id}/commit:
+    post:
+      summary: Commit AI job result
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/jobs/{job_id}/challenge:
+    post:
+      summary: Challenge AI job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/jobs/{job_id}/finalize:
+    post:
+      summary: Finalize AI job
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/vaults:
+    get:
+      summary: List machine-payment vaults
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create machine-payment vault
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVault"
+      responses:
+        "201":
+          description: Created
+  /ai/vaults/{vault_id}:
+    get:
+      summary: Get vault detail
+      parameters:
+        - in: path
+          name: vault_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/vaults/{vault_id}/deposit:
+    post:
+      summary: Deposit to vault
+      parameters:
+        - in: path
+          name: vault_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/payments/quote:
+    post:
+      summary: Quote payment requirement
+      responses:
+        "200":
+          description: OK
+  /ai/payments/charge:
+    post:
+      summary: Charge a vault
+      responses:
+        "200":
+          description: OK
+  /x402/resource:
+    get:
+      summary: Access x402-style protected resource
+      parameters:
+        - in: query
+          name: resource
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: units
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Paid access delivered
+        "402":
+          description: Payment required
+components:
+  schemas:
+    CreateJob:
+      type: object
+      properties:
+        creator:
+          type: string
+        worker:
+          type: string
+        vault_id:
+          type: string
+        reward:
+          type: string
+        stake:
+          type: string
+        input_uri:
+          type: string
+    CreateVault:
+      type: object
+      properties:
+        owner:
+          type: string
+        policy_id:
+          type: string
+        balance:
+          type: number
+        max_daily_spend:
+          type: number
+        max_per_payment:
+          type: number

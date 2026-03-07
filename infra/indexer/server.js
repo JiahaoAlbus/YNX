@@ -64,6 +64,23 @@ const YNX_OVERVIEW_TRACK = process.env.YNX_OVERVIEW_TRACK || "v2-web4";
 const YNX_POSITIONING_STATEMENT =
   process.env.YNX_POSITIONING_STATEMENT ||
   "AI-native Web4 chain: Ethereum-grade developer UX with Solana-class performance targets";
+const YNX_DENOM = process.env.YNX_DENOM || "anyxt";
+const YNX_MIN_GAS_PRICES = process.env.YNX_MIN_GAS_PRICES || `0.000000007${YNX_DENOM}`;
+const YNX_PUBLIC_RPC = process.env.YNX_PUBLIC_RPC || process.env.YNX_RPC || INDEXER_RPC;
+const YNX_PUBLIC_EVM_RPC = process.env.YNX_PUBLIC_EVM_RPC || process.env.YNX_EVM_RPC || "http://127.0.0.1:38545";
+const YNX_PUBLIC_EVM_WS = process.env.YNX_PUBLIC_EVM_WS || process.env.YNX_EVM_WS || "ws://127.0.0.1:38546";
+const YNX_PUBLIC_REST = process.env.YNX_PUBLIC_REST || process.env.YNX_REST || "http://127.0.0.1:31317";
+const YNX_PUBLIC_GRPC = process.env.YNX_PUBLIC_GRPC || process.env.YNX_GRPC || "http://127.0.0.1:39090";
+const YNX_PUBLIC_FAUCET = process.env.YNX_PUBLIC_FAUCET || process.env.YNX_FAUCET || "http://127.0.0.1:38080";
+const YNX_PUBLIC_INDEXER = process.env.YNX_PUBLIC_INDEXER || process.env.YNX_INDEXER || `http://127.0.0.1:${INDEXER_PORT}`;
+const YNX_PUBLIC_EXPLORER = process.env.YNX_PUBLIC_EXPLORER || process.env.YNX_EXPLORER || "http://127.0.0.1:38082";
+const YNX_PUBLIC_AI_GATEWAY = process.env.YNX_PUBLIC_AI_GATEWAY || process.env.YNX_AI_GATEWAY || "http://127.0.0.1:38090";
+const YNX_PUBLIC_WEB4_HUB = process.env.YNX_PUBLIC_WEB4_HUB || process.env.YNX_WEB4_HUB || "http://127.0.0.1:38091";
+const YNX_SEEDS = process.env.YNX_SEEDS || "";
+const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
+const YNX_BINARY_VERSION = process.env.YNX_BINARY_VERSION || "local-build";
+const YNX_RELEASE_URL = process.env.YNX_RELEASE_URL || "";
+const YNX_DESCRIPTOR_URL = process.env.YNX_DESCRIPTOR_URL || "";
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -544,6 +561,44 @@ const server = http.createServer(async (req, res) => {
           "replicate",
           "audit",
         ],
+      },
+    });
+  }
+
+  if (url.pathname === "/ynx/network-descriptor") {
+    return json(res, 200, {
+      ok: true,
+      generated_at: new Date().toISOString(),
+      track: YNX_OVERVIEW_TRACK,
+      chain_id: chainId,
+      denom: YNX_DENOM,
+      minimum_gas_prices: YNX_MIN_GAS_PRICES,
+      binary: {
+        name: "ynxd",
+        version: YNX_BINARY_VERSION,
+      },
+      release_url: YNX_RELEASE_URL,
+      descriptor_url: YNX_DESCRIPTOR_URL,
+      endpoints: {
+        rpc: YNX_PUBLIC_RPC,
+        evm_rpc: YNX_PUBLIC_EVM_RPC,
+        evm_ws: YNX_PUBLIC_EVM_WS,
+        rest: YNX_PUBLIC_REST,
+        grpc: YNX_PUBLIC_GRPC,
+        faucet: YNX_PUBLIC_FAUCET,
+        indexer: YNX_PUBLIC_INDEXER,
+        explorer: YNX_PUBLIC_EXPLORER,
+        ai_gateway: YNX_PUBLIC_AI_GATEWAY,
+        web4_hub: YNX_PUBLIC_WEB4_HUB,
+      },
+      network: {
+        seeds: YNX_SEEDS,
+        persistent_peers: YNX_PERSISTENT_PEERS,
+      },
+      roles: {
+        validator: { public_rpc: false, public_rest: false, public_evm: false },
+        "full-node": { public_rpc: false, public_rest: false, public_evm: false },
+        "public-rpc": { public_rpc: true, public_rest: true, public_evm: true },
       },
     });
   }

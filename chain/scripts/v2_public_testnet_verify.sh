@@ -116,6 +116,12 @@ overview_web4="$(echo "$overview_json" | jq -r '.value_proposition.web4_orientat
 [[ "$overview_ai" == "true" ]] || { echo "Overview ai flag invalid: $overview_ai"; exit 1; }
 [[ "$overview_web4" == "true" ]] || { echo "Overview web4 flag invalid: $overview_web4"; exit 1; }
 
+descriptor_json="$(curl_get_retry "${INDEXER}/ynx/network-descriptor")" || { echo "Network descriptor not reachable: ${INDEXER}/ynx/network-descriptor"; exit 1; }
+descriptor_chain="$(echo "$descriptor_json" | jq -r '.chain_id')"
+descriptor_rpc="$(echo "$descriptor_json" | jq -r '.endpoints.rpc')"
+[[ "$descriptor_chain" == "$CHAIN_ID" ]] || { echo "Descriptor chain id mismatch: $descriptor_chain"; exit 1; }
+[[ -n "$descriptor_rpc" && "$descriptor_rpc" != "null" ]] || { echo "Descriptor rpc missing"; exit 1; }
+
 explorer_head="$(curl_get_retry "${EXPLORER}" | head -c 600)" || { echo "Explorer not reachable: ${EXPLORER}"; exit 1; }
 echo "$explorer_head" | grep -qi "<!DOCTYPE html>" || { echo "Explorer page invalid"; exit 1; }
 echo "$explorer_head" | grep -qi "YNX Web4 Explorer" || { echo "Explorer title invalid"; exit 1; }
@@ -162,5 +168,6 @@ echo "rpc_catching_up=${rpc_syncing}"
 echo "evm_chain_id=${evm_chain}"
 echo "indexer_last_indexed=${indexer_last}"
 echo "overview_track=${overview_track}"
+echo "descriptor_rpc=${descriptor_rpc}"
 echo "ai_gateway_chain_id=${ai_chain}"
 echo "web4_track=${web4_track}"

@@ -13,9 +13,11 @@ chain/.testnet
 chain/.testnet.log
 chain/.testnet-v2
 chain/.testnet-v2.log
+chain/.testnet-v2-multi
 chain/.testnet-multi
 chain/.release
 chain/.release-v2
+chain/.company-v2
 chain/build
 chain/ynxd
 chain/ynxd-*

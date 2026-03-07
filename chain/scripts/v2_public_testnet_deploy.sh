@@ -94,6 +94,7 @@ REMOTE_RESET="$RESET"
 REMOTE_SMOKE_WRITE="$SMOKE_WRITE"
 LOCAL_REPO_DIR="${LOCAL_REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 REMOTE_REPO_DIR="${YNX_REPO_DIR:-~/YNX}"
+PUBLIC_HOST="${YNX_PUBLIC_HOST_OVERRIDE:-${REMOTE_HOST##*@}}"
 
 if [[ "$SYNC_MODE" == "local" ]]; then
   if [[ ! -d "$LOCAL_REPO_DIR/chain" || ! -f "$LOCAL_REPO_DIR/README.md" ]]; then
@@ -252,6 +253,12 @@ else
   YNX_HOME="\$V2_HOME" "\$REPO_DIR/chain/scripts/v2_profile_apply.sh" "\$PROFILE"
 fi
 
+NODE_ID="\$("\$REPO_DIR/chain/ynxd" comet show-node-id --home "\$V2_HOME" 2>/dev/null || true)"
+PUBLIC_SEED=""
+if [[ -n "\$NODE_ID" ]]; then
+  PUBLIC_SEED="\${NODE_ID}@$PUBLIC_HOST:\${P2P_PORT}"
+fi
+
 YNX_REPO_DIR="\$REPO_DIR" \
 YNX_HOME="\$V2_HOME" \
 YNX_CHAIN_ID="\$CHAIN_ID" \
@@ -265,6 +272,19 @@ EXPLORER_PORT="\$EXPLORER_PORT" \
 FAUCET_KEYRING_DIR="\$V2_HOME" \
 AI_GATEWAY_PORT="\$AI_PORT" \
 WEB4_PORT="\$WEB4_PORT" \
+YNX_PUBLIC_RPC="http://$PUBLIC_HOST:\$RPC_PORT" \
+YNX_PUBLIC_EVM_RPC="http://$PUBLIC_HOST:\$EVM_PORT" \
+YNX_PUBLIC_EVM_WS="ws://$PUBLIC_HOST:${YNX_EVM_WS_PORT:-38546}" \
+YNX_PUBLIC_REST="http://$PUBLIC_HOST:\$REST_PORT" \
+YNX_PUBLIC_GRPC="http://$PUBLIC_HOST:${YNX_GRPC_PORT:-39090}" \
+YNX_PUBLIC_FAUCET="http://$PUBLIC_HOST:\$FAUCET_PORT" \
+YNX_PUBLIC_INDEXER="http://$PUBLIC_HOST:\$INDEXER_PORT" \
+YNX_PUBLIC_EXPLORER="http://$PUBLIC_HOST:\$EXPLORER_PORT" \
+YNX_PUBLIC_AI_GATEWAY="http://$PUBLIC_HOST:\$AI_PORT" \
+YNX_PUBLIC_WEB4_HUB="http://$PUBLIC_HOST:\$WEB4_PORT" \
+YNX_DESCRIPTOR_URL="http://$PUBLIC_HOST:\$INDEXER_PORT/ynx/network-descriptor" \
+YNX_SEEDS="\$PUBLIC_SEED" \
+YNX_PERSISTENT_PEERS="\$PUBLIC_SEED" \
 "\$REPO_DIR/chain/scripts/install_v2_stack_systemd.sh"
 
 for _ in \$(seq 1 60); do

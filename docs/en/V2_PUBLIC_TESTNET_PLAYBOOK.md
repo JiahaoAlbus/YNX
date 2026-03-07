@@ -12,6 +12,24 @@ Bring YNX v2 to public-testnet readiness so external users only need:
 - validator onboarding info,
 - explorer link.
 
+## 1.1 Local-Only Completion Mode
+
+Before any server rollout, complete local buildout:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_local_complete.sh all
+```
+
+This ensures code, APIs, smoke tests, and release bundle are complete locally first.
+
+Optional Docker Compose path for the same local stack:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_local_compose.sh up
+```
+
 ## 2. Required Components
 
 - `ynxd` node (v2 chain-id)
@@ -111,12 +129,24 @@ cd ~/YNX/chain
 
 Output:
 
+- `ynxd`
 - `genesis.json`
 - `config.toml`
 - `app.toml`
 - `endpoints.json`
 - `network.json`
+- `descriptor.json`
+- `bootstrap/v2_validator_bootstrap.sh`
+- `bootstrap/v2_role_apply.sh`
+- role env profiles
 - checksums and tarball
+
+Company-ready local handoff package:
+
+```bash
+cd ~/Desktop/YNX/chain
+./scripts/v2_company_pack.sh
+```
 
 ## 7. Public Announcement Checklist
 
@@ -145,14 +175,33 @@ sudo journalctl -u ynx-v2-ai-gateway -f --no-pager
 sudo journalctl -u ynx-v2-web4-hub -f --no-pager
 ```
 
+Public network descriptor:
+
+```bash
+curl -s http://<SERVER_IP>:38081/ynx/network-descriptor | jq
+```
+
 ## 9. Validator Bootstrap (Public Join)
 
-For external validators joining v2:
+Preferred external validator join via network descriptor:
+
+```bash
+cd ~/YNX/chain
+./scripts/v2_validator_bootstrap.sh \
+  --descriptor http://<SERVER_IP>:38081/ynx/network-descriptor \
+  --role validator \
+  --home ~/.ynx-v2-validator \
+  --moniker <YOUR_MONIKER> \
+  --reset
+```
+
+Direct RPC fallback:
 
 ```bash
 cd ~/YNX/chain
 ./scripts/v2_validator_bootstrap.sh \
   --rpc http://<RPC_IP>:36657 \
+  --role validator \
   --home ~/.ynx-v2-validator \
   --moniker <YOUR_MONIKER> \
   --seeds '<seed_node_id@seed_ip:36656>' \

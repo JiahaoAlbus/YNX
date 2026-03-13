@@ -105,14 +105,10 @@ fi
 
 EMAIL_BLOCK=""
 if [[ -n "$TLS_EMAIL" ]]; then
-  EMAIL_BLOCK="    email ${TLS_EMAIL}"
+  echo "TLS email provided (${TLS_EMAIL}), using default Caddy ACME account configuration."
 fi
 
 run_root tee /etc/caddy/conf.d/ynx-v2-gateway.caddy >/dev/null <<EOF
-{
-${EMAIL_BLOCK}
-}
-
 (ynx_api_headers) {
   @preflight method OPTIONS
   header {

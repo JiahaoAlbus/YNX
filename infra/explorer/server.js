@@ -33,6 +33,18 @@ for (const candidate of envCandidates) {
 const PORT = parseInt(process.env.EXPLORER_PORT || "8082", 10);
 const INDEXER_URL = process.env.EXPLORER_INDEXER || "http://127.0.0.1:8081";
 const PUBLIC_DIR = path.resolve(__dirname, "public");
+const EXPLORER_CORS_ALLOW_ORIGIN = process.env.EXPLORER_CORS_ALLOW_ORIGIN || "*";
+const EXPLORER_CORS_ALLOW_METHODS = process.env.EXPLORER_CORS_ALLOW_METHODS || "GET,OPTIONS";
+const EXPLORER_CORS_ALLOW_HEADERS = process.env.EXPLORER_CORS_ALLOW_HEADERS || "content-type";
+
+function corsHeaders(extra = {}) {
+  return {
+    "access-control-allow-origin": EXPLORER_CORS_ALLOW_ORIGIN,
+    "access-control-allow-methods": EXPLORER_CORS_ALLOW_METHODS,
+    "access-control-allow-headers": EXPLORER_CORS_ALLOW_HEADERS,
+    ...extra,
+  };
+}
 
 function contentType(filePath) {
   if (filePath.endsWith(".html")) return "text/html";
@@ -43,14 +55,19 @@ function contentType(filePath) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders());
+    return res.end();
+  }
+
   const url = new URL(req.url, "http://localhost");
 
   if (url.pathname === "/config") {
     const body = JSON.stringify({ indexer: INDEXER_URL });
-    res.writeHead(200, {
+    res.writeHead(200, corsHeaders({
       "content-type": "application/json",
       "content-length": Buffer.byteLength(body),
-    });
+    }));
     return res.end(body);
   }
 
@@ -69,7 +86,7 @@ const server = http.createServer((req, res) => {
   }
 
   const data = fs.readFileSync(absPath);
-  res.writeHead(200, { "content-type": contentType(absPath) });
+  res.writeHead(200, corsHeaders({ "content-type": contentType(absPath) }));
   return res.end(data);
 });
 

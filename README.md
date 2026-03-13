@@ -40,6 +40,24 @@ v2 Web4 public testnet (recommended):
 - AI Gateway: `http://43.134.23.58:38090`
 - Web4 Hub: `http://43.134.23.58:38091`
 
+For HTTPS websites (for example `https://ynxweb4.com`), do not call raw `http://IP:PORT` endpoints from browser code.
+Use HTTPS subdomain gateway endpoints instead:
+
+- `https://rpc.<your-domain>`
+- `https://evm.<your-domain>`
+- `https://faucet.<your-domain>`
+- `https://indexer.<your-domain>`
+- `https://explorer.<your-domain>`
+- `https://ai.<your-domain>`
+- `https://web4.<your-domain>`
+
+Gateway setup script:
+
+```bash
+cd ~/YNX/chain
+./scripts/install_v2_caddy_subdomain_gateway.sh <your-domain> <tls-email>
+```
+
 v1 public testnet (legacy track):
 
 - Chain ID: `ynx_9002-1`

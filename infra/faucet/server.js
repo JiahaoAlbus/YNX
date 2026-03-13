@@ -43,6 +43,9 @@ const FAUCET_DENOM = process.env.FAUCET_DENOM || "anyxt";
 const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || "1000000000000000000";
 const FAUCET_GAS_PRICES = process.env.FAUCET_GAS_PRICES || "0anyxt";
 const FAUCET_GAS_ADJUSTMENT = process.env.FAUCET_GAS_ADJUSTMENT || "1.2";
+const FAUCET_CORS_ALLOW_ORIGIN = process.env.FAUCET_CORS_ALLOW_ORIGIN || "*";
+const FAUCET_CORS_ALLOW_METHODS = process.env.FAUCET_CORS_ALLOW_METHODS || "GET,POST,OPTIONS";
+const FAUCET_CORS_ALLOW_HEADERS = process.env.FAUCET_CORS_ALLOW_HEADERS || "content-type,x-ynx-payment";
 const RATE_LIMIT_SECONDS = parseInt(process.env.FAUCET_RATE_LIMIT_SECONDS || "3600", 10);
 const MAX_PER_DAY = parseInt(process.env.FAUCET_MAX_PER_DAY || "3", 10);
 const IP_RATE_LIMIT_SECONDS = parseInt(process.env.FAUCET_IP_RATE_LIMIT_SECONDS || "60", 10);
@@ -71,12 +74,21 @@ function saveState() {
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
 }
 
+function corsHeaders(extra = {}) {
+  return {
+    "access-control-allow-origin": FAUCET_CORS_ALLOW_ORIGIN,
+    "access-control-allow-methods": FAUCET_CORS_ALLOW_METHODS,
+    "access-control-allow-headers": FAUCET_CORS_ALLOW_HEADERS,
+    ...extra,
+  };
+}
+
 function json(res, code, payload) {
   const body = JSON.stringify(payload);
-  res.writeHead(code, {
+  res.writeHead(code, corsHeaders({
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body),
-  });
+  }));
   res.end(body);
 }
 
@@ -239,6 +251,11 @@ async function processQueue() {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders());
+    return res.end();
+  }
+
   if (req.method === "GET" && req.url === "/health") {
     return json(res, 200, {
       ok: true,

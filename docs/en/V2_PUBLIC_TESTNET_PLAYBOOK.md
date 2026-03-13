@@ -78,6 +78,33 @@ cd ~/YNX/chain
 ./scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset --smoke-write
 ```
 
+Deploy with HTTPS subdomain endpoints (recommended for public websites):
+
+```bash
+cd ~/YNX/chain
+YNX_PUBLIC_BASE_DOMAIN=ynxweb4.com \
+./scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset --smoke-write
+```
+
+Then install HTTPS reverse proxy gateway on the server:
+
+```bash
+cd ~/YNX/chain
+./scripts/install_v2_caddy_subdomain_gateway.sh ynxweb4.com ops@ynxweb4.com
+```
+
+Expected public endpoints after gateway:
+
+- `https://rpc.ynxweb4.com`
+- `https://evm.ynxweb4.com`
+- `https://evm-ws.ynxweb4.com`
+- `https://rest.ynxweb4.com`
+- `https://faucet.ynxweb4.com`
+- `https://indexer.ynxweb4.com`
+- `https://explorer.ynxweb4.com`
+- `https://ai.ynxweb4.com`
+- `https://web4.ynxweb4.com`
+
 What this command does:
 
 - installs required dependencies,

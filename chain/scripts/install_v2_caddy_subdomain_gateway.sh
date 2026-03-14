@@ -130,6 +130,13 @@ rpc.${BASE_DOMAIN} {
 
 evm.${BASE_DOMAIN} {
   import ynx_api_headers
+  @evm_probe {
+    method GET HEAD
+    path / /health
+  }
+  respond @evm_probe 200 {
+    body "{\"ok\":true,\"service\":\"evm-rpc\"}"
+  }
   reverse_proxy 127.0.0.1:${EVM_PORT} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods

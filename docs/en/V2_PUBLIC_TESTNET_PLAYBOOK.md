@@ -3,6 +3,12 @@
 Status: Active  
 Last updated: 2026-02-25
 
+## 0. External Naming (Competition/PR)
+
+- Official English name: `YNX Sovereign Execution Layer`
+- Official Chinese name: `YNX 主权执行层`
+- Suggested title line: `YNX Sovereign Execution Layer: A Decentralized Execution Network for Web4 and AI Agents`
+
 ## 1. Objective
 
 Bring YNX v2 to public-testnet readiness so external users only need:

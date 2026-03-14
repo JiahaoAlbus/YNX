@@ -62,7 +62,7 @@ const server = http.createServer((req, res) => {
 
   const url = new URL(req.url, "http://localhost");
 
-  if (url.pathname === "/config") {
+  if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/config") {
     const body = JSON.stringify({ indexer: INDEXER_URL });
     res.writeHead(200, corsHeaders({
       "content-type": "application/json",

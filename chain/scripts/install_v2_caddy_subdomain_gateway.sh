@@ -121,52 +121,92 @@ run_root tee /etc/caddy/conf.d/ynx-v2-gateway.caddy >/dev/null <<EOF
 
 rpc.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${RPC_PORT}
+  reverse_proxy 127.0.0.1:${RPC_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 evm.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${EVM_PORT}
+  reverse_proxy 127.0.0.1:${EVM_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 evm-ws.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${EVM_WS_PORT}
+  reverse_proxy 127.0.0.1:${EVM_WS_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 rest.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${REST_PORT}
+  reverse_proxy 127.0.0.1:${REST_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 grpc.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy h2c://127.0.0.1:${GRPC_PORT}
+  reverse_proxy h2c://127.0.0.1:${GRPC_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 faucet.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${FAUCET_PORT}
+  reverse_proxy 127.0.0.1:${FAUCET_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 indexer.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${INDEXER_PORT}
+  reverse_proxy 127.0.0.1:${INDEXER_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 explorer.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${EXPLORER_PORT}
+  reverse_proxy 127.0.0.1:${EXPLORER_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 ai.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${AI_GATEWAY_PORT}
+  reverse_proxy 127.0.0.1:${AI_GATEWAY_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 
 web4.${BASE_DOMAIN} {
   import ynx_api_headers
-  reverse_proxy 127.0.0.1:${WEB4_PORT}
+  reverse_proxy 127.0.0.1:${WEB4_PORT} {
+    header_down -Access-Control-Allow-Origin
+    header_down -Access-Control-Allow-Methods
+    header_down -Access-Control-Allow-Headers
+  }
 }
 EOF
 

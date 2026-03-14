@@ -256,7 +256,7 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  if (req.method === "GET" && req.url === "/health") {
+  if ((req.method === "GET" || req.method === "HEAD") && req.url === "/health") {
     return json(res, 200, {
       ok: true,
       chain_id: FAUCET_CHAIN_ID,
@@ -265,7 +265,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  if (req.method === "GET" && req.url === "/") {
+  if ((req.method === "GET" || req.method === "HEAD") && req.url === "/") {
     return json(res, 200, {
       ok: true,
       service: "ynx-faucet",

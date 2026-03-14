@@ -452,7 +452,9 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  if (req.method !== "GET") {
+  const isReadMethod = req.method === "GET" || req.method === "HEAD";
+
+  if (!isReadMethod) {
     return json(res, 405, { ok: false, error: "method_not_allowed" });
   }
 

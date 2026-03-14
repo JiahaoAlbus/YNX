@@ -193,7 +193,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const segments = url.pathname.split("/").filter(Boolean);
 
-  if (req.method === "GET" && url.pathname === "/health") {
+  if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/health") {
     return json(res, 200, {
       ok: true,
       chain_id: AI_CHAIN_ID,

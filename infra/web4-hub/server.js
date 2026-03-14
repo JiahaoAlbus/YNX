@@ -368,7 +368,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const segments = url.pathname.split("/").filter(Boolean);
 
-  if (req.method === "GET" && url.pathname === "/health") {
+  if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/health") {
     return json(res, 200, {
       ok: true,
       service: "ynx-web4-hub",
@@ -379,7 +379,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  if (req.method === "GET" && url.pathname === "/web4/overview") {
+  if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/web4/overview") {
     return json(res, 200, {
       ok: true,
       chain_id: WEB4_CHAIN_ID,

@@ -265,6 +265,18 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  if (req.method === "GET" && req.url === "/") {
+    return json(res, 200, {
+      ok: true,
+      service: "ynx-faucet",
+      usage: {
+        health: "/health",
+        faucet_get: "/faucet?address=ynx1...",
+        faucet_post: "POST /faucet {\"address\":\"ynx1...\"}",
+      },
+    });
+  }
+
   if ((req.method === "POST" && req.url === "/faucet") || (req.method === "GET" && req.url.startsWith("/faucet"))) {
     const body = req.method === "POST" ? await parseBody(req) : {};
     const url = new URL(req.url, "http://localhost");

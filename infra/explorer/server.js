@@ -31,7 +31,7 @@ for (const candidate of envCandidates) {
 }
 
 const PORT = parseInt(process.env.EXPLORER_PORT || "8082", 10);
-const INDEXER_URL = process.env.EXPLORER_INDEXER || "http://127.0.0.1:8081";
+const INDEXER_URL = process.env.YNX_PUBLIC_INDEXER || process.env.EXPLORER_INDEXER || "http://127.0.0.1:8081";
 const PUBLIC_DIR = path.resolve(__dirname, "public");
 const EXPLORER_CORS_ALLOW_ORIGIN = process.env.EXPLORER_CORS_ALLOW_ORIGIN || "*";
 const EXPLORER_CORS_ALLOW_METHODS = process.env.EXPLORER_CORS_ALLOW_METHODS || "GET,OPTIONS";

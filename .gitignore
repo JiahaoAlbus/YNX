@@ -27,3 +27,4 @@ ops-logs
 .idea
 ops/social/.sessions
 ops/
+output/

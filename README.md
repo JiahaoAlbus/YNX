@@ -1,91 +1,59 @@
 # YNX / NYXT
 
-YNX is an AI-native Web4 execution chain with an EVM-first developer surface.  
+YNX is a public execution network for humans and AI agents.  
+Project position: `YNX Sovereign Execution Layer`.
+
 NYXT is the native asset for gas, staking, and governance.
 
-## Overview
+## Active Track
 
-- Sovereignty model: `owner > policy > session key`
+- Track: `v2-web4`
+- Sovereignty order: `owner > policy > session key > agent action`
 - AI settlement plane: `/ai/*`
 - Web4 control plane: `/web4/*`
-- Operator-ready bootstrap, release bundle, and public node onboarding
-- Public testnet track: `v2-web4`
+- Goal: verifiable execution, machine payments, and open validator onboarding
 
-## Canonical Docs
+## Public Join Docs (External)
 
-- Canonical technical specs and operator runbooks are English-first.
-- Documentation index: `docs/en/INDEX.md`
-- Core spec: `docs/en/YNX_v2_WEB4_SPEC.md`
-- Execution plan: `docs/en/YNX_v2_EXECUTION_PLAN.md`
-- Public testnet playbook: `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
+- English join guide: `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- Chinese join guide: `docs/zh/V2_公开测试网加入手册.md`
+- English docs index: `docs/en/INDEX.md`
+- Chinese docs index: `docs/zh/INDEX.md`
 
-## v2 Web4 track (active)
+## Public Testnet (v2)
 
-- Track name: `v2-web4`
-- Product direction: AI-native Web4 chain
-- Delivery mode: new chain-id + new genesis + separate rollout from v1
-- Core docs: `docs/en/YNX_v2_WEB4_SPEC.md`, `docs/en/YNX_v2_EXECUTION_PLAN.md`, `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+- Cosmos Chain ID: `ynx_9102-1`
+- EVM Chain ID: `0x238e`
+- Denom: `anyxt`
 
-## Public testnet endpoints
+Recommended HTTPS endpoints:
 
-v2 Web4 public testnet (recommended):
+- `https://rpc.ynxweb4.com`
+- `https://evm.ynxweb4.com`
+- `https://evm-ws.ynxweb4.com`
+- `https://rest.ynxweb4.com`
+- `https://faucet.ynxweb4.com`
+- `https://indexer.ynxweb4.com`
+- `https://explorer.ynxweb4.com`
+- `https://ai.ynxweb4.com`
+- `https://web4.ynxweb4.com`
 
-- Chain ID: `ynx_9102-1`
-- RPC: `http://43.134.23.58:36657`
-- EVM RPC: `http://43.134.23.58:38545`
-- REST: `http://43.134.23.58:31317`
-- Faucet: `http://43.134.23.58:38080`
-- Indexer: `http://43.134.23.58:38081`
-- Explorer: `http://43.134.23.58:38082`
-- AI Gateway: `http://43.134.23.58:38090`
-- Web4 Hub: `http://43.134.23.58:38091`
+Do not call raw `http://IP:PORT` from public browser apps when using HTTPS websites.
 
-For HTTPS websites (for example `https://ynxweb4.com`), do not call raw `http://IP:PORT` endpoints from browser code.
-Use HTTPS subdomain gateway endpoints instead:
+## Repository Layout
 
-- `https://rpc.<your-domain>`
-- `https://evm.<your-domain>`
-- `https://faucet.<your-domain>`
-- `https://indexer.<your-domain>`
-- `https://explorer.<your-domain>`
-- `https://ai.<your-domain>`
-- `https://web4.<your-domain>`
+- `chain/`: YNX chain binary, scripts, network bootstrap and validator tooling
+- `infra/`: faucet, indexer, explorer, AI gateway, Web4 hub, OpenAPI specs
+- `docs/en/`: canonical English docs
+- `docs/zh/`: Chinese docs
+- `packages/`: SDK/contracts packages
+- `ops/`: operations assets
 
-Gateway setup script:
+## Documentation Policy
 
-```bash
-cd ~/YNX/chain
-./scripts/install_v2_caddy_subdomain_gateway.sh <your-domain> <tls-email>
-```
-
-v1 public testnet (legacy track):
-
-- Chain ID: `ynx_9002-1`
-- RPC: `http://43.134.23.58:26657`
-- EVM RPC: `http://43.134.23.58:8545`
-- REST: `http://43.134.23.58:1317`
-- Faucet: `http://43.134.23.58:8080`
-- Explorer: `http://43.134.23.58:8082`
-- Peer bootstrap: `e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656`
-
-Mainnet-parity note:
-
-- Public testnet targets the same protocol logic as planned mainnet.
-- Primary difference is economic value (test assets vs real-value assets).
-
-## Why choose YNX
-
-YNX positioning:
-
-- AI-native Web4 chain: Ethereum-grade developer UX with high-performance execution targets.
-
-Practical reasons to build on YNX:
-
-- EVM-compatible developer flow with low-latency profile options.
-- AI settlement lifecycle API (`/ai/*`) with vault-based machine payments.
-- Machine-readable governance and positioning via `GET /ynx/overview`.
-- Operator-ready bootstrap scripts for faster network scaling.
-- Web4 sovereignty model: `owner > policy > session key`.
+- Public onboarding docs are separated from internal operator runbooks.
+- Public websites should surface only public join/API/spec docs.
+- Internal deployment/runbook docs stay in repository but should not be exposed in public docs navigation.
 
 ## Jump by need
 

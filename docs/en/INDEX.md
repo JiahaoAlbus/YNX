@@ -1,7 +1,26 @@
-# YNX v0 Documentation (English, Canonical)
+# YNX Documentation Index (English)
 
-Status: Draft  
-Last updated: 2026-02-12
+Status: Active  
+Last updated: 2026-03-14
+
+## Public Docs (Website-safe)
+
+- `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
+- `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
+- `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference
+- `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
+- `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface
+
+## Internal / Operator Docs (Not for Public Website Nav)
+
+- `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — operator deployment + operations
+- `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md` — local complete runbook
+- `docs/en/V2_COMPANY_HANDOFF.md` — internal handoff package
+- `docs/en/V2_SMOKE_AND_VERIFY.md` — verification and write smoke
+- `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — validator bootstrap operations
+- `docs/en/V2_ALL_FILES_AND_FUNCTIONS.md` — file/function internal map
+- `docs/en/V2_WEB4_STATUS_AND_NODE_ONBOARDING.md` — internal status + onboarding notes
 
 ## Core Specs
 

@@ -261,6 +261,9 @@ descriptor_get() {
 if [[ -z "$RPC_URL" ]]; then
   RPC_URL="$(descriptor_get '.network.rpc')"
 fi
+if [[ -z "$RPC_URL" ]]; then
+  RPC_URL="$(descriptor_get '.endpoints.rpc')"
+fi
 if [[ -z "$CHAIN_ID" ]]; then
   CHAIN_ID="$(descriptor_get '.chain_id')"
 fi
@@ -315,8 +318,34 @@ if [[ -n "$GENESIS_FILE" ]]; then
   fi
   cp "$GENESIS_FILE" "$HOME_DIR/config/genesis.json"
 else
-  if ! rpc_get "/genesis" | jq -r '.result.genesis' >"$HOME_DIR/config/genesis.json"; then
-    echo "Failed to fetch /genesis from RPC and no local bundle/genesis was provided" >&2
+  genesis_ok=0
+  if genesis_json="$(rpc_get "/genesis" 2>/dev/null || true)"; then
+    if echo "$genesis_json" | jq -e '.result.genesis != null' >/dev/null 2>&1; then
+      echo "$genesis_json" | jq -r '.result.genesis' >"$HOME_DIR/config/genesis.json"
+      genesis_ok=1
+    fi
+  fi
+
+  if [[ "$genesis_ok" -eq 0 ]]; then
+    chunk_meta="$(rpc_get "/genesis_chunked?chunk=0" 2>/dev/null || true)"
+    if [[ -n "$chunk_meta" ]] && echo "$chunk_meta" | jq -e '.result.total != null and .result.data != null' >/dev/null 2>&1; then
+      total_chunks="$(echo "$chunk_meta" | jq -r '.result.total')"
+      : >"$HOME_DIR/config/genesis.json"
+      for ((i=0; i<total_chunks; i++)); do
+        chunk_json="$(rpc_get "/genesis_chunked?chunk=${i}")"
+        chunk_data="$(echo "$chunk_json" | jq -r '.result.data')"
+        if [[ -z "$chunk_data" || "$chunk_data" == "null" ]]; then
+          echo "Failed to fetch genesis chunk ${i}" >&2
+          exit 1
+        fi
+        printf '%s' "$chunk_data" | base64 -d >>"$HOME_DIR/config/genesis.json"
+      done
+      genesis_ok=1
+    fi
+  fi
+
+  if [[ "$genesis_ok" -eq 0 ]]; then
+    echo "Failed to fetch genesis via /genesis and /genesis_chunked (provide --genesis-file or --bundle)" >&2
     exit 1
   fi
 fi
@@ -359,7 +388,7 @@ fi
 set_section_key "$APP_TOML" "api" "enable" "true"
 set_section_key "$APP_TOML" "json-rpc" "enable" "true"
 
-"$ROOT_DIR/scripts/v2_role_apply.sh" "$ROLE" >/dev/null
+YNX_HOME="$HOME_DIR" "$ROOT_DIR/scripts/v2_role_apply.sh" "$ROLE" >/dev/null
 
 echo
 echo "Bootstrap complete"

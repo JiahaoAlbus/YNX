@@ -235,6 +235,7 @@ run_root tee /etc/systemd/system/ynx-v2-node.service >/dev/null <<EOF
 Description=YNX v2 Node
 After=network-online.target
 Wants=network-online.target
+Wants=ynx-v2-faucet.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-ai-gateway.service ynx-v2-web4-hub.service
 
 [Service]
 Type=simple
@@ -256,6 +257,7 @@ run_root tee /etc/systemd/system/ynx-v2-faucet.service >/dev/null <<EOF
 Description=YNX v2 Faucet
 After=ynx-v2-node.service
 Requires=ynx-v2-node.service
+PartOf=ynx-v2-node.service
 
 [Service]
 Type=simple
@@ -285,6 +287,7 @@ run_root tee /etc/systemd/system/ynx-v2-indexer.service >/dev/null <<EOF
 Description=YNX v2 Indexer
 After=ynx-v2-node.service
 Requires=ynx-v2-node.service
+PartOf=ynx-v2-node.service
 
 [Service]
 Type=simple
@@ -310,6 +313,7 @@ run_root tee /etc/systemd/system/ynx-v2-explorer.service >/dev/null <<EOF
 Description=YNX v2 Explorer
 After=ynx-v2-indexer.service
 Requires=ynx-v2-indexer.service
+PartOf=ynx-v2-node.service ynx-v2-indexer.service
 
 [Service]
 Type=simple
@@ -333,6 +337,7 @@ run_root tee /etc/systemd/system/ynx-v2-ai-gateway.service >/dev/null <<EOF
 Description=YNX v2 AI Gateway
 After=ynx-v2-node.service
 Requires=ynx-v2-node.service
+PartOf=ynx-v2-node.service
 
 [Service]
 Type=simple
@@ -357,6 +362,7 @@ run_root tee /etc/systemd/system/ynx-v2-web4-hub.service >/dev/null <<EOF
 Description=YNX v2 Web4 Hub
 After=ynx-v2-node.service
 Requires=ynx-v2-node.service
+PartOf=ynx-v2-node.service
 
 [Service]
 Type=simple

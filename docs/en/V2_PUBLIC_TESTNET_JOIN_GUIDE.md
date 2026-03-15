@@ -88,6 +88,36 @@ Open inbound TCP ports:
 - `36656` (P2P)
 - `36657` (RPC, optional public)
 
+Clean-server prerequisites (required once):
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y git curl jq build-essential ca-certificates
+```
+
+```bash
+if [ ! -d "$HOME/YNX/.git" ]; then
+  git clone https://github.com/JiahaoAlbus/YNX.git "$HOME/YNX"
+else
+  cd "$HOME/YNX" && git pull --ff-only
+fi
+```
+
+`v2_validator_bootstrap.sh` builds `ynxd` if no binary exists.
+For cleaner onboarding on restricted servers, pre-provide a binary and use `YNX_BIN`:
+
+```bash
+export YNX_BIN=/usr/local/bin/ynxd
+```
+
+If you must build from source, pin toolchain/proxy first:
+
+```bash
+export GOTOOLCHAIN=go1.23.6
+export GOPROXY=https://proxy.golang.org,direct
+export GOSUMDB=sum.golang.org
+```
+
 Join using descriptor (preferred):
 
 ```bash

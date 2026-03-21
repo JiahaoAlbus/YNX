@@ -13,6 +13,12 @@ NYXT is the native asset for gas, staking, and governance.
 - Web4 control plane: `/web4/*`
 - Goal: verifiable execution, machine payments, and open validator onboarding
 
+## Current Web4 Release
+
+- Release name: `ynxweb4`
+- English release notes: `docs/en/RELEASE_YNXWEB4.md`
+- Chinese release notes: `docs/zh/YNXWEB4_版本说明.md`
+
 ## Public Join Docs (External)
 
 - English join guide: `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`

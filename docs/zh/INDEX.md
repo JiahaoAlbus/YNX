@@ -1,10 +1,11 @@
 # YNX 文档索引（中文）
 
 状态：active  
-最后更新：2026-03-14
+最后更新：2026-03-21
 
 ## 对外公开文档（适合网站 Docs 展示）
 
+- `docs/zh/YNXWEB4_版本说明.md`：`ynxweb4` 整合发布说明
 - `docs/zh/V2_公开测试网加入手册.md`：对外加入公测网（体验用户/开发者/验证人）
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明

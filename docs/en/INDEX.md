@@ -1,10 +1,11 @@
 # YNX Documentation Index (English)
 
 Status: Active  
-Last updated: 2026-03-14
+Last updated: 2026-03-21
 
 ## Public Docs (Website-safe)
 
+- `docs/en/RELEASE_YNXWEB4.md` — consolidated Web4 release notes (`ynxweb4`)
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference

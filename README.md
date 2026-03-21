@@ -124,6 +124,17 @@ Report output:
 
 - `output/docs_verification_report_<timestamp>.md`
 
+## Audit + Compliance Pack (submission-ready)
+
+```bash
+./scripts/prepare_audit_compliance_pack.sh
+```
+
+Generated artifacts:
+
+- `output/audit_compliance_pack_<timestamp>/`
+- `output/audit_compliance_pack_<timestamp>.tar.gz`
+
 ---
 
 ## Repository Layout
@@ -142,4 +153,3 @@ Report output:
 - Public websites should call HTTPS endpoints only.
 - Testnet is for testing only; do not use real production funds.
 - Never commit private keys, mnemonics, or `.env` secrets.
-

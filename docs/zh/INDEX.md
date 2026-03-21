@@ -18,6 +18,8 @@
 - `docs/zh/V2_公开测试网手册.md`：运维部署与验收流程（operator runbook）
 - `docs/zh/V2_本地完整开发运行手册.md`：本地完整开发/运维手册
 - `docs/zh/V2_全部文件与功能说明.md`：内部文件与功能总清单
+- `docs/zh/V2_安全审计与合规执行指南.md`：前四周审计与合规并行执行方案
+- `docs/zh/V2_审计与合规提交包.md`：可直接用于平台填报的提交包模板
 - `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`：历史公测流程文档
 - `docs/zh/开放测试网下一步执行清单.md`：内部推进清单
 - `docs/zh/YNX_定位与卖点.md`：定位与宣发草案

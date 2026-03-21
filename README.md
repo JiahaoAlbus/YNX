@@ -80,6 +80,8 @@ Index:
 - Current release: `ynxweb4`
 - EN: [`docs/en/RELEASE_YNXWEB4.md`](docs/en/RELEASE_YNXWEB4.md)
 - ZH: [`docs/zh/YNXWEB4_版本说明.md`](docs/zh/YNXWEB4_版本说明.md)
+- Platform submit playbook (EN): [`docs/en/V2_PLATFORM_SUBMISSION_PLAYBOOK.md`](docs/en/V2_PLATFORM_SUBMISSION_PLAYBOOK.md)
+- 平台提交流程手册（ZH）: [`docs/zh/V2_平台提交流程手册.md`](docs/zh/V2_平台提交流程手册.md)
 
 ---
 
@@ -123,6 +125,17 @@ This script validates:
 Report output:
 
 - `output/docs_verification_report_<timestamp>.md`
+
+## Submission Readiness Check
+
+```bash
+./scripts/verify_submission_readiness.sh
+```
+
+This script validates:
+
+- docs readiness (`13 checks`)
+- public runtime evidence across RPC/EVM/Faucet/Indexer/Explorer/AI/Web4
 
 ## Audit + Compliance Pack (submission-ready)
 

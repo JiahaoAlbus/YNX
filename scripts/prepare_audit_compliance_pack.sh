@@ -6,9 +6,23 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 SKIP_DOC_CHECKS=0
-if [[ "${1:-}" == "--skip-doc-checks" ]]; then
-  SKIP_DOC_CHECKS=1
-fi
+SKIP_RUNTIME_EVIDENCE=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --skip-doc-checks)
+      SKIP_DOC_CHECKS=1
+      shift
+      ;;
+    --skip-runtime-evidence)
+      SKIP_RUNTIME_EVIDENCE=1
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 if [[ "${SKIP_DOC_CHECKS}" -eq 0 ]]; then
   ./scripts/verify_docs_readiness.sh
@@ -40,8 +54,10 @@ declare -a REQUIRED_FILES=(
   "docs/zh/V2_共识验证人加入手册.md"
   "docs/en/V2_AUDIT_COMPLIANCE_EXECUTION_GUIDE.md"
   "docs/en/V2_AUDIT_SUBMISSION_PACKET.md"
+  "docs/en/V2_PLATFORM_SUBMISSION_PLAYBOOK.md"
   "docs/zh/V2_安全审计与合规执行指南.md"
   "docs/zh/V2_审计与合规提交包.md"
+  "docs/zh/V2_平台提交流程手册.md"
   "infra/openapi/ynx-v2-ai.yaml"
   "infra/openapi/ynx-v2-web4.yaml"
 )
@@ -60,6 +76,38 @@ LATEST_DOC_REPORT="$(ls -1t "${REPO_ROOT}"/output/docs_verification_report_*.md 
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
   cp "${LATEST_DOC_REPORT}" "${REPORTS_DIR}/"
 fi
+
+RUNTIME_EVIDENCE_REPORT=""
+if [[ "${SKIP_RUNTIME_EVIDENCE}" -eq 0 ]]; then
+  ./scripts/capture_public_runtime_evidence.sh
+  RUNTIME_EVIDENCE_REPORT="$(ls -1t "${REPO_ROOT}"/output/runtime_evidence_*/RUNTIME_EVIDENCE.md 2>/dev/null | head -n 1 || true)"
+  if [[ -n "${RUNTIME_EVIDENCE_REPORT}" ]]; then
+    RUNTIME_EVIDENCE_DIR="$(dirname "${RUNTIME_EVIDENCE_REPORT}")"
+    cp -R "${RUNTIME_EVIDENCE_DIR}" "${REPORTS_DIR}/"
+  fi
+fi
+
+{
+  echo "# YNX Submission Answers (Copy-Paste)"
+  echo
+  echo "- Project: YNX"
+  echo "- Category: L1 public execution network (AI-native Web4 track)"
+  echo "- Positioning: Sovereign Execution Layer"
+  echo "- Repository: https://github.com/JiahaoAlbus/YNX"
+  echo "- Track: v2-web4"
+  echo "- Cosmos Chain ID: ynx_9102-1"
+  echo "- EVM Chain ID: 0x238e (9102)"
+  echo "- Denom: anyxt"
+  echo "- RPC: https://rpc.ynxweb4.com"
+  echo "- EVM RPC: https://evm.ynxweb4.com"
+  echo "- Faucet: https://faucet.ynxweb4.com"
+  echo "- Indexer: https://indexer.ynxweb4.com"
+  echo "- Explorer: https://explorer.ynxweb4.com"
+  echo "- AI Gateway: https://ai.ynxweb4.com"
+  echo "- Web4 Hub: https://web4.ynxweb4.com"
+  echo "- Scope baseline commit: $(git rev-parse HEAD)"
+  echo "- Scope baseline tag candidate: ynxweb4-audit-compliance-prep-$(date +%Y%m%d)"
+} > "${OUT_BASE}/SUBMISSION_ANSWERS.md"
 
 {
   echo "# YNX Audit + Compliance Pack Manifest"
@@ -80,6 +128,9 @@ fi
     echo "## Included report"
     echo "- $(basename "${LATEST_DOC_REPORT}")"
   fi
+  if [[ -n "${RUNTIME_EVIDENCE_REPORT}" ]]; then
+    echo "- runtime evidence: $(basename "$(dirname "${RUNTIME_EVIDENCE_REPORT}")")/RUNTIME_EVIDENCE.md"
+  fi
   echo
   echo "## Next actions (manual fill)"
   echo "- Fill contact and commercial fields in:"
@@ -87,6 +138,7 @@ fi
   echo "  - docs/zh/V2_审计与合规提交包.md"
   echo "- Select audit vendors and submit the same tagged scope packet."
   echo "- Start compliance tool onboarding (Drata/Vanta/Secureframe) and auditor onboarding."
+  echo "- Use SUBMISSION_ANSWERS.md for direct platform form copy-paste."
 } > "${OUT_BASE}/MANIFEST.md"
 
 {

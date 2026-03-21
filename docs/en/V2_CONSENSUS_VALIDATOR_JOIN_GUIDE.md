@@ -12,6 +12,45 @@ If you have not deployed a node yet, start here first:
 
 - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
 
+## 1.1 If you opened this page directly on a fresh server
+
+Run this first from zero environment:
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y git curl jq build-essential ca-certificates
+```
+
+```bash
+export YNX_REPO="$HOME/YNX"
+if [ ! -d "$YNX_REPO/.git" ]; then
+  git clone https://github.com/JiahaoAlbus/YNX.git "$YNX_REPO"
+else
+  cd "$YNX_REPO" && git pull --ff-only
+fi
+```
+
+```bash
+cd "$YNX_REPO/chain"
+export YNX_HOME="$HOME/.ynx-v2-validator"
+./scripts/v2_validator_bootstrap.sh \
+  --descriptor https://indexer.ynxweb4.com/ynx/network-descriptor \
+  --role validator \
+  --home "$YNX_HOME" \
+  --moniker <YOUR_MONIKER> \
+  --reset
+```
+
+```bash
+cd "$YNX_REPO/chain"
+./ynxd start \
+  --home "$YNX_HOME" \
+  --chain-id ynx_9102-1 \
+  --minimum-gas-prices 0.000000007anyxt
+```
+
+Then wait for `catching_up=false`, and continue from section 4 below.
+
 ## 2. Consensus vs node-only
 
 - Node-only: syncs chain data, does not vote/sign blocks.

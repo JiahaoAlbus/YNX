@@ -7,6 +7,8 @@
 
 - `docs/zh/YNXWEB4_版本说明.md`：`ynxweb4` 整合发布说明
 - `docs/zh/V2_公开测试网加入手册.md`：对外加入公测网（体验用户/开发者/验证人）
+- `docs/zh/V2_验证节点加入手册.md`：从零部署“验证节点（不进共识）”完整手册
+- `docs/zh/V2_共识验证人加入手册.md`：从零到 BONDED 的“共识验证人”完整手册
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图

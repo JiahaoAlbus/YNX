@@ -22,7 +22,11 @@ NYXT is the native asset for gas, staking, and governance.
 ## Public Join Docs (External)
 
 - English join guide: `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- English validator node guide (non-consensus): `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
+- English consensus validator guide (BONDED): `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md`
 - Chinese join guide: `docs/zh/V2_公开测试网加入手册.md`
+- 中文验证节点手册（不进共识）：`docs/zh/V2_验证节点加入手册.md`
+- 中文共识验证人手册（BONDED）：`docs/zh/V2_共识验证人加入手册.md`
 - English docs index: `docs/en/INDEX.md`
 - Chinese docs index: `docs/zh/INDEX.md`
 

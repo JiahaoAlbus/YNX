@@ -90,7 +90,11 @@
 ## 6）对外加入文档入口
 
 - 英文：`docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- 英文（验证节点，不进共识）：`docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
+- 英文（共识验证人，BONDED）：`docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md`
 - 中文：`docs/zh/V2_公开测试网加入手册.md`
+- 中文（验证节点，不进共识）：`docs/zh/V2_验证节点加入手册.md`
+- 中文（共识验证人，BONDED）：`docs/zh/V2_共识验证人加入手册.md`
 - 英文索引：`docs/en/INDEX.md`
 - 中文索引：`docs/zh/INDEX.md`
 

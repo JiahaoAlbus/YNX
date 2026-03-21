@@ -90,7 +90,11 @@ It packages one coherent operator/runtime baseline:
 ## 6) External docs for onboarding
 
 - EN public testnet join: `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- EN validator node guide (non-consensus): `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
+- EN consensus validator guide (BONDED): `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md`
 - ZH public testnet join: `docs/zh/V2_公开测试网加入手册.md`
+- ZH validator node guide (non-consensus): `docs/zh/V2_验证节点加入手册.md`
+- ZH consensus validator guide (BONDED): `docs/zh/V2_共识验证人加入手册.md`
 - EN docs index: `docs/en/INDEX.md`
 - ZH docs index: `docs/zh/INDEX.md`
 

@@ -10,6 +10,26 @@ This is the external entry guide for YNX v2 public testnet.
 
 Use this page to quickly decide your path, then jump to the full manual.
 
+## 1.1 If you opened this page on a fresh machine (from zero)
+
+Run this baseline first, even if you are not sure which path you will choose:
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y git curl jq build-essential ca-certificates
+```
+
+```bash
+export YNX_REPO="$HOME/YNX"
+if [ ! -d "$YNX_REPO/.git" ]; then
+  git clone https://github.com/JiahaoAlbus/YNX.git "$YNX_REPO"
+else
+  cd "$YNX_REPO" && git pull --ff-only
+fi
+```
+
+After this, continue with Path A / B / C below.
+
 ## 2. Network basics
 
 - Network name: `YNX v2 Public Testnet (Web4 Track)`

@@ -137,6 +137,16 @@ This script validates:
 - docs readiness (`13 checks`)
 - public runtime evidence across RPC/EVM/Faucet/Indexer/Explorer/AI/Web4
 
+## Terminal-only submission flow
+
+```bash
+./scripts/terminal_submission_ready.sh
+```
+
+This flow runs verify + pack, asks required form fields in terminal, and writes filled submission files under:
+
+- `output/audit_compliance_pack_<timestamp>/submission_profile/`
+
 ## Audit + Compliance Pack (submission-ready)
 
 ```bash

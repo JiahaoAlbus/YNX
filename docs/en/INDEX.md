@@ -27,7 +27,6 @@ Last updated: 2026-03-21
 - `docs/en/V2_AUDIT_COMPLIANCE_EXECUTION_GUIDE.md` — week-by-week pre-audit + compliance execution plan
 - `docs/en/V2_AUDIT_SUBMISSION_PACKET.md` — platform-ready submission packet template
 - `docs/en/V2_PLATFORM_SUBMISSION_PLAYBOOK.md` — platform-by-platform submit checklist and answer bank
-- `docs/en/V2_AUDIT_REPLY_TEMPLATES_20260327.md` — ready-to-send vendor reply templates (OZ/ToB/Halborn/Schellman)
 
 ## Core Specs
 

@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@nomicfoundation/hardhat-ethers": "^4.0.4",
+    "@nomicfoundation/hardhat-ethers": "^4.0.5",
     "@nomicfoundation/hardhat-mocha": "^3.0.9",
     "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
     "@types/node": "^25.2.3",

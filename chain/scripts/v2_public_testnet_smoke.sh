@@ -15,7 +15,7 @@ Environment:
   YNX_WEB4_PORT           default: 38091
   YNX_EXPECT_CHAIN_ID     default: ynx_9102-1
   YNX_EXPECT_TRACK        default: v2-web4
-  YNX_SMOKE_ENFORCE_POLICY default: 0
+  YNX_SMOKE_ENFORCE_POLICY default: 1
 EOF
 }
 
@@ -36,7 +36,7 @@ AI_PORT="${YNX_AI_GATEWAY_PORT:-38090}"
 WEB4_PORT="${YNX_WEB4_PORT:-38091}"
 EXPECT_CHAIN_ID="${YNX_EXPECT_CHAIN_ID:-ynx_9102-1}"
 EXPECT_TRACK="${YNX_EXPECT_TRACK:-v2-web4}"
-SMOKE_ENFORCE_POLICY="${YNX_SMOKE_ENFORCE_POLICY:-0}"
+SMOKE_ENFORCE_POLICY="${YNX_SMOKE_ENFORCE_POLICY:-1}"
 
 AI_BASE="http://${HOST}:${AI_PORT}"
 WEB4_BASE="http://${HOST}:${WEB4_PORT}"
@@ -87,7 +87,7 @@ owner_secret="$(echo "$policy_resp" | jq -r '.owner_secret')"
 [[ -n "$policy_id" && "$policy_id" != "null" ]] || { echo "Policy create failed"; exit 1; }
 [[ -n "$owner_secret" && "$owner_secret" != "null" ]] || { echo "Policy owner secret missing"; exit 1; }
 
-session_payload='{"capabilities":["identity.create","agent.create","agent.modify","agent.replicate","intent.create","intent.claim","intent.challenge","intent.finalize"],"ttl_sec":900,"max_ops":200,"max_spend":50000}'
+session_payload='{"capabilities":["identity.create","agent.create","agent.modify","agent.replicate","intent.create","intent.claim","intent.challenge","intent.finalize","ai.vault.create","ai.vault.deposit","ai.vault.admin","ai.job.create","ai.job.commit","ai.job.challenge","ai.job.finalize","ai.payment.charge"],"ttl_sec":900,"max_ops":200,"max_spend":50000}'
 session_resp="$(curl_json POST "${WEB4_BASE}/web4/policies/${policy_id}/sessions" "$session_payload" "x-ynx-owner: ${owner_secret}")"
 session_token="$(echo "$session_resp" | jq -r '.token')"
 [[ -n "$session_token" && "$session_token" != "null" ]] || { echo "Session issue failed"; exit 1; }
@@ -108,11 +108,11 @@ ai_job_payload="$(cat <<EOF
 {"creator":"ynx_creator_${SUFFIX}","worker":"","reward":"1000","stake":"100","input_uri":"ipfs://input/${SUFFIX}"}
 EOF
 )"
-vault_resp="$(curl_json POST "${AI_BASE}/ai/vaults" "{\"owner\":\"owner_${SUFFIX}\",\"balance\":10000,\"max_daily_spend\":9000,\"max_per_payment\":5000,\"policy_id\":\"${policy_id}\"}")"
+vault_resp="$(curl_json POST "${AI_BASE}/ai/vaults" "{\"owner\":\"owner_${SUFFIX}\",\"balance\":10000,\"max_daily_spend\":9000,\"max_per_payment\":5000,\"policy_id\":\"${policy_id}\"}" "x-ynx-session: ${session_token}")"
 vault_id="$(echo "$vault_resp" | jq -r '.vault.vault_id')"
 [[ -n "$vault_id" && "$vault_id" != "null" ]] || { echo "Vault create failed"; exit 1; }
 
-ai_job_resp="$(curl_json POST "${AI_BASE}/ai/jobs" "{\"creator\":\"ynx_creator_${SUFFIX}\",\"worker\":\"\",\"reward\":\"1000\",\"stake\":\"100\",\"input_uri\":\"ipfs://input/${SUFFIX}\",\"vault_id\":\"${vault_id}\"}")"
+ai_job_resp="$(curl_json POST "${AI_BASE}/ai/jobs" "{\"creator\":\"ynx_creator_${SUFFIX}\",\"worker\":\"\",\"reward\":\"1000\",\"stake\":\"100\",\"input_uri\":\"ipfs://input/${SUFFIX}\",\"vault_id\":\"${vault_id}\"}" "x-ynx-session: ${session_token}")"
 ai_job_id="$(echo "$ai_job_resp" | jq -r '.job.job_id')"
 [[ -n "$ai_job_id" && "$ai_job_id" != "null" ]] || { echo "AI job create failed"; exit 1; }
 
@@ -120,15 +120,15 @@ commit_payload="$(cat <<EOF
 {"worker":"ynx_worker_${SUFFIX}","result_hash":"0x${RAND}${RAND}${RAND}${RAND}","attestation_uri":"ipfs://att/${SUFFIX}"}
 EOF
 )"
-curl_json POST "${AI_BASE}/ai/jobs/${ai_job_id}/commit" "$commit_payload" >/dev/null
-curl_json POST "${AI_BASE}/ai/jobs/${ai_job_id}/finalize" '{"status":"finalized"}' >/dev/null
+curl_json POST "${AI_BASE}/ai/jobs/${ai_job_id}/commit" "$commit_payload" "x-ynx-session: ${session_token}" >/dev/null
+curl_json POST "${AI_BASE}/ai/jobs/${ai_job_id}/finalize" '{"status":"finalized"}' "x-ynx-session: ${session_token}" >/dev/null
 ai_job_final="$(curl_json GET "${AI_BASE}/ai/jobs/${ai_job_id}")"
 ai_status="$(echo "$ai_job_final" | jq -r '.job.status')"
 [[ "$ai_status" == "finalized" ]] || { echo "AI job status invalid: $ai_status"; exit 1; }
 ai_payout_id="$(echo "$ai_job_final" | jq -r '.job.payout_payment_id')"
 [[ -n "$ai_payout_id" && "$ai_payout_id" != "null" ]] || { echo "AI payout missing"; exit 1; }
 
-direct_charge_resp="$(curl_json POST "${AI_BASE}/ai/payments/charge" "{\"vault_id\":\"${vault_id}\",\"amount\":25,\"resource\":\"smoke/direct-charge\",\"reason\":\"smoke\"}")"
+direct_charge_resp="$(curl_json POST "${AI_BASE}/ai/payments/charge" "{\"vault_id\":\"${vault_id}\",\"amount\":25,\"resource\":\"smoke\",\"reason\":\"smoke\"}" "x-ynx-session: ${session_token}")"
 direct_payment_id="$(echo "$direct_charge_resp" | jq -r '.payment.payment_id')"
 [[ -n "$direct_payment_id" && "$direct_payment_id" != "null" ]] || { echo "Direct charge failed"; exit 1; }
 

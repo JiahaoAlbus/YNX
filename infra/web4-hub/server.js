@@ -27,31 +27,52 @@ envCandidates.push(path.resolve(__dirname, ".env"));
 envCandidates.push(path.resolve(__dirname, "../../.env"));
 for (const candidate of envCandidates) loadEnvFile(candidate);
 
-function json(res, status, payload) {
+function json(res, status, payload, extraHeaders = {}) {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body),
     "access-control-allow-origin": "*",
+    ...extraHeaders,
   });
   res.end(body);
 }
 
-function parseBody(req) {
+function parseBody(req, limitBytes) {
   return new Promise((resolve) => {
     let raw = "";
+    let size = 0;
+    let tooLarge = false;
+
     req.on("data", (chunk) => {
+      if (tooLarge) return;
+      size += chunk.length;
+      if (size > limitBytes) {
+        tooLarge = true;
+        req.destroy();
+        return resolve({ __parse_error: "payload_too_large" });
+      }
       raw += chunk.toString();
     });
+
+    req.on("error", () => resolve({ __parse_error: tooLarge ? "payload_too_large" : "request_error" }));
     req.on("end", () => {
+      if (tooLarge) return;
       if (!raw) return resolve({});
       try {
         resolve(JSON.parse(raw));
       } catch {
-        resolve({});
+        resolve({ __parse_error: "invalid_json" });
       }
     });
   });
+}
+
+function requireValidBody(res, body) {
+  if (!body || !body.__parse_error) return true;
+  const status = body.__parse_error === "payload_too_large" ? 413 : 400;
+  json(res, status, { ok: false, error: body.__parse_error });
+  return false;
 }
 
 function nowIso() {
@@ -75,60 +96,78 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function atomicWriteJson(filePath, payload) {
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2));
+  fs.renameSync(tmpPath, filePath);
+}
+
+function uniqueStrings(items) {
+  return [...new Set((Array.isArray(items) ? items : []).filter((item) => typeof item === "string" && item.trim()))];
+}
+
+const DEFAULT_ALLOWED_ACTIONS = [
+  "identity.create",
+  "agent.create",
+  "agent.modify",
+  "agent.replicate",
+  "intent.create",
+  "intent.claim",
+  "intent.challenge",
+  "intent.finalize",
+  "ai.vault.create",
+  "ai.vault.deposit",
+  "ai.vault.admin",
+  "ai.job.create",
+  "ai.job.commit",
+  "ai.job.challenge",
+  "ai.job.finalize",
+  "ai.payment.charge",
+];
+
+function normalizeState(loaded) {
+  const source = loaded && typeof loaded === "object" ? loaded : {};
+  return {
+    identities: Array.isArray(source.identities) ? source.identities : [],
+    agents: Array.isArray(source.agents) ? source.agents : [],
+    intents: Array.isArray(source.intents) ? source.intents : [],
+    claims: Array.isArray(source.claims) ? source.claims : [],
+    policies: Array.isArray(source.policies) ? source.policies : [],
+    sessions: Array.isArray(source.sessions) ? source.sessions : [],
+    wallet_bootstraps: Array.isArray(source.wallet_bootstraps) ? source.wallet_bootstraps : [],
+    audit_logs: Array.isArray(source.audit_logs) ? source.audit_logs : [],
+  };
+}
+
 const WEB4_PORT = parseInt(process.env.WEB4_PORT || "8091", 10);
 const WEB4_CHAIN_ID = process.env.WEB4_CHAIN_ID || "ynx_9102-1";
 const WEB4_TRACK = process.env.WEB4_TRACK || "v2-web4";
 const WEB4_DATA_DIR = process.env.WEB4_DATA_DIR || path.resolve(__dirname, "data");
 const WEB4_DATA_FILE = path.join(WEB4_DATA_DIR, "state.json");
 const WEB4_INTENT_TTL_SEC = parseInt(process.env.WEB4_INTENT_TTL_SEC || "900", 10);
-const WEB4_ENFORCE_POLICY = process.env.WEB4_ENFORCE_POLICY === "1";
+const WEB4_ENFORCE_POLICY = process.env.WEB4_ENFORCE_POLICY !== "0";
 const WEB4_DEFAULT_SESSION_TTL_SEC = parseInt(process.env.WEB4_DEFAULT_SESSION_TTL_SEC || "900", 10);
 const WEB4_DEFAULT_MAX_OPS = parseInt(process.env.WEB4_DEFAULT_MAX_OPS || "50", 10);
 const WEB4_DEFAULT_MAX_SPEND = Number(process.env.WEB4_DEFAULT_MAX_SPEND || "10000");
 const WEB4_AUDIT_LIMIT = parseInt(process.env.WEB4_AUDIT_LIMIT || "5000", 10);
+const WEB4_BODY_LIMIT_BYTES = parseInt(process.env.WEB4_BODY_LIMIT_BYTES || "1048576", 10);
+const WEB4_INTERNAL_TOKEN = process.env.WEB4_INTERNAL_TOKEN || "";
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
-let state = {
-  identities: [],
-  agents: [],
-  intents: [],
-  claims: [],
-  policies: [],
-  sessions: [],
-  wallet_bootstraps: [],
-  audit_logs: [],
-};
+let state = normalizeState({});
 
 if (fs.existsSync(WEB4_DATA_FILE)) {
   try {
     const loaded = JSON.parse(fs.readFileSync(WEB4_DATA_FILE, "utf8"));
-    state = {
-      identities: Array.isArray(loaded.identities) ? loaded.identities : [],
-      agents: Array.isArray(loaded.agents) ? loaded.agents : [],
-      intents: Array.isArray(loaded.intents) ? loaded.intents : [],
-      claims: Array.isArray(loaded.claims) ? loaded.claims : [],
-      policies: Array.isArray(loaded.policies) ? loaded.policies : [],
-      sessions: Array.isArray(loaded.sessions) ? loaded.sessions : [],
-      wallet_bootstraps: Array.isArray(loaded.wallet_bootstraps) ? loaded.wallet_bootstraps : [],
-      audit_logs: Array.isArray(loaded.audit_logs) ? loaded.audit_logs : [],
-    };
+    state = normalizeState(loaded);
   } catch {
-    state = {
-      identities: [],
-      agents: [],
-      intents: [],
-      claims: [],
-      policies: [],
-      sessions: [],
-      wallet_bootstraps: [],
-      audit_logs: [],
-    };
+    state = normalizeState({});
   }
 }
 
 function persist() {
-  fs.writeFileSync(WEB4_DATA_FILE, JSON.stringify(state, null, 2));
+  atomicWriteJson(WEB4_DATA_FILE, state);
 }
 
 function findIntent(intentId) {
@@ -191,7 +230,8 @@ function summarizeStats() {
     intents: state.intents.length,
     claims: state.claims.length,
     policies: state.policies.length,
-    sessions: state.sessions.filter((s) => s.status === "active").length,
+    sessions_active: state.sessions.filter((item) => item.status === "active").length,
+    bootstraps: state.wallet_bootstraps.length,
     intent_by_status: intentByStatus,
     agent_by_status: agentByStatus,
     policy_by_status: policyByStatus,
@@ -270,6 +310,7 @@ function policyGuard(req, action, policyId, amount = 0) {
     return { ok: false, status: 403, error: "policy_action_denied" };
   }
   const token = req.headers["x-ynx-session"] || "";
+  if (!token) return { ok: false, status: 401, error: "session_required" };
   const session = findSessionByToken(token);
   if (!session || session.policy_id !== policyId) return { ok: false, status: 401, error: "invalid_session" };
   const sessionCheck = validateSessionForAction(session, action, amount);
@@ -284,18 +325,11 @@ function createPolicy(body) {
     owner: body.owner || "",
     name: body.name || "default-policy",
     status: "active",
-    allowed_actions: Array.isArray(body.allowed_actions) && body.allowed_actions.length
-      ? body.allowed_actions
-      : [
-          "identity.create",
-          "agent.create",
-          "agent.modify",
-          "agent.replicate",
-          "intent.create",
-          "intent.claim",
-          "intent.challenge",
-          "intent.finalize",
-        ],
+    allowed_actions: uniqueStrings(
+      Array.isArray(body.allowed_actions) && body.allowed_actions.length
+        ? body.allowed_actions
+        : DEFAULT_ALLOWED_ACTIONS
+    ),
     max_total_spend: toNumber(body.max_total_spend, 0),
     max_daily_spend: toNumber(body.max_daily_spend, 0),
     max_children: Math.max(0, parseInt(body.max_children || "0", 10) || 0),
@@ -317,10 +351,11 @@ function issueSession(policy, body) {
   const ttlSec = Math.max(30, parseInt(body.ttl_sec || policy.session_ttl_sec, 10) || policy.session_ttl_sec);
   const expiresAt = new Date(Date.now() + ttlSec * 1000).toISOString();
   const token = body.token || `ses_${crypto.randomBytes(18).toString("hex")}`;
-  const capabilities =
+  const capabilities = uniqueStrings(
     Array.isArray(body.capabilities) && body.capabilities.length
       ? body.capabilities
-      : policy.allowed_actions;
+      : policy.allowed_actions
+  );
   const session = {
     session_id: body.session_id || randomId("session"),
     policy_id: policy.policy_id,
@@ -339,10 +374,9 @@ function issueSession(policy, body) {
 }
 
 function createWalletBootstrap(body) {
-  const walletAddress =
-    body.wallet_address || `0x${crypto.randomBytes(20).toString("hex")}`;
+  const walletAddress = body.wallet_address || `0x${crypto.randomBytes(20).toString("hex")}`;
   const nonce = crypto.randomBytes(12).toString("hex");
-  const item = {
+  return {
     bootstrap_id: body.bootstrap_id || randomId("bootstrap"),
     wallet_address: walletAddress,
     nonce,
@@ -352,7 +386,10 @@ function createWalletBootstrap(body) {
     verified_at: "",
     api_key_hash: "",
   };
-  return item;
+}
+
+function ensureUnique(collection, key, value) {
+  return !value || !collection.some((item) => item[key] === value);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -360,7 +397,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,x-ynx-owner,x-ynx-session",
+      "access-control-allow-headers": "content-type,x-ynx-owner,x-ynx-session,x-ynx-internal-token",
     });
     return res.end();
   }
@@ -375,7 +412,23 @@ const server = http.createServer(async (req, res) => {
       chain_id: WEB4_CHAIN_ID,
       track: WEB4_TRACK,
       enforce_policy: WEB4_ENFORCE_POLICY,
+      internal_authorizer_enabled: Boolean(WEB4_INTERNAL_TOKEN),
       stats: summarizeStats(),
+    });
+  }
+
+  if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/ready") {
+    const checks = {
+      persistence: fs.existsSync(WEB4_DATA_DIR),
+      policy_enforcement: WEB4_ENFORCE_POLICY,
+      internal_authorizer: Boolean(WEB4_INTERNAL_TOKEN),
+    };
+    return json(res, checks.persistence && checks.policy_enforcement && checks.internal_authorizer ? 200 : 503, {
+      ok: checks.persistence && checks.policy_enforcement && checks.internal_authorizer,
+      checks,
+      chain_id: WEB4_CHAIN_ID,
+      track: WEB4_TRACK,
+      data_file: WEB4_DATA_FILE,
     });
   }
 
@@ -388,11 +441,12 @@ const server = http.createServer(async (req, res) => {
         statement: "AI-native Web4 chain coordination and settlement surface",
         features: [
           "wallet-identity bootstrap",
-          "owner-policy-session sovereignty model",
+          "owner-rule-session sovereignty model",
           "intent market",
           "claim/challenge/finalize lifecycle",
           "controlled self-modification and replication",
           "audit-first operation logs",
+          "AI settlement policy enforcement",
         ],
       },
       defaults: {
@@ -412,8 +466,45 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, items: state.audit_logs.slice(0, limit) });
   }
 
+  if (req.method === "POST" && url.pathname === "/web4/internal/authorize") {
+    if (WEB4_INTERNAL_TOKEN && req.headers["x-ynx-internal-token"] !== WEB4_INTERNAL_TOKEN) {
+      return json(res, 401, { ok: false, error: "internal_auth_failed" });
+    }
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    if (!body.policy_id) return json(res, 400, { ok: false, error: "policy_id_required" });
+    if (!body.action) return json(res, 400, { ok: false, error: "action_required" });
+
+    const guard = policyGuard(req, body.action, body.policy_id, toNumber(body.amount, 0));
+    if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
+
+    if (body.consume !== false) {
+      applySpend(guard.policy, guard.session, toNumber(body.amount, 0));
+      addAudit("policy.authorized", {
+        policy_id: body.policy_id,
+        action: body.action,
+        amount: toNumber(body.amount, 0),
+        session_id: guard.session?.session_id || "",
+        context: body.context || {},
+      });
+      persist();
+    }
+
+    return json(res, 200, {
+      ok: true,
+      policy_id: guard.policy?.policy_id || body.policy_id,
+      session_id: guard.session?.session_id || "",
+      remaining_ops: guard.session ? Math.max(0, guard.session.max_ops - guard.session.ops_used) : null,
+      remaining_spend: guard.session ? Math.max(0, guard.session.max_spend - guard.session.spend_used) : null,
+    });
+  }
+
   if (req.method === "POST" && url.pathname === "/web4/wallet/bootstrap") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    if (body.bootstrap_id && !ensureUnique(state.wallet_bootstraps, "bootstrap_id", body.bootstrap_id)) {
+      return json(res, 409, { ok: false, error: "bootstrap_id_exists" });
+    }
     const item = createWalletBootstrap(body);
     state.wallet_bootstraps.unshift(item);
     addAudit("wallet.bootstrap.requested", { bootstrap_id: item.bootstrap_id, wallet_address: item.wallet_address });
@@ -426,7 +517,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/wallet/verify") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
     const item = state.wallet_bootstraps.find((entry) => entry.bootstrap_id === body.bootstrap_id);
     if (!item) return json(res, 404, { ok: false, error: "bootstrap_not_found" });
     if (item.status !== "pending") return json(res, 400, { ok: false, error: "bootstrap_already_used" });
@@ -449,8 +541,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/policies") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
     if (!body.owner) return json(res, 400, { ok: false, error: "owner_required" });
+    if (body.policy_id && !ensureUnique(state.policies, "policy_id", body.policy_id)) {
+      return json(res, 409, { ok: false, error: "policy_id_exists" });
+    }
     const created = createPolicy(body);
     state.policies.unshift(created.policy);
     addAudit("policy.created", { policy_id: created.policy.policy_id, owner: created.policy.owner });
@@ -474,7 +570,11 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === "POST" && action === "sessions") {
       if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      if (body.session_id && !ensureUnique(state.sessions, "session_id", body.session_id)) {
+        return json(res, 409, { ok: false, error: "session_id_exists" });
+      }
       const issued = issueSession(policy, body);
       state.sessions.unshift(issued.session);
       addAudit("policy.session.issued", { policy_id: policyId, session_id: issued.session.session_id });
@@ -519,8 +619,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/identities") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
     if (!body.address) return json(res, 400, { ok: false, error: "address_required" });
+    if (body.identity_id && !ensureUnique(state.identities, "identity_id", body.identity_id)) {
+      return json(res, 409, { ok: false, error: "identity_id_exists" });
+    }
     const guard = policyGuard(req, "identity.create", body.policy_id || "", 0);
     if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
     const identity = {
@@ -546,8 +650,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/agents") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
     if (!body.owner) return json(res, 400, { ok: false, error: "owner_required" });
+    if (body.agent_id && !ensureUnique(state.agents, "agent_id", body.agent_id)) {
+      return json(res, 409, { ok: false, error: "agent_id_exists" });
+    }
     const guard = policyGuard(req, "agent.create", body.policy_id || "", toNumber(body.stake, 0));
     if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
     const agent = {
@@ -558,7 +666,7 @@ const server = http.createServer(async (req, res) => {
       name: body.name || "unnamed-agent",
       model: body.model || "unspecified",
       endpoint: body.endpoint || "",
-      capabilities: Array.isArray(body.capabilities) ? body.capabilities : [],
+      capabilities: uniqueStrings(body.capabilities),
       stake: body.stake || "0",
       status: "active",
       created_at: nowIso(),
@@ -577,8 +685,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/intents") {
-    const body = await parseBody(req);
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
     if (!body.creator) return json(res, 400, { ok: false, error: "creator_required" });
+    if (body.intent_id && !ensureUnique(state.intents, "intent_id", body.intent_id)) {
+      return json(res, 409, { ok: false, error: "intent_id_exists" });
+    }
     const amount = toNumber(body.budget, 0);
     const guard = policyGuard(req, "intent.create", body.policy_id || "", amount);
     if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
@@ -614,7 +726,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && !action) return json(res, 200, { ok: true, agent });
 
     if (req.method === "POST" && action === "self-update") {
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
       const policyId = body.policy_id || agent.policy_id || "";
       const guard = policyGuard(req, "agent.modify", policyId, 0);
       if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
@@ -622,7 +735,9 @@ const server = http.createServer(async (req, res) => {
       const patch = body.patch || {};
       const allow = ["name", "model", "endpoint", "capabilities"];
       for (const key of allow) {
-        if (key in patch) agent[key] = patch[key];
+        if (key in patch) {
+          agent[key] = key === "capabilities" ? uniqueStrings(patch[key]) : patch[key];
+        }
       }
       agent.updated_at = nowIso();
       applySpend(guard.policy, guard.session, 0);
@@ -632,7 +747,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && action === "replicate") {
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
       const policyId = body.policy_id || agent.policy_id || "";
       const replicateStake = toNumber(body.stake, 0);
       const guard = policyGuard(req, "agent.replicate", policyId, replicateStake);
@@ -652,6 +768,10 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      if (body.agent_id && !ensureUnique(state.agents, "agent_id", body.agent_id)) {
+        return json(res, 409, { ok: false, error: "agent_id_exists" });
+      }
+
       const child = {
         agent_id: body.agent_id || randomId("agent"),
         policy_id: policyId,
@@ -660,7 +780,7 @@ const server = http.createServer(async (req, res) => {
         name: body.name || `${agent.name}-child`,
         model: body.model || agent.model,
         endpoint: body.endpoint || agent.endpoint,
-        capabilities: Array.isArray(body.capabilities) ? body.capabilities : agent.capabilities,
+        capabilities: Array.isArray(body.capabilities) ? uniqueStrings(body.capabilities) : agent.capabilities,
         stake: String(body.stake || agent.stake || "0"),
         status: "active",
         created_at: nowIso(),
@@ -689,9 +809,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && action === "claim") {
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
       if (!body.agent_id || !body.result_hash) {
         return json(res, 400, { ok: false, error: "agent_id_and_result_hash_required" });
+      }
+      if (body.claim_id && !ensureUnique(state.claims, "claim_id", body.claim_id)) {
+        return json(res, 409, { ok: false, error: "claim_id_exists" });
       }
       if (!findAgent(body.agent_id)) return json(res, 400, { ok: false, error: "agent_not_found" });
       if (intent.status !== "created" && intent.status !== "claimed") {
@@ -722,7 +846,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && action === "challenge") {
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
       const policyId = body.policy_id || intent.policy_id || "";
       const guard = policyGuard(req, "intent.challenge", policyId, 0);
       if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
@@ -736,7 +861,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && action === "finalize") {
-      const body = await parseBody(req);
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
       const policyId = body.policy_id || intent.policy_id || "";
       const guard = policyGuard(req, "intent.finalize", policyId, 0);
       if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });

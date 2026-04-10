@@ -128,7 +128,12 @@ echo "$explorer_head" | grep -qi "YNX Web4 Explorer" || { echo "Explorer title i
 
 ai_health="$(curl_get_retry "${AI}/health")" || { echo "AI gateway not reachable: ${AI}/health"; exit 1; }
 ai_chain="$(echo "$ai_health" | jq -r '.chain_id')"
+ai_enforce_policy="$(echo "$ai_health" | jq -r '.enforce_policy')"
 [[ "$ai_chain" == "$CHAIN_ID" ]] || { echo "AI gateway chain id mismatch: $ai_chain"; exit 1; }
+[[ "$ai_enforce_policy" == "true" ]] || { echo "AI gateway policy enforcement disabled"; exit 1; }
+ai_ready="$(curl_get_retry "${AI}/ready")" || { echo "AI gateway readiness not reachable: ${AI}/ready"; exit 1; }
+ai_ready_ok="$(echo "$ai_ready" | jq -r '.ok')"
+[[ "$ai_ready_ok" == "true" ]] || { echo "AI gateway readiness invalid"; exit 1; }
 ai_stats="$(curl_get_retry "${AI}/ai/stats")" || { echo "AI stats not reachable: ${AI}/ai/stats"; exit 1; }
 ai_ok="$(echo "$ai_stats" | jq -r '.ok')"
 [[ "$ai_ok" == "true" ]] || { echo "AI stats invalid"; exit 1; }
@@ -141,8 +146,13 @@ x402_code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 "${AI}/x402/res
 web4_health="$(curl_get_retry "${WEB4}/health")" || { echo "Web4 hub not reachable: ${WEB4}/health"; exit 1; }
 web4_chain="$(echo "$web4_health" | jq -r '.chain_id')"
 web4_track="$(echo "$web4_health" | jq -r '.track')"
+web4_enforce_policy="$(echo "$web4_health" | jq -r '.enforce_policy')"
 [[ "$web4_chain" == "$CHAIN_ID" ]] || { echo "Web4 hub chain id mismatch: $web4_chain"; exit 1; }
 [[ "$web4_track" == "$TRACK" ]] || { echo "Web4 hub track mismatch: $web4_track"; exit 1; }
+[[ "$web4_enforce_policy" == "true" ]] || { echo "Web4 hub policy enforcement disabled"; exit 1; }
+web4_ready="$(curl_get_retry "${WEB4}/ready")" || { echo "Web4 readiness not reachable: ${WEB4}/ready"; exit 1; }
+web4_ready_ok="$(echo "$web4_ready" | jq -r '.ok')"
+[[ "$web4_ready_ok" == "true" ]] || { echo "Web4 readiness invalid"; exit 1; }
 web4_overview="$(curl_get_retry "${WEB4}/web4/overview")" || { echo "Web4 overview not reachable: ${WEB4}/web4/overview"; exit 1; }
 web4_ok="$(echo "$web4_overview" | jq -r '.ok')"
 [[ "$web4_ok" == "true" ]] || { echo "Web4 overview invalid"; exit 1; }

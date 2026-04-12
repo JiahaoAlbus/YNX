@@ -186,6 +186,8 @@ set_section_key() {
 set_section_key "$CONFIG_TOML" "rpc" "laddr" "\"tcp://0.0.0.0:${YNX_RPC_PORT}\""
 set_section_key "$CONFIG_TOML" "rpc" "pprof_laddr" "\"localhost:${YNX_PPROF_PORT}\""
 set_section_key "$CONFIG_TOML" "p2p" "laddr" "\"tcp://0.0.0.0:${YNX_P2P_PORT}\""
+set_section_key "$CONFIG_TOML" "p2p" "seeds" "\"${YNX_SEEDS}\""
+set_section_key "$CONFIG_TOML" "p2p" "persistent_peers" "\"${YNX_PERSISTENT_PEERS}\""
 set_section_key "$CONFIG_TOML" "instrumentation" "prometheus_listen_addr" "\":${YNX_PROM_PORT}\""
 set_section_key "$APP_TOML" "api" "address" "\"tcp://0.0.0.0:${YNX_REST_PORT}\""
 set_section_key "$APP_TOML" "grpc" "address" "\"0.0.0.0:${YNX_GRPC_PORT}\""

@@ -104,6 +104,8 @@ REMOTE_REPO_DIR="${YNX_REPO_DIR:-~/YNX}"
 PUBLIC_HOST="${YNX_PUBLIC_HOST_OVERRIDE:-${REMOTE_HOST##*@}}"
 YNX_PUBLIC_BASE_DOMAIN="${YNX_PUBLIC_BASE_DOMAIN:-}"
 YNX_PUBLIC_SCHEME="${YNX_PUBLIC_SCHEME:-}"
+SEEDS_OVERRIDE="${YNX_SEEDS_OVERRIDE:-${YNX_SEEDS:-}}"
+PERSISTENT_PEERS_OVERRIDE="${YNX_PERSISTENT_PEERS_OVERRIDE:-${YNX_PERSISTENT_PEERS:-}}"
 LOCAL_LINUX_BIN=""
 REMOTE_REPO_DIR_SCP="$REMOTE_REPO_DIR"
 
@@ -205,6 +207,8 @@ WEB4_PORT="$WEB4_PORT"
 RESET_FLAG="$REMOTE_RESET"
 SMOKE_WRITE_FLAG="$REMOTE_SMOKE_WRITE"
 SYNC_MODE="$SYNC_MODE"
+SEEDS_OVERRIDE="$SEEDS_OVERRIDE"
+PERSISTENT_PEERS_OVERRIDE="$PERSISTENT_PEERS_OVERRIDE"
 
 if [[ "\$(id -u)" -eq 0 ]]; then
   SUDO=""
@@ -254,8 +258,16 @@ if ! command -v node >/dev/null 2>&1; then
   fi
 fi
 
-if ! command -v go >/dev/null 2>&1; then
-  curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
+REQUIRED_GO_VERSION="1.25.7"
+go_ok=0
+if command -v go >/dev/null 2>&1; then
+  current_go_version="\$(go version | awk '{print \$3}' | sed 's/^go//')"
+  if [[ -n "\$current_go_version" ]] && printf '%s\n%s\n' "\$REQUIRED_GO_VERSION" "\$current_go_version" | sort -V -C; then
+    go_ok=1
+  fi
+fi
+if [[ "\$go_ok" -ne 1 ]]; then
+  curl -fsSL "https://go.dev/dl/go\${REQUIRED_GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz
   run_root rm -rf /usr/local/go
   run_root tar -C /usr/local -xzf /tmp/go.tar.gz
 fi
@@ -329,6 +341,14 @@ PUBLIC_SEED=""
 if [[ -n "\$NODE_ID" ]]; then
   PUBLIC_SEED="\${NODE_ID}@$PUBLIC_HOST:\${P2P_PORT}"
 fi
+INSTALL_SEEDS="\$PUBLIC_SEED"
+INSTALL_PERSISTENT_PEERS="\$PUBLIC_SEED"
+if [[ -n "\$SEEDS_OVERRIDE" ]]; then
+  INSTALL_SEEDS="\$SEEDS_OVERRIDE"
+fi
+if [[ -n "\$PERSISTENT_PEERS_OVERRIDE" ]]; then
+  INSTALL_PERSISTENT_PEERS="\$PERSISTENT_PEERS_OVERRIDE"
+fi
 
 YNX_REPO_DIR="\$REPO_DIR" \
 YNX_HOME="\$V2_HOME" \
@@ -356,8 +376,8 @@ YNX_PUBLIC_EXPLORER="$PUBLIC_EXPLORER_URL" \
 YNX_PUBLIC_AI_GATEWAY="$PUBLIC_AI_URL" \
 YNX_PUBLIC_WEB4_HUB="$PUBLIC_WEB4_URL" \
 YNX_DESCRIPTOR_URL="$PUBLIC_DESCRIPTOR_URL" \
-YNX_SEEDS="\$PUBLIC_SEED" \
-YNX_PERSISTENT_PEERS="\$PUBLIC_SEED" \
+YNX_SEEDS="\$INSTALL_SEEDS" \
+YNX_PERSISTENT_PEERS="\$INSTALL_PERSISTENT_PEERS" \
 "\$REPO_DIR/chain/scripts/install_v2_stack_systemd.sh"
 
 for _ in \$(seq 1 60); do

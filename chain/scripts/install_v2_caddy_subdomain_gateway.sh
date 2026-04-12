@@ -70,7 +70,17 @@ install_caddy() {
   fi
   if command -v apt-get >/dev/null 2>&1; then
     run_root apt-get update -y >/dev/null
-    run_root apt-get install -y caddy >/dev/null
+    if ! run_root apt-get install -y caddy >/dev/null 2>&1; then
+      # Ubuntu default repos may not contain Caddy. Fall back to the official Caddy apt repo.
+      run_root apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg >/dev/null
+      run_root install -d -m 0755 /usr/share/keyrings
+      curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
+        | run_root gpg --dearmor --batch --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+      curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
+        | run_root tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+      run_root apt-get update -y >/dev/null
+      run_root apt-get install -y caddy >/dev/null
+    fi
     return
   fi
   if command -v dnf >/dev/null 2>&1; then

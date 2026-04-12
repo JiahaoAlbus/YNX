@@ -1,7 +1,7 @@
 # YNX Validator Signup and Review Template
 
 Status: Active  
-Last updated: 2026-02-17  
+Last updated: 2026-04-12  
 Canonical language: English
 
 ## 1. Intake Fields (Required)
@@ -64,7 +64,7 @@ List active validators:
 
 ```bash
 cd chain
-./ynxd query staking validators --node http://38.98.191.10:26657
+./ynxd query staking validators --node https://rpc.ynxweb4.com
 ```
 
 ## 6. CSV Template

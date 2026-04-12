@@ -1,7 +1,7 @@
 # YNX Public Testnet Kompletný Návod (SK)
 
 Stav: active  
-Posledná aktualizácia: 2026-02-17
+Posledná aktualizácia: 2026-04-12
 
 ## Rýchla navigácia (klikni podľa potreby)
 
@@ -15,29 +15,29 @@ Posledná aktualizácia: 2026-02-17
 
 ## Konštanty siete
 
-- Chain ID: `ynx_9002-1`
-- EVM chain id (hex): `0x232a`
+- Chain ID: `ynx_9102-1`
+- EVM chain id (hex): `0x238e`
 - Denom: `anyxt`
-- Verejné RPC: `http://43.134.23.58:26657`
-- Verejné EVM RPC: `http://43.134.23.58:8545`
-- Verejné REST: `http://43.134.23.58:1317`
-- Verejný Faucet: `http://43.134.23.58:8080`
-- Verejný Explorer: `http://43.134.23.58:8082`
-- Seed / peer bootstrap: `e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656`
+- Verejné RPC: `https://rpc.ynxweb4.com`
+- Verejné EVM RPC: `https://evm.ynxweb4.com`
+- Verejné REST: `https://rest.ynxweb4.com`
+- Verejný Faucet: `https://faucet.ynxweb4.com`
+- Verejný Explorer: `https://explorer.ynxweb4.com`
+- Seed / peer bootstrap: `4873f5737444f3fb3eced7035e0afc0fc1192110@34.96.134.119:36656`
 
 ## Cesta 0: Bez inštalácie, kontrola siete
 
 ```bash
-curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
-curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
-curl -s http://43.134.23.58:8080/health
-curl -s http://43.134.23.58:8081/ynx/overview | jq
+curl -s https://rpc.ynxweb4.com/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+curl -s https://evm.ynxweb4.com -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+curl -s https://faucet.ynxweb4.com/health
+curl -s https://indexer.ynxweb4.com/ynx/overview | jq
 ```
 
 Sledovanie blokov v reálnom čase:
 
 ```bash
-while true; do h=$(curl -s http://43.134.23.58:26657/status | jq -r .result.sync_info.latest_block_height); echo "$(date '+%F %T') height=$h"; sleep 1; done
+while true; do h=$(curl -s https://rpc.ynxweb4.com/status | jq -r .result.sync_info.latest_block_height); echo "$(date '+%F %T') height=$h"; sleep 1; done
 ```
 
 ## Cesta 1: Vytvor wallet len keď je potrebný
@@ -55,14 +55,14 @@ cd ~/YNX/chain
 
 ```bash
 ADDR="<tvoja_ynx1_adresa>"
-curl -s "http://43.134.23.58:8080/faucet?address=${ADDR}"
+curl -s "https://faucet.ynxweb4.com/faucet?address=${ADDR}"
 ```
 
 Kontrola zostatku:
 
 ```bash
 cd ~/YNX/chain
-./ynxd query bank balances "$ADDR" --node http://43.134.23.58:26657 --output json
+./ynxd query bank balances "$ADDR" --node https://rpc.ynxweb4.com --output json
 ```
 
 ## Cesta 3: Spusť full node
@@ -116,12 +116,12 @@ cp /tmp/ynx_bundle/app.toml ~/.ynx-testnet/config/app.toml
 ### 3.5 Nastav peer a spusti node
 
 ```bash
-PEER='e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656'
+PEER='4873f5737444f3fb3eced7035e0afc0fc1192110@34.96.134.119:36656'
 sed -i -E "s#^seeds = .*#seeds = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
 sed -i -E "s#^persistent_peers = .*#persistent_peers = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
 
 cd ~/YNX/chain
-./ynxd start --home ~/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt
+./ynxd start --home ~/.ynx-testnet --chain-id ynx_9102-1 --minimum-gas-prices 0anyxt
 ```
 
 ### 3.6 Over synchronizáciu
@@ -156,32 +156,32 @@ Kompletný health-check:
 
 ```bash
 cd ~/YNX
-./chain/scripts/public_testnet_verify.sh
+./chain/scripts/v2_public_testnet_verify.sh
 ```
 
 Lokálny health-check na serveri:
 
 ```bash
-YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/public_testnet_verify.sh
+YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/v2_public_testnet_verify.sh
 ```
 
 Systemd status:
 
 ```bash
-sudo systemctl status ynx-node ynx-faucet ynx-indexer ynx-explorer --no-pager
+sudo systemctl status ynx-v2-node ynx-v2-faucet ynx-v2-indexer ynx-v2-explorer --no-pager
 ```
 
 Live log:
 
 ```bash
-sudo journalctl -u ynx-node -f
+sudo journalctl -u ynx-v2-node -f
 ```
 
 Kontrolovaný upgrade (predvolene bez auto-update z Git):
 
 ```bash
 cd ~/YNX
-./chain/scripts/server_upgrade_apply.sh ubuntu@43.134.23.58 /Users/huangjiahao/Downloads/Huang.pem
+./chain/scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset --smoke-write
 ```
 
 ## Riešenie problémov

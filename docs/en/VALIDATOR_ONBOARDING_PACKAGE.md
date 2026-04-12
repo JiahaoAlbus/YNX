@@ -1,8 +1,15 @@
 # YNX Validator Onboarding Package
 
-Status: Active  
-Last updated: 2026-02-17  
+Status: Archived (legacy `ynx_9002-1`)  
+Last updated: 2026-04-12  
 Canonical language: English
+
+Legacy notice:
+- This file documents the old `ynx_9002-1` onboarding package.
+- Current public testnet onboarding and endpoints are in:
+  - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+  - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
+  - `docs/en/V2_GCP_CURRENT_DEPLOYMENT_PROFILE.md`
 
 ## 1. Network Parameters
 

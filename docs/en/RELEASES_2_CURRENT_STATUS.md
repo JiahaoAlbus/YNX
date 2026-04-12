@@ -1,7 +1,7 @@
 # YNX Releases 2 — Current Status Snapshot
 
 Status: active  
-Date: 2026-02-17  
+Date: 2026-04-12  
 Tag target: `f9d314e`
 
 ## Scope
@@ -16,8 +16,8 @@ This release updates the public testnet from baseline launch to a mainnet-parity
 
 ## Network snapshot at release time
 
-- Chain ID: `ynx_9002-1`
-- EVM chain ID: `0x232a`
+- Chain ID: `ynx_9102-1`
+- EVM chain ID: `0x238e`
 - Latest height snapshot: `13805`
 - Catching up: `false`
 - No base fee: `true`
@@ -25,12 +25,12 @@ This release updates the public testnet from baseline launch to a mainnet-parity
 
 ## Public endpoints
 
-- RPC: `http://43.134.23.58:26657`
-- EVM JSON-RPC: `http://43.134.23.58:8545`
-- REST: `http://43.134.23.58:1317`
-- Faucet: `http://43.134.23.58:8080`
-- Indexer: `http://43.134.23.58:8081`
-- Explorer: `http://43.134.23.58:8082`
+- RPC: `https://rpc.ynxweb4.com`
+- EVM JSON-RPC: `https://evm.ynxweb4.com`
+- REST: `https://rest.ynxweb4.com`
+- Faucet: `https://faucet.ynxweb4.com`
+- Indexer: `https://indexer.ynxweb4.com`
+- Explorer: `https://explorer.ynxweb4.com`
 
 ## New operator endpoints
 
@@ -48,4 +48,3 @@ This release updates the public testnet from baseline launch to a mainnet-parity
 - `docs/en/YNX_POSITIONING.md`
 - `docs/zh/YNX_定位与卖点.md`
 - `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
-

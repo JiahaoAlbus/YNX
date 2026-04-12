@@ -1,7 +1,7 @@
 # YNX Documentation Index (English)
 
 Status: Active  
-Last updated: 2026-03-21
+Last updated: 2026-04-12
 
 ## Public Docs (Website-safe)
 
@@ -18,6 +18,7 @@ Last updated: 2026-03-21
 ## Internal / Operator Docs (Not for Public Website Nav)
 
 - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — operator deployment + operations
+- `docs/en/V2_GCP_CURRENT_DEPLOYMENT_PROFILE.md` — current GCP topology, DNS routing, and security switch baseline
 - `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md` — local complete runbook
 - `docs/en/V2_COMPANY_HANDOFF.md` — internal handoff package
 - `docs/en/V2_SMOKE_AND_VERIFY.md` — verification and write smoke

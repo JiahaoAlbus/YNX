@@ -1,17 +1,20 @@
 # YNX Public Testnet Validator Recruitment Post (EN + 中文)
 
 Status: Active  
-Last updated: 2026-02-21
+Last updated: 2026-04-12
 
 ## English Version
 
 YNX Public Testnet is open for validator onboarding.
 
-- Chain ID: `ynx_9002-1`
-- RPC: `http://43.134.23.58:26657`
-- EVM RPC: `http://43.134.23.58:8545`
-- Faucet: `http://43.134.23.58:8080`
-- Explorer: `http://43.134.23.58:8082`
+- Chain ID: `ynx_9102-1`
+- RPC: `https://rpc.ynxweb4.com`
+- EVM RPC: `https://evm.ynxweb4.com`
+- Faucet: `https://faucet.ynxweb4.com`
+- Explorer: `https://explorer.ynxweb4.com`
+- Indexer: `https://indexer.ynxweb4.com`
+- AI Gateway: `https://ai.ynxweb4.com`
+- Web4 Hub: `https://web4.ynxweb4.com`
 
 How to join:
 
@@ -38,11 +41,14 @@ Reference docs:
 
 YNX 公测网现已开放验证人接入。
 
-- Chain ID：`ynx_9002-1`
-- RPC：`http://43.134.23.58:26657`
-- EVM RPC：`http://43.134.23.58:8545`
-- Faucet：`http://43.134.23.58:8080`
-- Explorer：`http://43.134.23.58:8082`
+- Chain ID：`ynx_9102-1`
+- RPC：`https://rpc.ynxweb4.com`
+- EVM RPC：`https://evm.ynxweb4.com`
+- Faucet：`https://faucet.ynxweb4.com`
+- Explorer：`https://explorer.ynxweb4.com`
+- Indexer：`https://indexer.ynxweb4.com`
+- AI Gateway：`https://ai.ynxweb4.com`
+- Web4 Hub：`https://web4.ynxweb4.com`
 
 加入步骤：
 

@@ -1,7 +1,7 @@
 # YNX 公测网完整上手手册（中文）
 
 状态：active  
-最后更新：2026-02-17
+最后更新：2026-04-12
 
 ## 快速导航（按需求点击）
 
@@ -15,29 +15,29 @@
 
 ## 网络固定参数
 
-- Chain ID：`ynx_9002-1`
-- EVM Chain ID（hex）：`0x232a`
+- Chain ID：`ynx_9102-1`
+- EVM Chain ID（hex）：`0x238e`
 - Denom：`anyxt`
-- 公网 RPC：`http://43.134.23.58:26657`
-- 公网 EVM RPC：`http://43.134.23.58:8545`
-- 公网 REST：`http://43.134.23.58:1317`
-- Faucet：`http://43.134.23.58:8080`
-- Explorer：`http://43.134.23.58:8082`
-- Seed/Peer 引导：`e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656`
+- 公网 RPC：`https://rpc.ynxweb4.com`
+- 公网 EVM RPC：`https://evm.ynxweb4.com`
+- 公网 REST：`https://rest.ynxweb4.com`
+- Faucet：`https://faucet.ynxweb4.com`
+- Explorer：`https://explorer.ynxweb4.com`
+- Seed/Peer 引导：`4873f5737444f3fb3eced7035e0afc0fc1192110@34.96.134.119:36656`
 
 ## 路径 0：不安装，直接查看网络
 
 ```bash
-curl -s http://43.134.23.58:26657/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
-curl -s http://43.134.23.58:8545 -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
-curl -s http://43.134.23.58:8080/health
-curl -s http://43.134.23.58:8081/ynx/overview | jq
+curl -s https://rpc.ynxweb4.com/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
+curl -s https://evm.ynxweb4.com -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
+curl -s https://faucet.ynxweb4.com/health
+curl -s https://indexer.ynxweb4.com/ynx/overview | jq
 ```
 
 实时看出块：
 
 ```bash
-while true; do h=$(curl -s http://43.134.23.58:26657/status | jq -r .result.sync_info.latest_block_height); echo "$(date '+%F %T') height=$h"; sleep 1; done
+while true; do h=$(curl -s https://rpc.ynxweb4.com/status | jq -r .result.sync_info.latest_block_height); echo "$(date '+%F %T') height=$h"; sleep 1; done
 ```
 
 ## 路径 1：需要时再创建钱包
@@ -55,14 +55,14 @@ cd ~/YNX/chain
 
 ```bash
 ADDR="<你的ynx1地址>"
-curl -s "http://43.134.23.58:8080/faucet?address=${ADDR}"
+curl -s "https://faucet.ynxweb4.com/faucet?address=${ADDR}"
 ```
 
 查余额（推荐）：
 
 ```bash
 cd ~/YNX/chain
-./ynxd query bank balances "$ADDR" --node http://43.134.23.58:26657 --output json
+./ynxd query bank balances "$ADDR" --node https://rpc.ynxweb4.com --output json
 ```
 
 ## 路径 3：运行全节点
@@ -116,12 +116,12 @@ cp /tmp/ynx_bundle/app.toml ~/.ynx-testnet/config/app.toml
 ### 3.5 配置 Peer 并启动
 
 ```bash
-PEER='e09b8e3fb963e7bd634520778846de6daaea4be6@43.134.23.58:26656'
+PEER='4873f5737444f3fb3eced7035e0afc0fc1192110@34.96.134.119:36656'
 sed -i -E "s#^seeds = .*#seeds = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
 sed -i -E "s#^persistent_peers = .*#persistent_peers = \"$PEER\"#" ~/.ynx-testnet/config/config.toml
 
 cd ~/YNX/chain
-./ynxd start --home ~/.ynx-testnet --chain-id ynx_9002-1 --minimum-gas-prices 0anyxt
+./ynxd start --home ~/.ynx-testnet --chain-id ynx_9102-1 --minimum-gas-prices 0anyxt
 ```
 
 ### 3.6 验证同步
@@ -156,32 +156,32 @@ cd ~/YNX/chain
 
 ```bash
 cd ~/YNX
-./chain/scripts/public_testnet_verify.sh
+./chain/scripts/v2_public_testnet_verify.sh
 ```
 
 服务器本机检查：
 
 ```bash
-YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/public_testnet_verify.sh
+YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/v2_public_testnet_verify.sh
 ```
 
 systemd 状态：
 
 ```bash
-sudo systemctl status ynx-node ynx-faucet ynx-indexer ynx-explorer --no-pager
+sudo systemctl status ynx-v2-node ynx-v2-faucet ynx-v2-indexer ynx-v2-explorer --no-pager
 ```
 
 实时日志：
 
 ```bash
-sudo journalctl -u ynx-node -f
+sudo journalctl -u ynx-v2-node -f
 ```
 
 受控升级（默认不自动从 Git 更新）：
 
 ```bash
 cd ~/YNX
-./chain/scripts/server_upgrade_apply.sh ubuntu@43.134.23.58 /Users/huangjiahao/Downloads/Huang.pem
+./chain/scripts/v2_public_testnet_deploy.sh ubuntu@<SERVER_IP> /path/to/key.pem --reset --smoke-write
 ```
 
 ## 故障排查

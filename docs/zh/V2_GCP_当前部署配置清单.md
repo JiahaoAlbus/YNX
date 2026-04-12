@@ -10,7 +10,7 @@
 
 ## 基线信息
 
-- 仓库基线：`main` @ `7dd1dae`
+- 仓库基线：`main` @ `c4e9a75`
 - 域名：`ynxweb4.com`
 - 公测网 Chain ID：`ynx_9102-1`
 - EVM Chain ID：`0x238e`
@@ -20,6 +20,33 @@
 - Bootstrap 节点：`34.96.134.119`
 - RPC 节点：`34.150.93.74`
 - Service 节点：`34.92.114.34`
+
+三台机器当前均为：
+- `RUNNING`
+- 机型：`e2-standard-4`（4 vCPU / 16GB RAM）
+- 区域：`asia-east2-b`
+- 网络：`default`（仅 IPv4）
+
+## 实时实例配置（live）
+
+- `ynx-v2-bootstrap-1`
+  - 内网 IP：`10.170.0.2`
+  - 公网 IP：`34.96.134.119`
+  - 启动盘：`200GB`，`pd-balanced`，Ubuntu 22.04
+  - 删除保护：`false`
+  - Shielded VM：`vTPM=true`、完整性监控=true、secure boot=false
+- `ynx-v2-rpc-1`
+  - 内网 IP：`10.170.0.4`
+  - 公网 IP：`34.150.93.74`
+  - 启动盘：`80GB`，`pd-standard`，Ubuntu 22.04
+  - 删除保护：`false`
+  - Shielded VM：`vTPM=true`、完整性监控=true、secure boot=false
+- `ynx-v2-service-1`
+  - 内网 IP：`10.170.0.5`
+  - 公网 IP：`34.92.114.34`
+  - 启动盘：`80GB`，`pd-standard`，Ubuntu 22.04
+  - 删除保护：`false`
+  - Shielded VM：`vTPM=true`、完整性监控=true、secure boot=false
 
 ## 公网域名路由
 
@@ -61,6 +88,9 @@
 - 系统盘：`80GB`（`pd-standard`）
 - 镜像：`ubuntu-2204-lts`
 
+说明：
+- 当前现网与脚本默认值有一处差异：bootstrap 启动盘是 `200GB pd-balanced`。
+
 ## 公开入口端口
 
 当前部署使用的主要端口：
@@ -70,6 +100,21 @@
 - REST / gRPC / EVM：`31317`、`39090`、`38545`、`38546`
 - 业务服务：`38080`、`38081`、`38082`、`38090`、`38091`
 - HTTPS 网关：`80`、`443`
+
+防火墙规则：
+- `ynx-v2-public`（INGRESS，来源 `0.0.0.0/0`）
+
+## 结算与预算（live）
+
+- 项目结算：已启用（`projects/ynx-testnet-gcp` -> `billingAccounts/01562C-E2CAC9-5704C6`）
+- 预算 `YNX`：
+  - 月预算 HKD `100`
+  - 实际支出提醒：50%、90%、100%（另含 25%、75%）
+  - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
+- 预算 `YNX-Credit-Guard-Stop`：
+  - 月预算 HKD `2300`
+  - 实际支出提醒：100%
+  - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
 
 ## 快速验收命令
 

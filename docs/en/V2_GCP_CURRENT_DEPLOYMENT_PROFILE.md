@@ -10,7 +10,7 @@ Use it as the source of truth for endpoint routing, node roles, and security swi
 
 ## Baseline
 
-- Repo baseline: `main` @ `7dd1dae`
+- Repo baseline: `main` @ `c4e9a75`
 - Domain: `ynxweb4.com`
 - Public testnet chain id: `ynx_9102-1`
 - EVM chain id: `0x238e`
@@ -20,6 +20,33 @@ Use it as the source of truth for endpoint routing, node roles, and security swi
 - Bootstrap node: `34.96.134.119`
 - RPC node: `34.150.93.74`
 - Service node: `34.92.114.34`
+
+All three nodes are currently:
+- `RUNNING`
+- machine type: `e2-standard-4` (4 vCPU, 16 GB RAM)
+- zone: `asia-east2-b`
+- network: `default` (IPv4 only)
+
+## Runtime Instance Profile (live)
+
+- `ynx-v2-bootstrap-1`
+  - internal IP: `10.170.0.2`
+  - external IP: `34.96.134.119`
+  - boot disk: `200GB`, `pd-balanced`, Ubuntu 22.04
+  - deletion protection: `false`
+  - shielded VM: `vTPM=true`, integrity monitoring=true, secure boot=false
+- `ynx-v2-rpc-1`
+  - internal IP: `10.170.0.4`
+  - external IP: `34.150.93.74`
+  - boot disk: `80GB`, `pd-standard`, Ubuntu 22.04
+  - deletion protection: `false`
+  - shielded VM: `vTPM=true`, integrity monitoring=true, secure boot=false
+- `ynx-v2-service-1`
+  - internal IP: `10.170.0.5`
+  - external IP: `34.92.114.34`
+  - boot disk: `80GB`, `pd-standard`, Ubuntu 22.04
+  - deletion protection: `false`
+  - shielded VM: `vTPM=true`, integrity monitoring=true, secure boot=false
 
 ## Public Domain Routing
 
@@ -61,6 +88,9 @@ Source: `chain/scripts/v2_gcp_fullblood_deploy.sh`
 - Boot disk: `80GB` (`pd-standard`)
 - OS image family: `ubuntu-2204-lts`
 
+Note:
+- Current runtime differs from script default on bootstrap disk (live is `200GB pd-balanced`).
+
 ## Public Ingress Ports
 
 Main exposed ports used by the deployed stack:
@@ -70,6 +100,21 @@ Main exposed ports used by the deployed stack:
 - REST / gRPC / EVM: `31317`, `39090`, `38545`, `38546`
 - App services: `38080`, `38081`, `38082`, `38090`, `38091`
 - HTTPS gateway: `80`, `443`
+
+Firewall rule:
+- `ynx-v2-public` (INGRESS, source `0.0.0.0/0`)
+
+## Billing Controls (live)
+
+- Project billing: enabled (`projects/ynx-testnet-gcp` -> `billingAccounts/01562C-E2CAC9-5704C6`)
+- Budget `YNX`:
+  - monthly HKD `100`
+  - current-spend alerts: 50%, 90%, 100% (plus 25%, 75%)
+  - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
+- Budget `YNX-Credit-Guard-Stop`:
+  - monthly HKD `2300`
+  - current-spend alert: 100%
+  - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
 
 ## Quick Validation Commands
 

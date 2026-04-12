@@ -238,6 +238,26 @@ fi
 EOF
 }
 
+wait_node_sync() {
+  local host_ip="$1"
+  local retries="${2:-120}"
+  local sleep_sec="${3:-3}"
+  local i
+  for i in $(seq 1 "$retries"); do
+    status_json="$(curl -fsS --max-time 3 "http://${host_ip}:36657/status" 2>/dev/null || true)"
+    if [[ -n "$status_json" ]]; then
+      height="$(echo "$status_json" | jq -r '.result.sync_info.latest_block_height // "0"' 2>/dev/null || echo "0")"
+      catching="$(echo "$status_json" | jq -r '.result.sync_info.catching_up // true' 2>/dev/null || echo "true")"
+      if [[ "$height" =~ ^[0-9]+$ ]] && [[ "$height" -gt 0 ]] && [[ "$catching" == "false" ]]; then
+        return 0
+      fi
+    fi
+    sleep "$sleep_sec"
+  done
+  echo "Node did not reach synced state in time: $host_ip" >&2
+  return 1
+}
+
 echo "==> Deploy bootstrap node..."
 run_deploy "$BOOTSTRAP_IP"
 
@@ -288,6 +308,11 @@ echo "==> Installing watchdog/backup services..."
 install_ops_services "$BOOTSTRAP_IP"
 install_ops_services "$RPC_IP"
 install_ops_services "$SVC_IP"
+
+echo "==> Waiting nodes to report synced state..."
+wait_node_sync "$BOOTSTRAP_IP"
+wait_node_sync "$RPC_IP"
+wait_node_sync "$SVC_IP"
 
 echo "==> Verifying cluster sync..."
 "$CLUSTER_VERIFY_SCRIPT" "$BOOTSTRAP_IP" "$RPC_IP" "$SVC_IP"

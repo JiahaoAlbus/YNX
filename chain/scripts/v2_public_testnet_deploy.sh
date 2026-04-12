@@ -284,6 +284,9 @@ if [[ "\$SYNC_MODE" == "remote-git" ]]; then
     git clone "\$REPO_URL" "\$REPO_DIR"
   fi
   cd "\$REPO_DIR"
+  if [[ -n "\$(git status --porcelain)" ]]; then
+    git stash push --include-untracked -m "v2-deploy-auto-stash-\$(date +%s)" >/dev/null 2>&1 || true
+  fi
   git fetch origin
   git checkout main
   git pull --ff-only
@@ -341,8 +344,8 @@ PUBLIC_SEED=""
 if [[ -n "\$NODE_ID" ]]; then
   PUBLIC_SEED="\${NODE_ID}@$PUBLIC_HOST:\${P2P_PORT}"
 fi
-INSTALL_SEEDS="\$PUBLIC_SEED"
-INSTALL_PERSISTENT_PEERS="\$PUBLIC_SEED"
+INSTALL_SEEDS=""
+INSTALL_PERSISTENT_PEERS=""
 if [[ -n "\$SEEDS_OVERRIDE" ]]; then
   INSTALL_SEEDS="\$SEEDS_OVERRIDE"
 fi

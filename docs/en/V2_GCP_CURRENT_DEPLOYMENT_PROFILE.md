@@ -1,7 +1,7 @@
 # YNX v2 GCP Current Deployment Profile
 
 Status: active  
-Last updated: 2026-04-12
+Last updated: 2026-04-17
 
 ## Purpose
 
@@ -115,6 +115,69 @@ Firewall rule:
   - monthly HKD `2300`
   - current-spend alert: 100%
   - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
+
+## Cost Behavior Notes (important)
+
+- GCP VM billing is based on uptime + machine type, not CPU saturation.
+- Therefore, low CPU usage does not mean low compute cost.
+- Current stack has 3 always-on `e2-standard-4` VMs, so credits are consumed continuously even during low-traffic periods.
+- Stopping a VM saves most compute cost immediately, but disks and reserved/public IP items may still incur small charges.
+
+## Stop/Start Without Redeploy
+
+- You can stop and start the instances without redeploying the chain.
+- State is preserved on persistent disks.
+- Systemd units are enabled, so services auto-recover at boot.
+- Validation command after restart:
+  - `curl -sS https://rpc.ynxweb4.com/status | jq -r '.result.sync_info.catching_up'`
+  - `curl -sS https://ai.ynxweb4.com/ready | jq -r '.ok'`
+  - `curl -sS https://web4.ynxweb4.com/ready | jq -r '.ok'`
+
+## New Control Scripts
+
+- IPv4-safe gcloud wrapper:
+  - `chain/scripts/gcloud_ipv4.sh`
+- One-command stack control:
+  - `chain/scripts/v2_gcp_stack_ctl.sh`
+- Extreme performance benchmark:
+  - `chain/scripts/v2_extreme_perf_bench.sh`
+
+Examples:
+
+```bash
+# Show VM status + endpoint health
+./chain/scripts/v2_gcp_stack_ctl.sh status
+
+# Stop all 3 YNX v2 GCP instances
+./chain/scripts/v2_gcp_stack_ctl.sh stop
+
+# Start and wait until public endpoints are ready
+./chain/scripts/v2_gcp_stack_ctl.sh start
+
+# Resize instances (default target: all 3)
+./chain/scripts/v2_gcp_stack_ctl.sh rightsize e2-standard-2
+
+# Apply predefined cost/perf profile
+./chain/scripts/v2_gcp_stack_ctl.sh mode economy
+./chain/scripts/v2_gcp_stack_ctl.sh mode balanced
+./chain/scripts/v2_gcp_stack_ctl.sh mode extreme
+
+# One-click read/write benchmark
+./chain/scripts/v2_extreme_perf_bench.sh
+```
+
+## High-Throughput Runtime Tuning
+
+AI gateway and Web4 hub now support debounced async persistence to reduce write-path blocking.
+
+Key env vars:
+
+- `AI_PERSIST_DEBOUNCE_MS` (default `200`)
+- `WEB4_PERSIST_DEBOUNCE_MS` (default `200`)
+- `AI_MAX_JOBS`, `AI_MAX_PAYMENTS`, `AI_MAX_VAULTS`
+- `WEB4_MAX_INTENTS`, `WEB4_MAX_CLAIMS`, `WEB4_MAX_SESSIONS`, etc.
+
+These are for throughput scaling under high write concurrency while keeping bounded state file growth.
 
 ## Quick Validation Commands
 

@@ -102,6 +102,12 @@ function atomicWriteJson(filePath, payload) {
   fs.renameSync(tmpPath, filePath);
 }
 
+async function atomicWriteJsonAsync(filePath, payload) {
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  await fs.promises.writeFile(tmpPath, JSON.stringify(payload, null, 2));
+  await fs.promises.rename(tmpPath, filePath);
+}
+
 function uniqueStrings(items) {
   return [...new Set((Array.isArray(items) ? items : []).filter((item) => typeof item === "string" && item.trim()))];
 }
@@ -152,6 +158,14 @@ const WEB4_DEFAULT_MAX_SPEND = Number(process.env.WEB4_DEFAULT_MAX_SPEND || "100
 const WEB4_AUDIT_LIMIT = parseInt(process.env.WEB4_AUDIT_LIMIT || "5000", 10);
 const WEB4_BODY_LIMIT_BYTES = parseInt(process.env.WEB4_BODY_LIMIT_BYTES || "1048576", 10);
 const WEB4_INTERNAL_TOKEN = process.env.WEB4_INTERNAL_TOKEN || "";
+const WEB4_MAX_IDENTITIES = parseInt(process.env.WEB4_MAX_IDENTITIES || "200000", 10);
+const WEB4_MAX_AGENTS = parseInt(process.env.WEB4_MAX_AGENTS || "200000", 10);
+const WEB4_MAX_INTENTS = parseInt(process.env.WEB4_MAX_INTENTS || "200000", 10);
+const WEB4_MAX_CLAIMS = parseInt(process.env.WEB4_MAX_CLAIMS || "200000", 10);
+const WEB4_MAX_POLICIES = parseInt(process.env.WEB4_MAX_POLICIES || "100000", 10);
+const WEB4_MAX_SESSIONS = parseInt(process.env.WEB4_MAX_SESSIONS || "300000", 10);
+const WEB4_MAX_BOOTSTRAPS = parseInt(process.env.WEB4_MAX_BOOTSTRAPS || "100000", 10);
+const WEB4_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.WEB4_PERSIST_DEBOUNCE_MS || "200", 10));
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -166,8 +180,69 @@ if (fs.existsSync(WEB4_DATA_FILE)) {
   }
 }
 
-function persist() {
+const persistRuntime = {
+  timer: null,
+  pending: false,
+  writing: false,
+  writes: 0,
+  queued: 0,
+  last_persist_at: "",
+  last_error: "",
+};
+
+function trimStateForRetention() {
+  if (WEB4_MAX_IDENTITIES > 0 && state.identities.length > WEB4_MAX_IDENTITIES) state.identities = state.identities.slice(0, WEB4_MAX_IDENTITIES);
+  if (WEB4_MAX_AGENTS > 0 && state.agents.length > WEB4_MAX_AGENTS) state.agents = state.agents.slice(0, WEB4_MAX_AGENTS);
+  if (WEB4_MAX_INTENTS > 0 && state.intents.length > WEB4_MAX_INTENTS) state.intents = state.intents.slice(0, WEB4_MAX_INTENTS);
+  if (WEB4_MAX_CLAIMS > 0 && state.claims.length > WEB4_MAX_CLAIMS) state.claims = state.claims.slice(0, WEB4_MAX_CLAIMS);
+  if (WEB4_MAX_POLICIES > 0 && state.policies.length > WEB4_MAX_POLICIES) state.policies = state.policies.slice(0, WEB4_MAX_POLICIES);
+  if (WEB4_MAX_SESSIONS > 0 && state.sessions.length > WEB4_MAX_SESSIONS) state.sessions = state.sessions.slice(0, WEB4_MAX_SESSIONS);
+  if (WEB4_MAX_BOOTSTRAPS > 0 && state.wallet_bootstraps.length > WEB4_MAX_BOOTSTRAPS) {
+    state.wallet_bootstraps = state.wallet_bootstraps.slice(0, WEB4_MAX_BOOTSTRAPS);
+  }
+  if (WEB4_AUDIT_LIMIT > 0 && state.audit_logs.length > WEB4_AUDIT_LIMIT) state.audit_logs = state.audit_logs.slice(0, WEB4_AUDIT_LIMIT);
+}
+
+function persistSync() {
+  trimStateForRetention();
   atomicWriteJson(WEB4_DATA_FILE, state);
+  persistRuntime.writes += 1;
+  persistRuntime.last_persist_at = nowIso();
+}
+
+async function flushPersist() {
+  if (!persistRuntime.pending || persistRuntime.writing) return;
+  persistRuntime.writing = true;
+  persistRuntime.pending = false;
+  try {
+    trimStateForRetention();
+    await atomicWriteJsonAsync(WEB4_DATA_FILE, state);
+    persistRuntime.writes += 1;
+    persistRuntime.last_persist_at = nowIso();
+    persistRuntime.last_error = "";
+  } catch (error) {
+    persistRuntime.last_error = error && error.message ? error.message : "persist_failed";
+    console.error("[web4-hub] persist error:", error);
+  } finally {
+    persistRuntime.writing = false;
+    if (persistRuntime.pending) {
+      void flushPersist();
+    }
+  }
+}
+
+function persist() {
+  persistRuntime.pending = true;
+  persistRuntime.queued += 1;
+  if (WEB4_PERSIST_DEBOUNCE_MS === 0) {
+    void flushPersist();
+    return;
+  }
+  if (persistRuntime.timer) return;
+  persistRuntime.timer = setTimeout(() => {
+    persistRuntime.timer = null;
+    void flushPersist();
+  }, WEB4_PERSIST_DEBOUNCE_MS);
 }
 
 function findIntent(intentId) {
@@ -413,6 +488,14 @@ const server = http.createServer(async (req, res) => {
       track: WEB4_TRACK,
       enforce_policy: WEB4_ENFORCE_POLICY,
       internal_authorizer_enabled: Boolean(WEB4_INTERNAL_TOKEN),
+      persistence: {
+        debounce_ms: WEB4_PERSIST_DEBOUNCE_MS,
+        pending: persistRuntime.pending,
+        writing: persistRuntime.writing,
+        writes: persistRuntime.writes,
+        last_persist_at: persistRuntime.last_persist_at,
+        last_error: persistRuntime.last_error,
+      },
       stats: summarizeStats(),
     });
   }
@@ -429,6 +512,12 @@ const server = http.createServer(async (req, res) => {
       chain_id: WEB4_CHAIN_ID,
       track: WEB4_TRACK,
       data_file: WEB4_DATA_FILE,
+      persistence: {
+        debounce_ms: WEB4_PERSIST_DEBOUNCE_MS,
+        pending: persistRuntime.pending,
+        writing: persistRuntime.writing,
+        last_error: persistRuntime.last_error,
+      },
     });
   }
 
@@ -883,4 +972,27 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(WEB4_PORT, () => {
   console.log(`YNX Web4 hub listening on :${WEB4_PORT}`);
+});
+
+async function gracefulShutdown(signal) {
+  console.log(`[web4-hub] received ${signal}, flushing state...`);
+  if (persistRuntime.timer) {
+    clearTimeout(persistRuntime.timer);
+    persistRuntime.timer = null;
+  }
+  try {
+    if (persistRuntime.pending || persistRuntime.writing) await flushPersist();
+    else persistSync();
+  } catch (error) {
+    console.error("[web4-hub] graceful flush failed:", error);
+  }
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 1500).unref();
+}
+
+process.on("SIGINT", () => {
+  void gracefulShutdown("SIGINT");
+});
+process.on("SIGTERM", () => {
+  void gracefulShutdown("SIGTERM");
 });

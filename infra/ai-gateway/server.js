@@ -75,6 +75,12 @@ function atomicWriteJson(filePath, payload) {
   fs.renameSync(tmpPath, filePath);
 }
 
+async function atomicWriteJsonAsync(filePath, payload) {
+  const tmpPath = `${filePath}.${process.pid}.tmp`;
+  await fs.promises.writeFile(tmpPath, JSON.stringify(payload, null, 2));
+  await fs.promises.rename(tmpPath, filePath);
+}
+
 function normalizeState(loaded) {
   if (Array.isArray(loaded)) {
     return {
@@ -145,6 +151,11 @@ const AI_BODY_LIMIT_BYTES = parseInt(process.env.AI_BODY_LIMIT_BYTES || "1048576
 const AI_ENFORCE_POLICY = process.env.AI_ENFORCE_POLICY !== "0";
 const AI_WEB4_HUB_URL = (process.env.AI_WEB4_HUB_URL || process.env.YNX_PUBLIC_WEB4_HUB || "").replace(/\/$/, "");
 const AI_WEB4_INTERNAL_TOKEN = process.env.AI_WEB4_INTERNAL_TOKEN || process.env.WEB4_INTERNAL_TOKEN || "";
+const AI_AUDIT_LIMIT = parseInt(process.env.AI_AUDIT_LIMIT || "5000", 10);
+const AI_MAX_JOBS = parseInt(process.env.AI_MAX_JOBS || "200000", 10);
+const AI_MAX_VAULTS = parseInt(process.env.AI_MAX_VAULTS || "50000", 10);
+const AI_MAX_PAYMENTS = parseInt(process.env.AI_MAX_PAYMENTS || "200000", 10);
+const AI_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.AI_PERSIST_DEBOUNCE_MS || "200", 10));
 
 if (!fs.existsSync(AI_DATA_DIR)) fs.mkdirSync(AI_DATA_DIR, { recursive: true });
 
@@ -164,8 +175,63 @@ if (fs.existsSync(AI_DATA_FILE)) {
   }
 }
 
-function persist() {
+const persistRuntime = {
+  timer: null,
+  pending: false,
+  writing: false,
+  writes: 0,
+  queued: 0,
+  last_persist_at: "",
+  last_error: "",
+};
+
+function trimStateForRetention() {
+  if (AI_MAX_JOBS > 0 && state.jobs.length > AI_MAX_JOBS) state.jobs = state.jobs.slice(0, AI_MAX_JOBS);
+  if (AI_MAX_VAULTS > 0 && state.vaults.length > AI_MAX_VAULTS) state.vaults = state.vaults.slice(0, AI_MAX_VAULTS);
+  if (AI_MAX_PAYMENTS > 0 && state.payments.length > AI_MAX_PAYMENTS) state.payments = state.payments.slice(0, AI_MAX_PAYMENTS);
+  if (AI_AUDIT_LIMIT > 0 && state.audit_logs.length > AI_AUDIT_LIMIT) state.audit_logs = state.audit_logs.slice(0, AI_AUDIT_LIMIT);
+}
+
+function persistSync() {
+  trimStateForRetention();
   atomicWriteJson(AI_DATA_FILE, state);
+  persistRuntime.writes += 1;
+  persistRuntime.last_persist_at = nowIso();
+}
+
+async function flushPersist() {
+  if (!persistRuntime.pending || persistRuntime.writing) return;
+  persistRuntime.writing = true;
+  persistRuntime.pending = false;
+  try {
+    trimStateForRetention();
+    await atomicWriteJsonAsync(AI_DATA_FILE, state);
+    persistRuntime.writes += 1;
+    persistRuntime.last_persist_at = nowIso();
+    persistRuntime.last_error = "";
+  } catch (error) {
+    persistRuntime.last_error = error && error.message ? error.message : "persist_failed";
+    console.error("[ai-gateway] persist error:", error);
+  } finally {
+    persistRuntime.writing = false;
+    if (persistRuntime.pending) {
+      void flushPersist();
+    }
+  }
+}
+
+function persist() {
+  persistRuntime.pending = true;
+  persistRuntime.queued += 1;
+  if (AI_PERSIST_DEBOUNCE_MS === 0) {
+    void flushPersist();
+    return;
+  }
+  if (persistRuntime.timer) return;
+  persistRuntime.timer = setTimeout(() => {
+    persistRuntime.timer = null;
+    void flushPersist();
+  }, AI_PERSIST_DEBOUNCE_MS);
 }
 
 function addAudit(event, payload) {
@@ -175,8 +241,8 @@ function addAudit(event, payload) {
     payload,
     created_at: nowIso(),
   });
-  if (state.audit_logs.length > 5000) {
-    state.audit_logs = state.audit_logs.slice(0, 5000);
+  if (state.audit_logs.length > AI_AUDIT_LIMIT) {
+    state.audit_logs = state.audit_logs.slice(0, AI_AUDIT_LIMIT);
   }
 }
 
@@ -363,6 +429,14 @@ const server = http.createServer(async (req, res) => {
       service: "ynx-ai-gateway",
       enforce_policy: AI_ENFORCE_POLICY,
       has_web4_authorizer: Boolean(AI_WEB4_HUB_URL),
+      persistence: {
+        debounce_ms: AI_PERSIST_DEBOUNCE_MS,
+        pending: persistRuntime.pending,
+        writing: persistRuntime.writing,
+        writes: persistRuntime.writes,
+        last_persist_at: persistRuntime.last_persist_at,
+        last_error: persistRuntime.last_error,
+      },
       stats: summarizeStats(),
     });
   }
@@ -378,6 +452,12 @@ const server = http.createServer(async (req, res) => {
       data_file: AI_DATA_FILE,
       chain_id: AI_CHAIN_ID,
       enforce_policy: AI_ENFORCE_POLICY,
+      persistence: {
+        debounce_ms: AI_PERSIST_DEBOUNCE_MS,
+        pending: persistRuntime.pending,
+        writing: persistRuntime.writing,
+        last_error: persistRuntime.last_error,
+      },
     });
   }
 
@@ -734,4 +814,27 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(AI_GATEWAY_PORT, () => {
   console.log(`YNX AI gateway listening on :${AI_GATEWAY_PORT}`);
+});
+
+async function gracefulShutdown(signal) {
+  console.log(`[ai-gateway] received ${signal}, flushing state...`);
+  if (persistRuntime.timer) {
+    clearTimeout(persistRuntime.timer);
+    persistRuntime.timer = null;
+  }
+  try {
+    if (persistRuntime.pending || persistRuntime.writing) await flushPersist();
+    else persistSync();
+  } catch (error) {
+    console.error("[ai-gateway] graceful flush failed:", error);
+  }
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 1500).unref();
+}
+
+process.on("SIGINT", () => {
+  void gracefulShutdown("SIGINT");
+});
+process.on("SIGTERM", () => {
+  void gracefulShutdown("SIGTERM");
 });

@@ -1,7 +1,7 @@
 # YNX v2 GCP 当前部署配置清单
 
 状态：active  
-最后更新：2026-04-12
+最后更新：2026-04-17
 
 ## 目的
 
@@ -115,6 +115,69 @@
   - 月预算 HKD `2300`
   - 实际支出提醒：100%
   - `creditTypesTreatment=EXCLUDE_ALL_CREDITS`
+
+## 费用行为说明（重点）
+
+- GCP 虚机计费按“开机时长 + 机型”，不是按 CPU 是否跑满。
+- 所以 CPU 很低也会持续扣计算费。
+- 现在是 3 台 `e2-standard-4` 常开，低峰时段也会持续消耗赠金。
+- 关机后会立刻节省大部分计算费用，但磁盘和部分公网 IP 资源仍可能有小额费用。
+
+## 停机后是否要重部署
+
+- 不需要重部署。
+- 链数据在持久盘里，开机后会继续使用原数据目录。
+- 目前 systemd 单元已启用，实例开机后服务会自动拉起。
+- 重启后的快速验收：
+  - `curl -sS https://rpc.ynxweb4.com/status | jq -r '.result.sync_info.catching_up'`
+  - `curl -sS https://ai.ynxweb4.com/ready | jq -r '.ok'`
+  - `curl -sS https://web4.ynxweb4.com/ready | jq -r '.ok'`
+
+## 新增控制脚本
+
+- IPv4 兼容的 gcloud 包装器：
+  - `chain/scripts/gcloud_ipv4.sh`
+- 一键栈控制脚本：
+  - `chain/scripts/v2_gcp_stack_ctl.sh`
+- 极限性能压测脚本：
+  - `chain/scripts/v2_extreme_perf_bench.sh`
+
+示例：
+
+```bash
+# 查看实例状态 + 公网健康
+./chain/scripts/v2_gcp_stack_ctl.sh status
+
+# 停止 3 台 YNX v2 GCP 实例
+./chain/scripts/v2_gcp_stack_ctl.sh stop
+
+# 启动并等待公网服务 ready
+./chain/scripts/v2_gcp_stack_ctl.sh start
+
+# 批量降配（默认 3 台全部）
+./chain/scripts/v2_gcp_stack_ctl.sh rightsize e2-standard-2
+
+# 预设成本/性能档位
+./chain/scripts/v2_gcp_stack_ctl.sh mode economy
+./chain/scripts/v2_gcp_stack_ctl.sh mode balanced
+./chain/scripts/v2_gcp_stack_ctl.sh mode extreme
+
+# 一键读写压测
+./chain/scripts/v2_extreme_perf_bench.sh
+```
+
+## 高吞吐运行参数
+
+AI Gateway / Web4 Hub 现已支持“合并异步落盘”，降低高并发写入时的阻塞。
+
+关键参数：
+
+- `AI_PERSIST_DEBOUNCE_MS`（默认 `200`）
+- `WEB4_PERSIST_DEBOUNCE_MS`（默认 `200`）
+- `AI_MAX_JOBS`、`AI_MAX_PAYMENTS`、`AI_MAX_VAULTS`
+- `WEB4_MAX_INTENTS`、`WEB4_MAX_CLAIMS`、`WEB4_MAX_SESSIONS` 等
+
+用于高并发写入场景下的吞吐提升和状态文件规模控制。
 
 ## 快速验收命令
 

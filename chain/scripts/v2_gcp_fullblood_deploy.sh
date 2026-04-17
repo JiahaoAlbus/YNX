@@ -27,6 +27,7 @@ Environment:
   ZONE
   MACHINE_TYPE
   BOOT_DISK_GB
+  FULLBLOOD_SYNC_MODE     default: local (local|remote-git)
   SKIP_GCLOUD_PROVISION   default: 0 (set 1 to reuse existing VM IPs)
   BOOTSTRAP_IP_OVERRIDE   required when SKIP_GCLOUD_PROVISION=1
   RPC_IP_OVERRIDE         required when SKIP_GCLOUD_PROVISION=1
@@ -35,6 +36,16 @@ Environment:
   YNX_CHAIN_ID
   YNX_EVM_CHAIN_ID
   WEB4_INTERNAL_TOKEN
+  AI_ENFORCE_POLICY      default: 1
+  WEB4_ENFORCE_POLICY    default: 1
+  AI_PERSIST_DEBOUNCE_MS default: 200
+  WEB4_PERSIST_DEBOUNCE_MS default: 200
+  AI_MAX_JOBS            default: 200000
+  AI_MAX_PAYMENTS        default: 200000
+  AI_MAX_VAULTS          default: 50000
+  WEB4_MAX_INTENTS       default: 200000
+  WEB4_MAX_CLAIMS        default: 200000
+  WEB4_MAX_SESSIONS      default: 300000
   INSTALL_WATCHDOG        default: 1
   INSTALL_BACKUP          default: 1
   BACKUP_MAX_KEEP         default: 14
@@ -96,6 +107,7 @@ REGION="${REGION:-asia-east2}"
 ZONE="${ZONE:-asia-east2-b}"
 MACHINE_TYPE="${MACHINE_TYPE:-e2-standard-4}"
 BOOT_DISK_GB="${BOOT_DISK_GB:-80}"
+FULLBLOOD_SYNC_MODE="${FULLBLOOD_SYNC_MODE:-local}"
 SKIP_GCLOUD_PROVISION="${SKIP_GCLOUD_PROVISION:-0}"
 BOOTSTRAP_IP_OVERRIDE="${BOOTSTRAP_IP_OVERRIDE:-}"
 RPC_IP_OVERRIDE="${RPC_IP_OVERRIDE:-}"
@@ -104,11 +116,24 @@ BASE_DOMAIN="${BASE_DOMAIN:-}"
 YNX_CHAIN_ID="${YNX_CHAIN_ID:-ynx_9102-1}"
 YNX_EVM_CHAIN_ID="${YNX_EVM_CHAIN_ID:-9102}"
 WEB4_INTERNAL_TOKEN="${WEB4_INTERNAL_TOKEN:-ynx-v2-internal}"
+AI_ENFORCE_POLICY="${AI_ENFORCE_POLICY:-1}"
+WEB4_ENFORCE_POLICY="${WEB4_ENFORCE_POLICY:-1}"
+AI_PERSIST_DEBOUNCE_MS="${AI_PERSIST_DEBOUNCE_MS:-200}"
+WEB4_PERSIST_DEBOUNCE_MS="${WEB4_PERSIST_DEBOUNCE_MS:-200}"
+AI_MAX_JOBS="${AI_MAX_JOBS:-200000}"
+AI_MAX_PAYMENTS="${AI_MAX_PAYMENTS:-200000}"
+AI_MAX_VAULTS="${AI_MAX_VAULTS:-50000}"
+WEB4_MAX_INTENTS="${WEB4_MAX_INTENTS:-200000}"
+WEB4_MAX_CLAIMS="${WEB4_MAX_CLAIMS:-200000}"
+WEB4_MAX_SESSIONS="${WEB4_MAX_SESSIONS:-300000}"
 INSTALL_WATCHDOG="${INSTALL_WATCHDOG:-1}"
 INSTALL_BACKUP="${INSTALL_BACKUP:-1}"
 BACKUP_MAX_KEEP="${BACKUP_MAX_KEEP:-14}"
 INCLUDE_CHAIN_DATA="${INCLUDE_CHAIN_DATA:-0}"
 ALERT_WEBHOOK_URL="${ALERT_WEBHOOK_URL:-}"
+FULLBLOOD_P2P_ADDR_BOOK_STRICT="${FULLBLOOD_P2P_ADDR_BOOK_STRICT:-false}"
+FULLBLOOD_P2P_ALLOW_DUP_IP="${FULLBLOOD_P2P_ALLOW_DUP_IP:-true}"
+FULLBLOOD_P2P_PEX="${FULLBLOOD_P2P_PEX:-false}"
 
 BOOTSTRAP_NAME="ynx-v2-bootstrap-1"
 RPC_NAME="ynx-v2-rpc-1"
@@ -200,10 +225,24 @@ run_deploy() {
   local seeds_override="${2:-}"
   local peers_override="${3:-$seeds_override}"
   echo "Deploying full stack to $host_ip ..."
+  local sync_flag="--from-local"
+  if [[ "$FULLBLOOD_SYNC_MODE" == "remote-git" ]]; then
+    sync_flag="--from-remote-git"
+  fi
   local -a deploy_env=(
     "YNX_CHAIN_ID=$YNX_CHAIN_ID"
     "YNX_EVM_CHAIN_ID=$YNX_EVM_CHAIN_ID"
+    "AI_ENFORCE_POLICY=$AI_ENFORCE_POLICY"
+    "WEB4_ENFORCE_POLICY=$WEB4_ENFORCE_POLICY"
     "WEB4_INTERNAL_TOKEN=$WEB4_INTERNAL_TOKEN"
+    "AI_PERSIST_DEBOUNCE_MS=$AI_PERSIST_DEBOUNCE_MS"
+    "WEB4_PERSIST_DEBOUNCE_MS=$WEB4_PERSIST_DEBOUNCE_MS"
+    "AI_MAX_JOBS=$AI_MAX_JOBS"
+    "AI_MAX_PAYMENTS=$AI_MAX_PAYMENTS"
+    "AI_MAX_VAULTS=$AI_MAX_VAULTS"
+    "WEB4_MAX_INTENTS=$WEB4_MAX_INTENTS"
+    "WEB4_MAX_CLAIMS=$WEB4_MAX_CLAIMS"
+    "WEB4_MAX_SESSIONS=$WEB4_MAX_SESSIONS"
   )
   if [[ -n "$seeds_override" ]]; then
     deploy_env+=("YNX_SEEDS_OVERRIDE=$seeds_override")
@@ -212,7 +251,7 @@ run_deploy() {
     deploy_env+=("YNX_PERSISTENT_PEERS_OVERRIDE=$peers_override")
   fi
   env "${deploy_env[@]}" \
-    "$DEPLOY_SCRIPT" "${SSH_USER}@${host_ip}" "$SSH_KEY" --reset --smoke-write --from-remote-git
+    "$DEPLOY_SCRIPT" "${SSH_USER}@${host_ip}" "$SSH_KEY" --reset --smoke-write "$sync_flag"
 }
 
 install_ops_services() {
@@ -238,6 +277,17 @@ fi
 EOF
 }
 
+tune_p2p_filters() {
+  local host_ip="$1"
+  ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "${SSH_USER}@${host_ip}" "bash -s" <<EOF
+set -euo pipefail
+sed -i.bak 's#^addr_book_strict = .*#addr_book_strict = ${FULLBLOOD_P2P_ADDR_BOOK_STRICT}#' ~/.ynx-v2/config/config.toml
+sed -i.bak 's#^allow_duplicate_ip = .*#allow_duplicate_ip = ${FULLBLOOD_P2P_ALLOW_DUP_IP}#' ~/.ynx-v2/config/config.toml
+sed -i.bak 's#^pex = .*#pex = ${FULLBLOOD_P2P_PEX}#' ~/.ynx-v2/config/config.toml
+sudo systemctl restart ynx-v2-node.service
+EOF
+}
+
 wait_node_sync() {
   local host_ip="$1"
   local retries="${2:-120}"
@@ -260,10 +310,15 @@ wait_node_sync() {
 
 echo "==> Deploy bootstrap node..."
 run_deploy "$BOOTSTRAP_IP"
+tune_p2p_filters "$BOOTSTRAP_IP"
 
 echo "==> Reading bootstrap node info..."
 BOOTSTRAP_NODE_ID="$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "${SSH_USER}@${BOOTSTRAP_IP}" '~/YNX/chain/ynxd comet show-node-id --home ~/.ynx-v2' | tr -d '\r\n')"
-BOOTSTRAP_SEED="${BOOTSTRAP_NODE_ID}@${BOOTSTRAP_IP}:36656"
+BOOTSTRAP_PEER_HOST="${BOOTSTRAP_PEER_HOST_OVERRIDE:-}"
+if [[ -z "$BOOTSTRAP_PEER_HOST" ]]; then
+  BOOTSTRAP_PEER_HOST="$BOOTSTRAP_IP"
+fi
+BOOTSTRAP_SEED="${BOOTSTRAP_NODE_ID}@${BOOTSTRAP_PEER_HOST}:36656"
 
 TMP_GENESIS="$(mktemp)"
 scp -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "${SSH_USER}@${BOOTSTRAP_IP}:~/\.ynx-v2/config/genesis.json" "$TMP_GENESIS"
@@ -296,6 +351,7 @@ fi
 sudo systemctl daemon-reload
 sudo systemctl restart ynx-v2-node.service
 EOF
+  tune_p2p_filters "$host_ip"
 }
 
 echo "==> Deploy follower nodes..."

@@ -76,7 +76,10 @@ for i in "${!hosts[@]}"; do
     -H 'content-type: application/json' \
     --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' \
     "http://${host}:${YNX_EVM_PORT}" | jq -r '.result')"
+done
 
+for i in "${!hosts[@]}"; do
+  host="${hosts[$i]}"
   curl -fsS --max-time 5 "http://${host}:${YNX_FAUCET_PORT}/health" >/dev/null
   curl -fsS --max-time 5 "http://${host}:${YNX_INDEXER_PORT}/health" >/dev/null
   curl -fsS --max-time 5 "http://${host}:${YNX_AI_GATEWAY_PORT}/health" | jq -e '.ok == true' >/dev/null

@@ -110,8 +110,8 @@ build_ynxd() {
   )
   local proxy
   local last_rc=1
-  local module_total package_total module_done package_done pct line
-  local mod_log build_log
+  local module_total package_total module_done package_done pct
+  local mod_log build_log cmd_pid
 
   module_total="$(go list -m -mod=mod all 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
   package_total="$(go list -deps ./cmd/ynxd 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
@@ -133,24 +133,35 @@ build_ynxd() {
     ynx_ui_progress 44 "prepare binary" "proxy: $proxy | phase: download modules"
 
     : >"$mod_log"
-    if env \
+    env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
       GIT_TERMINAL_PROMPT=0 \
       CGO_ENABLED=0 \
-      go mod download -json all >"$mod_log" 2>&1; then
-      while IFS= read -r line; do
-        if [[ "$line" == *'"Path":'* ]]; then
-          module_done=$((module_done + 1))
-          if (( module_total > 0 )); then
-            pct=$((44 + (module_done * 2 / module_total)))
-            if (( pct > 46 )); then
-              pct=46
-            fi
-            ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
-          fi
+      go mod download -json all >"$mod_log" 2>&1 &
+    cmd_pid=$!
+    while kill -0 "$cmd_pid" >/dev/null 2>&1; do
+      module_done="$(grep -c '"Path":' "$mod_log" 2>/dev/null || true)"
+      if ! [[ "$module_done" =~ ^[0-9]+$ ]]; then
+        module_done=0
+      fi
+      if (( module_total > 0 )); then
+        pct=$((44 + (module_done * 2 / module_total)))
+        if (( pct > 46 )); then
+          pct=46
         fi
-      done <"$mod_log"
+        ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
+      fi
+      sleep 0.3
+    done
+    if wait "$cmd_pid"; then
+      module_done="$(grep -c '"Path":' "$mod_log" 2>/dev/null || true)"
+      if ! [[ "$module_done" =~ ^[0-9]+$ ]]; then
+        module_done=0
+      fi
+      if (( module_total > 0 )); then
+        ynx_ui_progress 46 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
+      fi
       last_rc=0
     else
       last_rc=$?
@@ -162,24 +173,38 @@ build_ynxd() {
 
     : >"$build_log"
     ynx_ui_progress 46 "prepare binary" "proxy: $proxy | phase: compile packages"
-    if env \
+    env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
       GIT_TERMINAL_PROMPT=0 \
       CGO_ENABLED=0 \
-      go build -v -buildvcs=false -o "$output_bin" ./cmd/ynxd >"$build_log" 2>&1; then
-      while IFS= read -r line; do
-        if [[ -n "$line" && "$line" != go:\ downloading* ]]; then
-          package_done=$((package_done + 1))
-          if (( package_total > 0 )); then
-            pct=$((46 + (package_done * 2 / package_total)))
-            if (( pct > 48 )); then
-              pct=48
-            fi
-            ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
-          fi
+      go build -v -buildvcs=false -o "$output_bin" ./cmd/ynxd >"$build_log" 2>&1 &
+    cmd_pid=$!
+    while kill -0 "$cmd_pid" >/dev/null 2>&1; do
+      package_done="$(grep -vc '^go: downloading' "$build_log" 2>/dev/null || true)"
+      if ! [[ "$package_done" =~ ^[0-9]+$ ]]; then
+        package_done=0
+      fi
+      if (( package_done < 0 )); then
+        package_done=0
+      fi
+      if (( package_total > 0 )); then
+        pct=$((46 + (package_done * 2 / package_total)))
+        if (( pct > 48 )); then
+          pct=48
         fi
-      done <"$build_log"
+        ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
+      fi
+      sleep 0.3
+    done
+    if wait "$cmd_pid"; then
+      package_done="$(grep -vc '^go: downloading' "$build_log" 2>/dev/null || true)"
+      if ! [[ "$package_done" =~ ^[0-9]+$ ]]; then
+        package_done=0
+      fi
+      if (( package_total > 0 )); then
+        ynx_ui_progress 48 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
+      fi
       last_rc=0
     else
       last_rc=$?

@@ -91,6 +91,7 @@ fi
 print_progress() {
   local pct="$1"
   shift
+  ynx_ui_progress_reset_metrics
   ynx_ui_progress "$pct" "$*"
 }
 
@@ -143,7 +144,7 @@ download_file_with_progress() {
   local stage="${3:-download source archive}"
   local start_pct="${4:-12}"
   local end_pct="${5:-17}"
-  local total_bytes current_bytes span pct stage_text
+  local total_bytes current_bytes span pct stage_text current_mb total_mb
   span=$((end_pct - start_pct))
 
   total_bytes="$(
@@ -166,16 +167,19 @@ download_file_with_progress() {
       if (( pct > end_pct )); then
         pct="$end_pct"
       fi
+      current_mb="$(awk -v cur="$current_bytes" 'BEGIN { printf "%.1f", cur/1048576 }')"
+      total_mb="$(awk -v total="$total_bytes" 'BEGIN { printf "%.1f", total/1048576 }')"
       stage_text="$stage ($(awk -v cur="$current_bytes" -v total="$total_bytes" 'BEGIN { printf "%.1f/%.1f MB", cur/1048576, total/1048576 }'))"
-      print_progress "$pct" "$stage_text"
+      ynx_ui_progress_metric "$pct" "$stage" "$stage_text" "archive-download" "$current_mb" "$total_mb" "MB"
       sleep 0.2
     done
   fi
 
   wait "$curl_pid"
   if [[ "$total_bytes" =~ ^[0-9]+$ ]] && (( total_bytes > 0 )); then
+    total_mb="$(awk -v total="$total_bytes" 'BEGIN { printf "%.1f", total/1048576 }')"
     stage_text="$stage ($(awk -v total="$total_bytes" 'BEGIN { printf "%.1f/%.1f MB", total/1048576, total/1048576 }'))"
-    print_progress "$end_pct" "$stage_text"
+    ynx_ui_progress_metric "$end_pct" "$stage" "$stage_text" "archive-download" "$total_mb" "$total_mb" "MB"
   else
     print_progress "$end_pct" "$stage"
   fi

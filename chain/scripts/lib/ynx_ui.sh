@@ -19,6 +19,11 @@ YNX_UI_PROGRESS_RENDERED_LINES=0
 YNX_UI_PROGRESS_PCT=0
 YNX_UI_PROGRESS_TEXT=""
 YNX_UI_PROGRESS_TIP=""
+YNX_UI_PROGRESS_RATE="n/a"
+YNX_UI_PROGRESS_ETA="n/a"
+YNX_UI_PROGRESS_METRIC_KEY=""
+YNX_UI_PROGRESS_METRIC_LAST_VALUE=0
+YNX_UI_PROGRESS_METRIC_LAST_TS=0
 
 ynx_ui_init() {
   if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
@@ -166,6 +171,65 @@ ynx_ui_flush_progress() {
   YNX_UI_PROGRESS_RENDERED_LINES=0
 }
 
+ynx_ui_format_duration() {
+  local sec="${1:-0}"
+  if ! [[ "$sec" =~ ^[0-9]+$ ]]; then
+    echo "n/a"
+    return 0
+  fi
+  if (( sec < 60 )); then
+    printf '%ss' "$sec"
+  elif (( sec < 3600 )); then
+    printf '%sm%ss' $((sec / 60)) $((sec % 60))
+  else
+    printf '%sh%sm' $((sec / 3600)) $(((sec % 3600) / 60))
+  fi
+}
+
+ynx_ui_progress_reset_metrics() {
+  YNX_UI_PROGRESS_RATE="n/a"
+  YNX_UI_PROGRESS_ETA="n/a"
+  YNX_UI_PROGRESS_METRIC_KEY=""
+  YNX_UI_PROGRESS_METRIC_LAST_VALUE=0
+  YNX_UI_PROGRESS_METRIC_LAST_TS=0
+}
+
+ynx_ui_progress_track() {
+  local key="$1"
+  local current="$2"
+  local total="$3"
+  local unit="$4"
+  local now delta_value delta_time rate eta
+
+  if ! [[ "$current" =~ ^[0-9]+([.][0-9]+)?$ && "$total" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    ynx_ui_progress_reset_metrics
+    return 0
+  fi
+  now="$(date +%s)"
+  if [[ "$YNX_UI_PROGRESS_METRIC_KEY" != "$key" ]]; then
+    YNX_UI_PROGRESS_METRIC_KEY="$key"
+    YNX_UI_PROGRESS_METRIC_LAST_VALUE="$current"
+    YNX_UI_PROGRESS_METRIC_LAST_TS="$now"
+    YNX_UI_PROGRESS_RATE="n/a"
+    YNX_UI_PROGRESS_ETA="n/a"
+    return 0
+  fi
+
+  delta_time=$((now - YNX_UI_PROGRESS_METRIC_LAST_TS))
+  rate="$(awk -v cur="$current" -v prev="$YNX_UI_PROGRESS_METRIC_LAST_VALUE" -v dt="$delta_time" 'BEGIN { if (dt <= 0 || cur < prev) print 0; else printf "%.1f", (cur - prev) / dt }')"
+  if [[ "$rate" != "0" && "$rate" != "0.0" ]]; then
+    eta="$(awk -v cur="$current" -v total="$total" -v r="$rate" 'BEGIN { remain=total-cur; if (r <= 0 || remain <= 0) print -1; else printf "%.0f", remain / r }')"
+    YNX_UI_PROGRESS_RATE="${rate} ${unit}/s"
+    if [[ "$eta" =~ ^-?[0-9]+$ ]] && (( eta >= 0 )); then
+      YNX_UI_PROGRESS_ETA="$(ynx_ui_format_duration "$eta")"
+    else
+      YNX_UI_PROGRESS_ETA="n/a"
+    fi
+  fi
+  YNX_UI_PROGRESS_METRIC_LAST_VALUE="$current"
+  YNX_UI_PROGRESS_METRIC_LAST_TS="$now"
+}
+
 ynx_ui_stdout() {
   local had_progress="${YNX_UI_PROGRESS_ACTIVE:-0}"
   local pct="${YNX_UI_PROGRESS_PCT:-0}"
@@ -304,14 +368,30 @@ ynx_ui_progress() {
     ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
     printf '%s%s' "$panel" "$muted"
     ynx_ui_box_text "Detail   : $tip_text" 72
+    printf '%s%s' "$panel" "$muted"
+    ynx_ui_box_text "Rate     : ${YNX_UI_PROGRESS_RATE}" 72
+    printf '%s%s' "$panel" "$muted"
+    ynx_ui_box_text "ETA      : ${YNX_UI_PROGRESS_ETA}" 72
     printf '%s%s' "$panel" "$blue"
     ynx_ui_box_line "+" "=" "+" 74
     printf '%s' "$reset"
     YNX_UI_PROGRESS_ACTIVE=1
-    YNX_UI_PROGRESS_RENDERED_LINES=5
+    YNX_UI_PROGRESS_RENDERED_LINES=7
   else
     printf '[%s%s] %s%% | %s | %s\n' "$bar_done" "$bar_todo" "$pct" "$text" "$YNX_UI_PROGRESS_TIP"
   fi
+}
+
+ynx_ui_progress_metric() {
+  local pct="$1"
+  local text="$2"
+  local detail="$3"
+  local key="$4"
+  local current="$5"
+  local total="$6"
+  local unit="$7"
+  ynx_ui_progress_track "$key" "$current" "$total" "$unit"
+  ynx_ui_progress "$pct" "$text" "$detail"
 }
 
 ynx_ui_kv() {

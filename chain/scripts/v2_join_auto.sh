@@ -94,6 +94,7 @@ step() {
       6) pct=100 ;;
       *) pct=100 ;;
     esac
+    ynx_ui_progress_reset_metrics
     ynx_ui_progress "$pct" "$*"
   else
     ynx_ui_step "$STEP" "$TOTAL" "$*"
@@ -150,7 +151,7 @@ build_ynxd() {
         if (( pct > 52 )); then
           pct=52
         fi
-        ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
+        ynx_ui_progress_metric "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}" "mod-download" "$module_done" "$module_total" "mod"
       fi
       sleep 0.3
     done
@@ -160,7 +161,7 @@ build_ynxd() {
         module_done=0
       fi
       if (( module_total > 0 )); then
-        ynx_ui_progress 52 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
+        ynx_ui_progress_metric 52 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}" "mod-download" "$module_done" "$module_total" "mod"
       fi
       last_rc=0
     else
@@ -193,7 +194,7 @@ build_ynxd() {
         if (( pct > 68 )); then
           pct=68
         fi
-        ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
+        ynx_ui_progress_metric "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}" "pkg-build" "$package_done" "$package_total" "pkg"
       fi
       sleep 0.3
     done
@@ -203,7 +204,7 @@ build_ynxd() {
         package_done=0
       fi
       if (( package_total > 0 )); then
-        ynx_ui_progress 68 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
+        ynx_ui_progress_metric 68 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}" "pkg-build" "$package_done" "$package_total" "pkg"
       fi
       last_rc=0
     else

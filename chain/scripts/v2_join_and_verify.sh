@@ -237,6 +237,7 @@ step() {
       7) pct=100 ;;
       *) pct=100 ;;
     esac
+    ynx_ui_progress_reset_metrics
     ynx_ui_progress "$pct" "$*"
   else
     ynx_ui_step "$STEP" "$TOTAL_STEPS" "$*"
@@ -632,7 +633,7 @@ while true; do
       if (( sync_pct > 98 )); then
         sync_pct=98
       fi
-      ynx_ui_progress "$sync_pct" "sync and verify blocks" "height ${local_height}/${ref_height} | lag ${lag} | catching_up ${local_catching_up}"
+      ynx_ui_progress_metric "$sync_pct" "sync and verify blocks" "height ${local_height}/${ref_height} | lag ${lag} | catching_up ${local_catching_up}" "sync-height" "$local_height" "$ref_height" "blk"
     fi
     last_progress_print="$elapsed"
   fi

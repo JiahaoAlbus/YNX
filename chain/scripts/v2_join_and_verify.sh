@@ -550,7 +550,7 @@ while true; do
     max_height_seen="$local_height_now"
   fi
 
-  if (( peer_elapsed - last_peer_print >= 10 )); then
+  if (( peer_elapsed - last_peer_print >= 3 )); then
     log "peer-probe elapsed=${peer_elapsed}s peers_now=${peers_now} max_peers=${max_peers_seen} local_height=${local_height_now}"
     if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
       peer_pct=$((66 + (peer_elapsed * 8 / (PEER_WAIT > 0 ? PEER_WAIT : 1))))
@@ -577,6 +577,7 @@ step "sync and verify blocks"
 log "wait sync: timeout=${SYNC_TIMEOUT}s lag<=${LAG_MAX}"
 start_ts="$(date +%s)"
 last_progress_print=0
+sync_base_height=0
 while true; do
   now_ts="$(date +%s)"
   elapsed=$((now_ts - start_ts))
@@ -608,14 +609,30 @@ while true; do
     lag=0
   fi
 
-  if (( elapsed - last_progress_print >= 10 )); then
+  if (( sync_base_height == 0 )); then
+    sync_base_height="$local_height"
+  fi
+
+  if (( elapsed - last_progress_print >= 3 )); then
     log "sync-progress elapsed=${elapsed}s local_height=${local_height} ref_height=${ref_height} lag=${lag} catching_up=${local_catching_up}"
     if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
-      sync_pct=$((74 + (elapsed * 24 / (SYNC_TIMEOUT > 0 ? SYNC_TIMEOUT : 1))))
+      target_delta=$((ref_height - sync_base_height))
+      caught_delta=$((local_height - sync_base_height))
+      if (( target_delta > 0 )); then
+        if (( caught_delta < 0 )); then
+          caught_delta=0
+        fi
+        if (( caught_delta > target_delta )); then
+          caught_delta="$target_delta"
+        fi
+        sync_pct=$((74 + (caught_delta * 24 / target_delta)))
+      else
+        sync_pct=74
+      fi
       if (( sync_pct > 98 )); then
         sync_pct=98
       fi
-      ynx_ui_progress "$sync_pct" "sync and verify blocks"
+      ynx_ui_progress "$sync_pct" "sync and verify blocks (height ${local_height}/${ref_height}, lag ${lag})"
     fi
     last_progress_print="$elapsed"
   fi

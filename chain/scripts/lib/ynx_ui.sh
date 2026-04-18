@@ -150,16 +150,16 @@ ynx_ui_tip_for_pct() {
   local bucket=$((pct / 10))
   case "$bucket" in
     0) echo "TIP: YNX uses a staged join flow: fetch code, prepare node home, verify RPC, then verify sync." ;;
-    1) echo "TIP: The CLI is designed so a fresh machine can install first, then use a stable `ynx join` command." ;;
-    2) echo "TIP: `ynx join-plan` is a dry-run mode. It validates the path and shows the flow without mutating the machine." ;;
+    1) echo 'TIP: The CLI is designed so a fresh machine can install first, then use a stable "ynx join" command.' ;;
+    2) echo 'TIP: "ynx join-plan" is a dry-run mode. It validates the path and shows the flow without mutating the machine.' ;;
     3) echo "TIP: A full node is the default role. Validator mode should only be used after funding and operator review." ;;
     4) echo "TIP: The bootstrap stage validates chain-id and genesis before the node is allowed to start." ;;
     5) echo "TIP: P2P readiness is not just port reachability. The node must keep stable peers long enough to sync blocks." ;;
     6) echo "TIP: YNX exposes separate ports for P2P, RPC, API, gRPC, and EVM RPC. Port offset keeps local collisions out." ;;
     7) echo "TIP: Sync verification compares your local block hash with the reference RPC at the same height." ;;
     8) echo "TIP: A machine that can open TCP is still not necessarily accepted as a healthy peer by the network." ;;
-    9) echo "TIP: When join completes, the same `ynx` CLI can be used again for repeatable node bring-up on new machines." ;;
-    *) echo "TIP: YNX is converging toward a single operator experience: install once, then use `ynx help` and `ynx join`." ;;
+    9) echo 'TIP: When join completes, the same "ynx" CLI can be used again for repeatable node bring-up on new machines.' ;;
+    *) echo 'TIP: YNX is converging toward a single operator experience: install once, then use "ynx help" and "ynx join".' ;;
   esac
 }
 

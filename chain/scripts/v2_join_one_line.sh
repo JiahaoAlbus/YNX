@@ -94,6 +94,154 @@ print_progress() {
   ynx_ui_progress "$pct" "$*"
 }
 
+workspace_progress_from_git_line() {
+  local line="$1"
+  local pct=""
+  if [[ "$line" =~ Counting\ objects:[[:space:]]+([0-9]{1,3})% ]]; then
+    pct=$((12 + BASH_REMATCH[1] * 1 / 100))
+  elif [[ "$line" =~ Compressing\ objects:[[:space:]]+([0-9]{1,3})% ]]; then
+    pct=$((13 + BASH_REMATCH[1] * 1 / 100))
+  elif [[ "$line" =~ Receiving\ objects:[[:space:]]+([0-9]{1,3})% ]]; then
+    pct=$((14 + BASH_REMATCH[1] * 3 / 100))
+  elif [[ "$line" =~ Resolving\ deltas:[[:space:]]+([0-9]{1,3})% ]]; then
+    pct=$((17 + BASH_REMATCH[1] * 1 / 100))
+  fi
+  if [[ -n "$pct" ]]; then
+    printf '%s\n' "$pct"
+  fi
+}
+
+file_size_bytes() {
+  local path="$1"
+  if [[ ! -f "$path" ]]; then
+    echo 0
+    return 0
+  fi
+  if stat -f %z "$path" >/dev/null 2>&1; then
+    stat -f %z "$path"
+  else
+    stat -c %s "$path"
+  fi
+}
+
+github_archive_url_from_repo() {
+  local repo_url="$1"
+  local repo_branch="$2"
+  local owner repo
+  if [[ "$repo_url" =~ ^https://github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+    owner="${BASH_REMATCH[1]}"
+    repo="${BASH_REMATCH[2]%.git}"
+    printf 'https://codeload.github.com/%s/%s/tar.gz/refs/heads/%s\n' "$owner" "$repo" "$repo_branch"
+    return 0
+  fi
+  return 1
+}
+
+download_file_with_progress() {
+  local url="$1"
+  local dest="$2"
+  local stage="${3:-download source archive}"
+  local start_pct="${4:-12}"
+  local end_pct="${5:-17}"
+  local total_bytes current_bytes span pct stage_text
+  span=$((end_pct - start_pct))
+
+  total_bytes="$(
+    curl -fsSLI "$url" 2>/dev/null \
+      | tr -d '\r' \
+      | awk 'tolower($1)=="content-length:"{print $2}' \
+      | tail -n1
+  )"
+  if ! [[ "$total_bytes" =~ ^[0-9]+$ ]] || (( total_bytes <= 0 )); then
+    total_bytes="$(curl -fsSL "$url" -o /dev/null -w '%{size_download}' 2>/dev/null || true)"
+  fi
+
+  curl -fsSL "$url" -o "$dest" &
+  local curl_pid=$!
+
+  if [[ "$total_bytes" =~ ^[0-9]+$ ]] && (( total_bytes > 0 )); then
+    while kill -0 "$curl_pid" >/dev/null 2>&1; do
+      current_bytes="$(file_size_bytes "$dest")"
+      pct=$((start_pct + (current_bytes * span / total_bytes)))
+      if (( pct > end_pct )); then
+        pct="$end_pct"
+      fi
+      stage_text="$stage ($(awk -v cur="$current_bytes" -v total="$total_bytes" 'BEGIN { printf "%.1f/%.1f MB", cur/1048576, total/1048576 }'))"
+      print_progress "$pct" "$stage_text"
+      sleep 0.2
+    done
+  fi
+
+  wait "$curl_pid"
+  if [[ "$total_bytes" =~ ^[0-9]+$ ]] && (( total_bytes > 0 )); then
+    stage_text="$stage ($(awk -v total="$total_bytes" 'BEGIN { printf "%.1f/%.1f MB", total/1048576, total/1048576 }'))"
+    print_progress "$end_pct" "$stage_text"
+  else
+    print_progress "$end_pct" "$stage"
+  fi
+}
+
+prepare_workspace_from_github_archive() {
+  local archive_url archive_path top_dir extracted_dir
+  archive_url="$(github_archive_url_from_repo "$REPO_URL" "$REPO_BRANCH")"
+  archive_path="$(mktemp "${TMPDIR:-/tmp}/ynx-archive.XXXXXX.tar.gz")"
+
+  download_file_with_progress "$archive_url" "$archive_path" "download source archive" 12 17
+
+  print_progress 17 "extract source archive"
+  rm -rf "$REPO_DIR"
+  top_dir="$(tar -tzf "$archive_path" | head -n1 | cut -d/ -f1)"
+  tar -xzf "$archive_path" -C "$WORKDIR"
+  extracted_dir="$WORKDIR/$top_dir"
+  if [[ ! -d "$extracted_dir" ]]; then
+    echo "Archive extract failed: cannot find $extracted_dir" >&2
+    rm -f "$archive_path"
+    return 1
+  fi
+  mv "$extracted_dir" "$REPO_DIR"
+  rm -f "$archive_path"
+}
+
+prepare_workspace() {
+  mkdir -p "$WORKDIR"
+  REPO_DIR="$WORKDIR/YNX"
+
+  if [[ -d "$REPO_URL" ]]; then
+    rm -rf "$REPO_DIR"
+    mkdir -p "$(dirname "$REPO_DIR")"
+    if command -v rsync >/dev/null 2>&1; then
+      rsync -a --delete "${REPO_URL%/}/" "${REPO_DIR}/"
+    else
+      cp -a "$REPO_URL" "$REPO_DIR"
+    fi
+    return 0
+  fi
+
+  if github_archive_url_from_repo "$REPO_URL" "$REPO_BRANCH" >/dev/null 2>&1; then
+    prepare_workspace_from_github_archive
+    return 0
+  fi
+
+  if [[ -d "$REPO_DIR/.git" ]]; then
+    git -C "$REPO_DIR" fetch --progress --depth=1 origin "$REPO_BRANCH" 2>&1 | tr '\r' '\n' | while IFS= read -r line; do
+      echo "$line"
+      pct="$(workspace_progress_from_git_line "$line" || true)"
+      if [[ -n "${pct:-}" ]]; then
+        print_progress "$pct" "prepare workspace"
+      fi
+    done
+    git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
+  else
+    git clone --progress --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR" 2>&1 | while IFS= read -r line; do
+      echo "$line"
+      pct="$(workspace_progress_from_git_line "$line" || true)"
+      if [[ -n "${pct:-}" ]]; then
+        print_progress "$pct" "prepare workspace"
+      fi
+    done
+  fi
+}
+
 OS_RAW="$(uname -s 2>/dev/null || echo unknown)"
 OS_NAME="$(echo "$OS_RAW" | tr '[:upper:]' '[:lower:]')"
 
@@ -229,27 +377,7 @@ print_progress 6 "check prerequisites"
 install_missing_base_deps
 
 print_progress 12 "prepare workspace"
-mkdir -p "$WORKDIR"
-REPO_DIR="$WORKDIR/YNX"
-
-# Local directory source keeps working-tree changes (useful for dev/staging verification).
-if [[ -d "$REPO_URL" ]]; then
-  rm -rf "$REPO_DIR"
-  mkdir -p "$(dirname "$REPO_DIR")"
-  if command -v rsync >/dev/null 2>&1; then
-    rsync -a --delete "${REPO_URL%/}/" "${REPO_DIR}/"
-  else
-    cp -a "$REPO_URL" "$REPO_DIR"
-  fi
-else
-  if [[ -d "$REPO_DIR/.git" ]]; then
-    git -C "$REPO_DIR" fetch --depth=1 origin "$REPO_BRANCH"
-    git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
-  else
-    git clone --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
-  fi
-fi
-
+prepare_workspace
 print_progress 18 "prepare join script"
 JOIN_SCRIPT="$REPO_DIR/chain/scripts/v2_join_auto.sh"
 if [[ ! -x "$JOIN_SCRIPT" ]]; then

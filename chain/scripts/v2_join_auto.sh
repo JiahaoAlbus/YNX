@@ -130,6 +130,7 @@ build_ynxd() {
     ynx_ui_stdout "Building ynxd with GOPROXY=$proxy ..."
     module_done=0
     package_done=0
+    ynx_ui_progress 44 "prepare binary" "proxy: $proxy | phase: download modules"
 
     : >"$mod_log"
     if env \
@@ -146,7 +147,7 @@ build_ynxd() {
             if (( pct > 46 )); then
               pct=46
             fi
-            ynx_ui_progress "$pct" "prepare binary: download modules ${module_done}/${module_total}"
+            ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
           fi
         fi
       done <"$mod_log"
@@ -160,6 +161,7 @@ build_ynxd() {
     fi
 
     : >"$build_log"
+    ynx_ui_progress 46 "prepare binary" "proxy: $proxy | phase: compile packages"
     if env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
@@ -174,7 +176,7 @@ build_ynxd() {
             if (( pct > 48 )); then
               pct=48
             fi
-            ynx_ui_progress "$pct" "prepare binary: compile packages ${package_done}/${package_total}"
+            ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
           fi
         fi
       done <"$build_log"

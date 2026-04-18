@@ -90,9 +90,10 @@ fi
 
 print_progress() {
   local pct="$1"
-  shift
+  local stage="${2:-}"
+  local detail="${3:-}"
   ynx_ui_progress_reset_metrics
-  ynx_ui_progress "$pct" "$*"
+  ynx_ui_progress "$pct" "$stage" "$detail"
 }
 
 workspace_progress_from_git_line() {
@@ -181,7 +182,7 @@ download_file_with_progress() {
     stage_text="$stage ($(awk -v total="$total_bytes" 'BEGIN { printf "%.1f/%.1f MB", total/1048576, total/1048576 }'))"
     ynx_ui_progress_metric "$end_pct" "$stage" "$stage_text" "archive-download" "$total_mb" "$total_mb" "MB"
   else
-    print_progress "$end_pct" "$stage"
+    print_progress "$end_pct" "$stage" "source archive downloaded"
   fi
 }
 
@@ -192,7 +193,7 @@ prepare_workspace_from_github_archive() {
 
   download_file_with_progress "$archive_url" "$archive_path" "download source archive" 12 17
 
-  print_progress 17 "extract source archive"
+  print_progress 17 "extract source archive" "unpack repository archive into the local workspace"
   rm -rf "$REPO_DIR"
   top_dir="$(tar -tzf "$archive_path" | head -n1 | cut -d/ -f1)"
   tar -xzf "$archive_path" -C "$WORKDIR"
@@ -231,7 +232,7 @@ prepare_workspace() {
       ynx_ui_stdout "$line"
       pct="$(workspace_progress_from_git_line "$line" || true)"
       if [[ -n "${pct:-}" ]]; then
-        print_progress "$pct" "prepare workspace"
+        print_progress "$pct" "prepare workspace" "git fetch --progress | update the local YNX working copy"
       fi
     done
     git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
@@ -240,7 +241,7 @@ prepare_workspace() {
       ynx_ui_stdout "$line"
       pct="$(workspace_progress_from_git_line "$line" || true)"
       if [[ -n "${pct:-}" ]]; then
-        print_progress "$pct" "prepare workspace"
+        print_progress "$pct" "prepare workspace" "git clone --progress | create the local YNX working copy"
       fi
     done
   fi
@@ -369,7 +370,8 @@ install_go_toolchain() {
   if [[ ! -x "$go_dir/bin/go" ]]; then
     local url="https://go.dev/dl/go${GO_VERSION}.${os}-${arch}.tar.gz"
     ynx_ui_stdout "Installing Go ${GO_VERSION} (${os}/${arch})..."
-    curl -fsSL "$url" -o "$tarball"
+    download_file_with_progress "$url" "$tarball" "download go toolchain" 24 28
+    print_progress 28 "extract go toolchain" "unpack go ${GO_VERSION} for ${os}/${arch}"
     rm -rf "$go_dir"
     tar -xzf "$tarball" -C "$toolchain_dir"
   fi
@@ -377,18 +379,18 @@ install_go_toolchain() {
   command -v go >/dev/null 2>&1 || return 1
 }
 
-print_progress 6 "check prerequisites"
+print_progress 6 "check prerequisites" "verify shell, package manager, and base dependencies"
 install_missing_base_deps
 
-print_progress 12 "prepare workspace"
+print_progress 12 "prepare workspace" "prepare or refresh the local YNX repository copy"
 prepare_workspace
-print_progress 18 "prepare join script"
+print_progress 18 "prepare join script" "resolve the repo-local join dispatcher entrypoint"
 JOIN_SCRIPT="$REPO_DIR/chain/scripts/v2_join_auto.sh"
 if [[ ! -x "$JOIN_SCRIPT" ]]; then
   chmod +x "$JOIN_SCRIPT"
 fi
 
-print_progress 24 "prepare toolchain"
+print_progress 24 "prepare toolchain" "ensure go is available if ynxd must be built from source"
 if [[ ! -x "$REPO_DIR/chain/ynxd" ]] && ! command -v ynxd >/dev/null 2>&1 && ! command -v go >/dev/null 2>&1; then
   if [[ "$INSTALL_DEPS" -ne 1 ]]; then
     echo "Missing go and no ynxd binary found. Re-run with --install-deps." >&2
@@ -400,7 +402,7 @@ if [[ ! -x "$REPO_DIR/chain/ynxd" ]] && ! command -v ynxd >/dev/null 2>&1 && ! c
   }
 fi
 
-print_progress 30 "handoff to repo-local join flow"
+print_progress 30 "handoff to repo-local join flow" "delegate into the repo-local build, bootstrap, and verify pipeline"
 CMD=(
   "$JOIN_SCRIPT"
   --home "$HOME_DIR"
@@ -428,5 +430,5 @@ YNX_UI_GLOBAL_MODE=1 \
 YNX_UI_SUPPRESS_HEADER=1 \
 "${CMD[@]}"
 
-print_progress 100 "deployment flow complete"
+print_progress 100 "deployment flow complete" "fresh-machine bootstrap finished"
 ynx_ui_note "YNX join flow finished."

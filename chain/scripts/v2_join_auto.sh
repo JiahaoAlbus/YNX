@@ -85,17 +85,18 @@ step() {
   STEP=$((STEP + 1))
   if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
     local pct=0
+    local detail=""
     case "$STEP" in
-      1) pct=34 ;;
-      2) pct=38 ;;
-      3) pct=40 ;;
-      4) pct=68 ;;
-      5) pct=98 ;;
-      6) pct=100 ;;
+      1) pct=34; detail="inspect uname, shell, and supported runtime mode" ;;
+      2) pct=38; detail="resolve the chain workspace and entry scripts on this machine" ;;
+      3) pct=40; detail="resolve ynxd or prepare a build from source" ;;
+      4) pct=68; detail="delegate to the chain join and verification pipeline" ;;
+      5) pct=98; detail="collect final local node result and operator output" ;;
+      6) pct=100; detail="repo-local dispatcher completed" ;;
       *) pct=100 ;;
     esac
     ynx_ui_progress_reset_metrics
-    ynx_ui_progress "$pct" "$*"
+    ynx_ui_progress "$pct" "$*" "$detail"
   else
     ynx_ui_step "$STEP" "$TOTAL" "$*"
   fi
@@ -112,7 +113,7 @@ build_ynxd() {
   local proxy
   local last_rc=1
   local module_total package_total module_done package_done pct
-  local mod_log build_log cmd_pid
+  local mod_log build_log cmd_pid build_last_line
 
   module_total="$(go list -m -mod=mod all 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
   package_total="$(go list -deps ./cmd/ynxd 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
@@ -131,7 +132,8 @@ build_ynxd() {
     ynx_ui_stdout "Building ynxd with GOPROXY=$proxy ..."
     module_done=0
     package_done=0
-    ynx_ui_progress 40 "prepare binary" "proxy: $proxy | phase: download modules"
+    ynx_ui_progress_set_meta "n/a" "n/a"
+    ynx_ui_progress 40 "prepare binary" "go mod download | resolve module graph via $proxy"
 
     : >"$mod_log"
     env \
@@ -151,7 +153,7 @@ build_ynxd() {
         if (( pct > 52 )); then
           pct=52
         fi
-        ynx_ui_progress_metric "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}" "mod-download" "$module_done" "$module_total" "mod"
+        ynx_ui_progress_metric "$pct" "prepare binary" "go mod download | modules ${module_done}/${module_total} via $proxy" "mod-download" "$module_done" "$module_total" "mod"
       fi
       sleep 0.3
     done
@@ -161,7 +163,13 @@ build_ynxd() {
         module_done=0
       fi
       if (( module_total > 0 )); then
-        ynx_ui_progress_metric 52 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}" "mod-download" "$module_done" "$module_total" "mod"
+        ynx_ui_progress_metric 52 "prepare binary" "go mod download | modules ${module_done}/${module_total} via $proxy" "mod-download" "$module_done" "$module_total" "mod"
+      fi
+      if (( package_total == 0 )); then
+        package_total="$(env GOPROXY="${GOPROXY:-$proxy}" GOSUMDB="${GOSUMDB:-sum.golang.org}" GIT_TERMINAL_PROMPT=0 CGO_ENABLED=0 go list -deps ./cmd/ynxd 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
+        if ! [[ "$package_total" =~ ^[0-9]+$ ]]; then
+          package_total=0
+        fi
       fi
       last_rc=0
     else
@@ -173,7 +181,8 @@ build_ynxd() {
     fi
 
     : >"$build_log"
-    ynx_ui_progress 52 "prepare binary" "proxy: $proxy | phase: compile packages"
+    ynx_ui_progress_set_meta "n/a" "n/a"
+    ynx_ui_progress 52 "prepare binary" "go build ./cmd/ynxd | compile packages via $proxy"
     env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
@@ -183,6 +192,7 @@ build_ynxd() {
     cmd_pid=$!
     while kill -0 "$cmd_pid" >/dev/null 2>&1; do
       package_done="$(grep -vc '^go: downloading' "$build_log" 2>/dev/null || true)"
+      build_last_line="$(tail -n 1 "$build_log" 2>/dev/null | sed 's/[[:space:]]*$//' || true)"
       if ! [[ "$package_done" =~ ^[0-9]+$ ]]; then
         package_done=0
       fi
@@ -194,7 +204,9 @@ build_ynxd() {
         if (( pct > 68 )); then
           pct=68
         fi
-        ynx_ui_progress_metric "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}" "pkg-build" "$package_done" "$package_total" "pkg"
+        ynx_ui_progress_metric "$pct" "prepare binary" "go build ./cmd/ynxd | packages ${package_done}/${package_total} | ${build_last_line:-waiting for compiler output}" "pkg-build" "$package_done" "$package_total" "pkg"
+      else
+        ynx_ui_progress 60 "prepare binary" "go build ./cmd/ynxd | ${build_last_line:-waiting for compiler output}"
       fi
       sleep 0.3
     done
@@ -204,7 +216,9 @@ build_ynxd() {
         package_done=0
       fi
       if (( package_total > 0 )); then
-        ynx_ui_progress_metric 68 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}" "pkg-build" "$package_done" "$package_total" "pkg"
+        ynx_ui_progress_metric 68 "prepare binary" "go build ./cmd/ynxd | packages ${package_done}/${package_total} | ${build_last_line:-build complete}" "pkg-build" "$package_done" "$package_total" "pkg"
+      else
+        ynx_ui_progress 68 "prepare binary" "go build ./cmd/ynxd | build complete"
       fi
       last_rc=0
     else

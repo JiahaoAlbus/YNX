@@ -227,18 +227,19 @@ step() {
   STEP=$((STEP + 1))
   if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
     local pct=0
+    local detail=""
     case "$STEP" in
-      1) pct=72 ;;
-      2) pct=78 ;;
-      3) pct=82 ;;
-      4) pct=86 ;;
-      5) pct=92 ;;
-      6) pct=100 ;;
-      7) pct=100 ;;
+      1) pct=72; detail="write node home, config.toml, app.toml, and genesis.json" ;;
+      2) pct=76; detail="launch ynxd with explicit P2P, RPC, and ABCI ports" ;;
+      3) pct=80; detail="probe local RPC until status is reachable and chain-id matches" ;;
+      4) pct=82; detail="wait for peer handshake or first local block movement" ;;
+      5) pct=90; detail="compare local height with the reference RPC until lag is acceptable" ;;
+      6) pct=98; detail="run final verification and summarize the node result" ;;
+      7) pct=100; detail="join and verification pipeline completed" ;;
       *) pct=100 ;;
     esac
     ynx_ui_progress_reset_metrics
-    ynx_ui_progress "$pct" "$*"
+    ynx_ui_progress "$pct" "$*" "$detail"
   else
     ynx_ui_step "$STEP" "$TOTAL_STEPS" "$*"
   fi
@@ -554,11 +555,11 @@ while true; do
   if (( peer_elapsed - last_peer_print >= 3 )); then
     log "peer-probe elapsed=${peer_elapsed}s peers_now=${peers_now} max_peers=${max_peers_seen} local_height=${local_height_now}"
     if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
-      peer_pct=$((66 + (peer_elapsed * 8 / (PEER_WAIT > 0 ? PEER_WAIT : 1))))
-      if (( peer_pct > 74 )); then
-        peer_pct=74
+      peer_pct=$((82 + (peer_elapsed * 8 / (PEER_WAIT > 0 ? PEER_WAIT : 1))))
+      if (( peer_pct > 90 )); then
+        peer_pct=90
       fi
-      ynx_ui_progress "$peer_pct" "wait P2P peers" "elapsed ${peer_elapsed}s | peers ${peers_now} | max_peers ${max_peers_seen} | height ${local_height_now}"
+      ynx_ui_progress_wait "$peer_pct" "wait P2P peers" "peer handshake | elapsed ${peer_elapsed}s | peers ${peers_now} | max ${max_peers_seen} | height ${local_height_now}" "$peer_elapsed" "$PEER_WAIT" "probe every 3s"
     fi
     last_peer_print="$peer_elapsed"
   fi
@@ -626,14 +627,14 @@ while true; do
         if (( caught_delta > target_delta )); then
           caught_delta="$target_delta"
         fi
-        sync_pct=$((74 + (caught_delta * 24 / target_delta)))
+        sync_pct=$((90 + (caught_delta * 8 / target_delta)))
       else
-        sync_pct=74
+        sync_pct=90
       fi
       if (( sync_pct > 98 )); then
         sync_pct=98
       fi
-      ynx_ui_progress_metric "$sync_pct" "sync and verify blocks" "height ${local_height}/${ref_height} | lag ${lag} | catching_up ${local_catching_up}" "sync-height" "$local_height" "$ref_height" "blk"
+      ynx_ui_progress_metric "$sync_pct" "sync and verify blocks" "catch up blocks | height ${local_height}/${ref_height} | lag ${lag} | catching_up ${local_catching_up}" "sync-height" "$local_height" "$ref_height" "blk"
     fi
     last_progress_print="$elapsed"
   fi

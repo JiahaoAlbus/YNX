@@ -21,6 +21,7 @@ YNX_UI_PROGRESS_TEXT=""
 YNX_UI_PROGRESS_TIP=""
 YNX_UI_PROGRESS_RATE="n/a"
 YNX_UI_PROGRESS_ETA="n/a"
+YNX_UI_PROGRESS_SPINNER_INDEX=0
 YNX_UI_PROGRESS_METRIC_KEY=""
 YNX_UI_PROGRESS_METRIC_LAST_VALUE=0
 YNX_UI_PROGRESS_METRIC_LAST_TS=0
@@ -194,6 +195,11 @@ ynx_ui_progress_reset_metrics() {
   YNX_UI_PROGRESS_METRIC_LAST_TS=0
 }
 
+ynx_ui_progress_set_meta() {
+  YNX_UI_PROGRESS_RATE="${1:-n/a}"
+  YNX_UI_PROGRESS_ETA="${2:-n/a}"
+}
+
 ynx_ui_progress_track() {
   local key="$1"
   local current="$2"
@@ -310,31 +316,39 @@ ynx_ui_step() {
   ynx_ui_progress "$pct" "$text"
 }
 
-ynx_ui_tip_for_pct() {
+ynx_ui_detail_for_stage() {
   local pct="${1:-0}"
   local bucket=$((pct / 10))
   case "$bucket" in
-    0) echo "Checking machine prerequisites before any files are changed." ;;
-    1) echo 'Preparing the working copy and entry scripts for this machine.' ;;
-    2) echo 'Preparing the toolchain or reusing an existing local binary.' ;;
-    3) echo "Resolving platform and node role for the local machine." ;;
-    4) echo "Building the node binary and preparing runtime paths." ;;
-    5) echo "Bootstrapping chain home and validating core config/genesis." ;;
-    6) echo "Starting the local node and waiting for RPC readiness." ;;
-    7) echo "Forming peers and checking whether block sync has started." ;;
-    8) echo "Comparing local height and reference height during sync." ;;
-    9) echo 'Final verification and follow-up operator steps.' ;;
-    *) echo 'Running the current stage and collecting live status.' ;;
+    0) echo "checking machine prerequisites" ;;
+    1) echo "preparing workspace and entry scripts" ;;
+    2) echo "preparing toolchain or reusing an existing binary" ;;
+    3) echo "resolving platform and node role" ;;
+    4) echo "building ynxd and runtime paths" ;;
+    5) echo "bootstrapping chain home and validating genesis" ;;
+    6) echo "starting the local node and checking RPC" ;;
+    7) echo "forming peers and checking first block movement" ;;
+    8) echo "comparing local height with the reference RPC" ;;
+    9) echo "final verification and operator next steps" ;;
+    *) echo "running the current stage" ;;
   esac
+}
+
+ynx_ui_spinner() {
+  local frames=("-" "\\" "|" "/")
+  local idx=$((YNX_UI_PROGRESS_SPINNER_INDEX % 4))
+  printf '%s' "${frames[$idx]}"
+  YNX_UI_PROGRESS_SPINNER_INDEX=$((YNX_UI_PROGRESS_SPINNER_INDEX + 1))
 }
 
 ynx_ui_progress() {
   local pct="$1"
   local text="$2"
-  local explicit_tip="${3:-}"
-  local width=34
+  local explicit_detail="${3:-}"
+  local width=38
   local filled=$((pct * width / 100))
-  local bar_done="" bar_todo="" stage_text tip_text
+  local bar_done="" bar_todo="" stage_text detail_text spinner
+  local box_width=84
   local blue white muted reset panel
   blue="$(ynx_ui_color "$YNX_UI_KLEIN_BLUE")"
   white="$(ynx_ui_color "$YNX_UI_WHITE")"
@@ -343,13 +357,13 @@ ynx_ui_progress() {
   reset="$(ynx_ui_reset)"
   YNX_UI_PROGRESS_PCT="$pct"
   YNX_UI_PROGRESS_TEXT="$text"
-  if [[ -n "$explicit_tip" ]]; then
-    YNX_UI_PROGRESS_TIP="$explicit_tip"
+  if [[ -n "$explicit_detail" ]]; then
+    YNX_UI_PROGRESS_TIP="$explicit_detail"
   else
-    YNX_UI_PROGRESS_TIP="$(ynx_ui_tip_for_pct "$pct")"
+    YNX_UI_PROGRESS_TIP="$(ynx_ui_detail_for_stage "$pct")"
   fi
   if (( filled > 0 )); then
-    bar_done="$(printf '%*s' "$filled" '' | tr ' ' '#')"
+    bar_done="$(printf '%*s' "$filled" '' | tr ' ' '=')"
   fi
   if (( filled < width )); then
     bar_todo="$(printf '%*s' "$((width - filled))" '' | tr ' ' '.')"
@@ -358,27 +372,30 @@ ynx_ui_progress() {
     if (( YNX_UI_PROGRESS_ACTIVE == 1 && YNX_UI_PROGRESS_RENDERED_LINES > 0 )); then
       printf '\033[%sA' "$YNX_UI_PROGRESS_RENDERED_LINES"
     fi
-    stage_text="$(ynx_ui_truncate "$text" 66)"
-    tip_text="$(ynx_ui_truncate "$YNX_UI_PROGRESS_TIP" 66)"
+    spinner="$(ynx_ui_spinner)"
+    stage_text="$(ynx_ui_truncate "$text" 70)"
+    detail_text="$(ynx_ui_truncate "$YNX_UI_PROGRESS_TIP" 70)"
     printf '\033[2K%s%s' "$panel" "$blue"
-    ynx_ui_box_line "+" "=" "+" 74
+    ynx_ui_box_line "+" "=" "+" 86
     printf '%s%s' "$panel" "$white"
-    ynx_ui_box_text "Current  : $stage_text" 72
+    ynx_ui_box_text "Stage   : [$spinner] $stage_text" "$box_width"
     printf '%s%s' "$panel" "$white"
-    ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
+    ynx_ui_box_text "Action  : $detail_text" "$box_width"
     printf '%s%s' "$panel" "$muted"
-    ynx_ui_box_text "Detail   : $tip_text" 72
+    ynx_ui_box_text "Overall : [${bar_done}${bar_todo}] ${pct}%" "$box_width"
     printf '%s%s' "$panel" "$muted"
-    ynx_ui_box_text "Rate     : ${YNX_UI_PROGRESS_RATE}" 72
+    ynx_ui_box_text "Rate    : ${YNX_UI_PROGRESS_RATE}" "$box_width"
     printf '%s%s' "$panel" "$muted"
-    ynx_ui_box_text "ETA      : ${YNX_UI_PROGRESS_ETA}" 72
+    ynx_ui_box_text "ETA     : ${YNX_UI_PROGRESS_ETA}" "$box_width"
+    printf '%s%s' "$panel" "$muted"
+    ynx_ui_box_text "Logs    : live output continues above" "$box_width"
     printf '%s%s' "$panel" "$blue"
-    ynx_ui_box_line "+" "=" "+" 74
+    ynx_ui_box_line "+" "=" "+" 86
     printf '%s' "$reset"
     YNX_UI_PROGRESS_ACTIVE=1
-    YNX_UI_PROGRESS_RENDERED_LINES=7
+    YNX_UI_PROGRESS_RENDERED_LINES=8
   else
-    printf '[%s%s] %s%% | %s | %s\n' "$bar_done" "$bar_todo" "$pct" "$text" "$YNX_UI_PROGRESS_TIP"
+    printf 'YNX [%s%s] %s%% | %s | %s | %s | %s\n' "$bar_done" "$bar_todo" "$pct" "$text" "$YNX_UI_PROGRESS_TIP" "$YNX_UI_PROGRESS_RATE" "$YNX_UI_PROGRESS_ETA"
   fi
 }
 
@@ -391,6 +408,25 @@ ynx_ui_progress_metric() {
   local total="$6"
   local unit="$7"
   ynx_ui_progress_track "$key" "$current" "$total" "$unit"
+  ynx_ui_progress "$pct" "$text" "$detail"
+}
+
+ynx_ui_progress_wait() {
+  local pct="$1"
+  local text="$2"
+  local detail="$3"
+  local elapsed="$4"
+  local total="$5"
+  local rate_label="${6:-poll every 3s}"
+  if [[ "$elapsed" =~ ^[0-9]+$ && "$total" =~ ^[0-9]+$ ]] && (( total > 0 )); then
+    local remain=$((total - elapsed))
+    if (( remain < 0 )); then
+      remain=0
+    fi
+    ynx_ui_progress_set_meta "$rate_label" "$(ynx_ui_format_duration "$remain")"
+  else
+    ynx_ui_progress_set_meta "$rate_label" "n/a"
+  fi
   ynx_ui_progress "$pct" "$text" "$detail"
 }
 

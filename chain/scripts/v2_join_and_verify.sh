@@ -225,7 +225,22 @@ STEP=0
 TOTAL_STEPS=7
 step() {
   STEP=$((STEP + 1))
-  ynx_ui_step "$STEP" "$TOTAL_STEPS" "$*"
+  if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
+    local pct=0
+    case "$STEP" in
+      1) pct=52 ;;
+      2) pct=60 ;;
+      3) pct=66 ;;
+      4) pct=72 ;;
+      5) pct=78 ;;
+      6) pct=100 ;;
+      7) pct=100 ;;
+      *) pct=100 ;;
+    esac
+    ynx_ui_progress "$pct" "$*"
+  else
+    ynx_ui_step "$STEP" "$TOTAL_STEPS" "$*"
+  fi
 }
 
 if [[ "$OS_NAME" == *darwin* ]] && [[ "$ROLE" != "full-node" ]]; then
@@ -298,27 +313,29 @@ LOCAL_P2P_PORT=$((36656 + PORT_OFFSET))
 LOCAL_ABCI_PORT=$((36658 + PORT_OFFSET))
 LOCAL_RPC="http://127.0.0.1:${LOCAL_RPC_PORT}"
 
-ynx_ui_banner "Join + verify pipeline" "This stage bootstraps the node home, starts ynxd, waits for RPC, waits for peers, then verifies block sync."
-ynx_ui_plan "Join pipeline order" \
-  "Normalize configuration and choose ports" \
-  "Bootstrap chain home and write config/genesis" \
-  "Start the node with explicit RPC, P2P, and ABCI ports" \
-  "Wait for the local RPC to become reachable" \
-  "Observe peer formation or first block movement" \
-  "Compare sync height against the reference RPC" \
-  "Optionally create the validator transaction after sync"
-ynx_ui_kv "role" "$ROLE"
-ynx_ui_kv "moniker" "$MONIKER"
-ynx_ui_kv "home" "$HOME_DIR"
-ynx_ui_kv "rpc_ref" "$RPC_URL"
-ynx_ui_kv "chain_id" "$CHAIN_ID"
-ynx_ui_kv "node_bin" "$NODE_BIN"
-ynx_ui_kv "port_offset" "$PORT_OFFSET"
-ynx_ui_kv "local_p2p" "$LOCAL_P2P_PORT"
-ynx_ui_kv "local_rpc" "$LOCAL_RPC"
-ynx_ui_kv "statesync" "$ENABLE_STATESYNC"
-ynx_ui_kv "plan_only" "$PLAN_ONLY"
-echo
+if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_banner "Join + verify pipeline" "This stage bootstraps the node home, starts ynxd, waits for RPC, waits for peers, then verifies block sync."
+  ynx_ui_plan "Join pipeline order" \
+    "Normalize configuration and choose ports" \
+    "Bootstrap chain home and write config/genesis" \
+    "Start the node with explicit RPC, P2P, and ABCI ports" \
+    "Wait for the local RPC to become reachable" \
+    "Observe peer formation or first block movement" \
+    "Compare sync height against the reference RPC" \
+    "Optionally create the validator transaction after sync"
+  ynx_ui_kv "role" "$ROLE"
+  ynx_ui_kv "moniker" "$MONIKER"
+  ynx_ui_kv "home" "$HOME_DIR"
+  ynx_ui_kv "rpc_ref" "$RPC_URL"
+  ynx_ui_kv "chain_id" "$CHAIN_ID"
+  ynx_ui_kv "node_bin" "$NODE_BIN"
+  ynx_ui_kv "port_offset" "$PORT_OFFSET"
+  ynx_ui_kv "local_p2p" "$LOCAL_P2P_PORT"
+  ynx_ui_kv "local_rpc" "$LOCAL_RPC"
+  ynx_ui_kv "statesync" "$ENABLE_STATESYNC"
+  ynx_ui_kv "plan_only" "$PLAN_ONLY"
+  echo
+fi
 
 if [[ "$PLAN_ONLY" -eq 1 ]]; then
   ynx_ui_note "Plan-only mode: no chain home created, no process started, and no network verification executed."
@@ -450,6 +467,8 @@ fi
 if [[ "$RESET" -eq 1 ]]; then
   BOOTSTRAP_ARGS+=(--reset)
 fi
+YNX_UI_EMBEDDED=1 \
+YNX_UI_SUPPRESS_HEADER=1 \
 "$BOOTSTRAP_SCRIPT" "${BOOTSTRAP_ARGS[@]}"
 
 if ! jq -e '.chain_id != null and .app_state != null' "$HOME_DIR/config/genesis.json" >/dev/null 2>&1; then
@@ -533,6 +552,13 @@ while true; do
 
   if (( peer_elapsed - last_peer_print >= 10 )); then
     log "peer-probe elapsed=${peer_elapsed}s peers_now=${peers_now} max_peers=${max_peers_seen} local_height=${local_height_now}"
+    if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
+      peer_pct=$((66 + (peer_elapsed * 8 / (PEER_WAIT > 0 ? PEER_WAIT : 1))))
+      if (( peer_pct > 74 )); then
+        peer_pct=74
+      fi
+      ynx_ui_progress "$peer_pct" "wait P2P peers"
+    fi
     last_peer_print="$peer_elapsed"
   fi
 
@@ -584,6 +610,13 @@ while true; do
 
   if (( elapsed - last_progress_print >= 10 )); then
     log "sync-progress elapsed=${elapsed}s local_height=${local_height} ref_height=${ref_height} lag=${lag} catching_up=${local_catching_up}"
+    if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
+      sync_pct=$((74 + (elapsed * 24 / (SYNC_TIMEOUT > 0 ? SYNC_TIMEOUT : 1))))
+      if (( sync_pct > 98 )); then
+        sync_pct=98
+      fi
+      ynx_ui_progress "$sync_pct" "sync and verify blocks"
+    fi
     last_progress_print="$elapsed"
   fi
 

@@ -403,22 +403,24 @@ if [[ -z "$MIN_GAS_PRICES" ]]; then
   MIN_GAS_PRICES="0.000000007anyxt"
 fi
 
-ynx_ui_banner "Bootstrap chain home" "This stage resolves RPC and descriptor inputs, writes genesis/config, and prepares a fresh machine for joining."
-ynx_ui_plan "Bootstrap order" \
-  "Resolve bundle, descriptor, and genesis sources" \
-  "Resolve RPC endpoint, chain ID, seeds, and persistent peers" \
-  "Fetch and validate genesis from file, bundle, or RPC" \
-  "Initialize the chain home and write network ports" \
-  "Apply role-specific config and then restore network settings" \
-  "Print the exact next commands for key creation and node start"
-ynx_ui_kv "home" "$HOME_DIR"
-ynx_ui_kv "role" "$ROLE"
-ynx_ui_kv "rpc" "${RPC_URL:-auto}"
-ynx_ui_kv "chain_id" "${CHAIN_ID:-auto}"
-ynx_ui_kv "port_offset" "$PORT_OFFSET"
-ynx_ui_kv "statesync" "$ENABLE_STATESYNC"
-ynx_ui_kv "plan_only" "$PLAN_ONLY"
-echo
+if [[ "${YNX_UI_EMBEDDED:-0}" -ne 1 && "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_banner "Bootstrap chain home" "This stage resolves RPC and descriptor inputs, writes genesis/config, and prepares a fresh machine for joining."
+  ynx_ui_plan "Bootstrap order" \
+    "Resolve bundle, descriptor, and genesis sources" \
+    "Resolve RPC endpoint, chain ID, seeds, and persistent peers" \
+    "Fetch and validate genesis from file, bundle, or RPC" \
+    "Initialize the chain home and write network ports" \
+    "Apply role-specific config and then restore network settings" \
+    "Print the exact next commands for key creation and node start"
+  ynx_ui_kv "home" "$HOME_DIR"
+  ynx_ui_kv "role" "$ROLE"
+  ynx_ui_kv "rpc" "${RPC_URL:-auto}"
+  ynx_ui_kv "chain_id" "${CHAIN_ID:-auto}"
+  ynx_ui_kv "port_offset" "$PORT_OFFSET"
+  ynx_ui_kv "statesync" "$ENABLE_STATESYNC"
+  ynx_ui_kv "plan_only" "$PLAN_ONLY"
+  echo
+fi
 
 if [[ -z "$RPC_URL" ]]; then
   echo "Need one of --rpc, --bundle, or --descriptor with a usable RPC endpoint" >&2
@@ -442,9 +444,11 @@ if [[ "$CHAIN_ID" != "$rpc_chain_id" ]]; then
   exit 1
 fi
 
-ynx_ui_kv "resolved_rpc" "$RPC_URL"
-ynx_ui_kv "resolved_chain_id" "$CHAIN_ID"
-ynx_ui_kv "resolved_moniker" "$MONIKER"
+if [[ "${YNX_UI_EMBEDDED:-0}" -ne 1 && "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_kv "resolved_rpc" "$RPC_URL"
+  ynx_ui_kv "resolved_chain_id" "$CHAIN_ID"
+  ynx_ui_kv "resolved_moniker" "$MONIKER"
+fi
 
 if [[ "$PLAN_ONLY" -eq 1 ]]; then
   ynx_ui_note "Plan-only mode: bootstrap input resolution completed, but no home/config/genesis changes were written."
@@ -553,36 +557,38 @@ set_section_key "$APP_TOML" "grpc-web" "address" "\"0.0.0.0:${GRPC_WEB_PORT}\""
 set_section_key "$APP_TOML" "json-rpc" "address" "\"0.0.0.0:${EVM_RPC_PORT}\""
 set_section_key "$APP_TOML" "json-rpc" "ws-address" "\"0.0.0.0:${EVM_WS_PORT}\""
 
-echo
-ynx_ui_note "Bootstrap complete"
-ynx_ui_kv "home" "$HOME_DIR"
-ynx_ui_kv "role" "$ROLE"
-ynx_ui_kv "chain_id" "$CHAIN_ID"
-ynx_ui_kv "rpc" "$RPC_URL"
-ynx_ui_kv "statesync" "$statesync_mode"
-ynx_ui_kv "port_offset" "$PORT_OFFSET"
-ynx_ui_kv "p2p_port" "$P2P_PORT"
-ynx_ui_kv "rpc_port" "$RPC_PORT"
-ynx_ui_kv "api_port" "$API_PORT"
-ynx_ui_kv "grpc_port" "$GRPC_PORT"
-ynx_ui_kv "evm_rpc_port" "$EVM_RPC_PORT"
-ynx_ui_kv "seeds" "$SEEDS"
-ynx_ui_kv "persistent_peers" "$PERSISTENT_PEERS"
-if [[ -n "$BUNDLE_DIR" ]]; then
-  ynx_ui_kv "bundle" "$BUNDLE_DIR"
+if [[ "${YNX_UI_EMBEDDED:-0}" -ne 1 ]]; then
+  echo
+  ynx_ui_note "Bootstrap complete"
+  ynx_ui_kv "home" "$HOME_DIR"
+  ynx_ui_kv "role" "$ROLE"
+  ynx_ui_kv "chain_id" "$CHAIN_ID"
+  ynx_ui_kv "rpc" "$RPC_URL"
+  ynx_ui_kv "statesync" "$statesync_mode"
+  ynx_ui_kv "port_offset" "$PORT_OFFSET"
+  ynx_ui_kv "p2p_port" "$P2P_PORT"
+  ynx_ui_kv "rpc_port" "$RPC_PORT"
+  ynx_ui_kv "api_port" "$API_PORT"
+  ynx_ui_kv "grpc_port" "$GRPC_PORT"
+  ynx_ui_kv "evm_rpc_port" "$EVM_RPC_PORT"
+  ynx_ui_kv "seeds" "$SEEDS"
+  ynx_ui_kv "persistent_peers" "$PERSISTENT_PEERS"
+  if [[ -n "$BUNDLE_DIR" ]]; then
+    ynx_ui_kv "bundle" "$BUNDLE_DIR"
+  fi
+  if [[ -n "$DESCRIPTOR_FILE" ]]; then
+    ynx_ui_kv "descriptor" "$DESCRIPTOR_FILE"
+  fi
+  echo
+  ynx_ui_note "Create validator key:"
+  echo "$BIN keys add validator --home \"$HOME_DIR\" --keyring-backend os --key-type eth_secp256k1"
+  echo
+  ynx_ui_note "Start node:"
+  echo "$BIN start --home \"$HOME_DIR\" --chain-id \"$CHAIN_ID\" --minimum-gas-prices \"$MIN_GAS_PRICES\""
+  echo
+  ynx_ui_note "After funding validator account, create validator tx:"
+  echo "$BIN tx staking create-validator --amount 100000000000000000000anyxt --pubkey \"\$($BIN comet show-validator --home \"$HOME_DIR\")\" --moniker \"$MONIKER\" --chain-id \"$CHAIN_ID\" --commission-rate 0.10 --commission-max-rate 0.20 --commission-max-change-rate 0.01 --min-self-delegation 1 --from validator --home \"$HOME_DIR\" --keyring-backend os --node \"$RPC_URL\" --gas auto --gas-adjustment 1.2 --gas-prices \"$MIN_GAS_PRICES\""
 fi
-if [[ -n "$DESCRIPTOR_FILE" ]]; then
-  ynx_ui_kv "descriptor" "$DESCRIPTOR_FILE"
-fi
-echo
-ynx_ui_note "Create validator key:"
-echo "$BIN keys add validator --home \"$HOME_DIR\" --keyring-backend os --key-type eth_secp256k1"
-echo
-ynx_ui_note "Start node:"
-echo "$BIN start --home \"$HOME_DIR\" --chain-id \"$CHAIN_ID\" --minimum-gas-prices \"$MIN_GAS_PRICES\""
-echo
-ynx_ui_note "After funding validator account, create validator tx:"
-echo "$BIN tx staking create-validator --amount 100000000000000000000anyxt --pubkey \"\$($BIN comet show-validator --home \"$HOME_DIR\")\" --moniker \"$MONIKER\" --chain-id \"$CHAIN_ID\" --commission-rate 0.10 --commission-max-rate 0.20 --commission-max-change-rate 0.01 --min-self-delegation 1 --from validator --home \"$HOME_DIR\" --keyring-backend os --node \"$RPC_URL\" --gas auto --gas-adjustment 1.2 --gas-prices \"$MIN_GAS_PRICES\""
 
 if [[ "$START" -eq 1 ]]; then
   exec "$BIN" start --home "$HOME_DIR" --chain-id "$CHAIN_ID" --minimum-gas-prices "$MIN_GAS_PRICES"

@@ -88,11 +88,10 @@ if [[ -n "$PORT_OFFSET" ]] && ! [[ "$PORT_OFFSET" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-step=0
-total=6
-print_step() {
-  step=$((step + 1))
-  ynx_ui_step "$step" "$total" "$*"
+print_progress() {
+  local pct="$1"
+  shift
+  ynx_ui_progress "$pct" "$*"
 }
 
 OS_RAW="$(uname -s 2>/dev/null || echo unknown)"
@@ -226,10 +225,10 @@ install_go_toolchain() {
   command -v go >/dev/null 2>&1 || return 1
 }
 
-print_step "check prerequisites"
+print_progress 6 "check prerequisites"
 install_missing_base_deps
 
-print_step "prepare workspace"
+print_progress 12 "prepare workspace"
 mkdir -p "$WORKDIR"
 REPO_DIR="$WORKDIR/YNX"
 
@@ -251,13 +250,13 @@ else
   fi
 fi
 
-print_step "prepare join script"
+print_progress 18 "prepare join script"
 JOIN_SCRIPT="$REPO_DIR/chain/scripts/v2_join_auto.sh"
 if [[ ! -x "$JOIN_SCRIPT" ]]; then
   chmod +x "$JOIN_SCRIPT"
 fi
 
-print_step "prepare toolchain"
+print_progress 24 "prepare toolchain"
 if [[ ! -x "$REPO_DIR/chain/ynxd" ]] && ! command -v ynxd >/dev/null 2>&1 && ! command -v go >/dev/null 2>&1; then
   if [[ "$INSTALL_DEPS" -ne 1 ]]; then
     echo "Missing go and no ynxd binary found. Re-run with --install-deps." >&2
@@ -269,7 +268,7 @@ if [[ ! -x "$REPO_DIR/chain/ynxd" ]] && ! command -v ynxd >/dev/null 2>&1 && ! c
   }
 fi
 
-print_step "run join flow"
+print_progress 28 "handoff to repo-local join flow"
 CMD=(
   "$JOIN_SCRIPT"
   --home "$HOME_DIR"
@@ -293,7 +292,9 @@ if [[ "$PLAN_ONLY" -eq 1 ]]; then
   CMD+=(--plan-only)
 fi
 
+YNX_UI_GLOBAL_MODE=1 \
+YNX_UI_SUPPRESS_HEADER=1 \
 "${CMD[@]}"
 
-print_step "complete"
+print_progress 100 "deployment flow complete"
 ynx_ui_note "YNX join flow finished."

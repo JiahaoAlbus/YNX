@@ -83,23 +83,39 @@ STEP=0
 TOTAL=6
 step() {
   STEP=$((STEP + 1))
-  ynx_ui_step "$STEP" "$TOTAL" "$*"
+  if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
+    local pct=0
+    case "$STEP" in
+      1) pct=32 ;;
+      2) pct=38 ;;
+      3) pct=44 ;;
+      4) pct=48 ;;
+      5) pct=98 ;;
+      6) pct=99 ;;
+      *) pct=99 ;;
+    esac
+    ynx_ui_progress "$pct" "$*"
+  else
+    ynx_ui_step "$STEP" "$TOTAL" "$*"
+  fi
 }
 
-ynx_ui_banner "Repo-local join dispatcher" "This layer detects the platform, resolves the chain workspace, finds ynxd, then invokes join + verify."
-ynx_ui_plan "Repo-local dispatcher order" \
-  "Detect operating system and decide supported mode" \
-  "Resolve the node role, interactive or non-interactive" \
-  "Locate the YNX chain workspace in the current machine" \
-  "Build or reuse the ynxd binary" \
-  "Launch join + verify with resolved parameters" \
-  "Print quick next actions for the chosen role"
-ynx_ui_kv "home" "$HOME_DIR"
-ynx_ui_kv "rpc" "$RPC_URL"
-ynx_ui_kv "chain_id" "$CHAIN_ID"
-ynx_ui_kv "port_offset" "${PORT_OFFSET:-auto}"
-ynx_ui_kv "plan_only" "$PLAN_ONLY"
-echo
+if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_banner "Repo-local join dispatcher" "This layer detects the platform, resolves the chain workspace, finds ynxd, then invokes join + verify."
+  ynx_ui_plan "Repo-local dispatcher order" \
+    "Detect operating system and decide supported mode" \
+    "Resolve the node role, interactive or non-interactive" \
+    "Locate the YNX chain workspace in the current machine" \
+    "Build or reuse the ynxd binary" \
+    "Launch join + verify with resolved parameters" \
+    "Print quick next actions for the chosen role"
+  ynx_ui_kv "home" "$HOME_DIR"
+  ynx_ui_kv "rpc" "$RPC_URL"
+  ynx_ui_kv "chain_id" "$CHAIN_ID"
+  ynx_ui_kv "port_offset" "${PORT_OFFSET:-auto}"
+  ynx_ui_kv "plan_only" "$PLAN_ONLY"
+  echo
+fi
 
 choose_role_interactive() {
   echo
@@ -165,7 +181,9 @@ if [[ -z "$CHAIN_DIR" ]]; then
   exit 1
 fi
 echo "CHAIN_DIR=$CHAIN_DIR"
-ynx_ui_kv "chain_dir" "$CHAIN_DIR"
+if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_kv "chain_dir" "$CHAIN_DIR"
+fi
 
 step "prepare binary"
 cd "$CHAIN_DIR"
@@ -186,7 +204,9 @@ elif command -v ynxd >/dev/null 2>&1; then
   fi
 
 echo "NODE_BIN=$NODE_BIN"
-ynx_ui_kv "node_bin" "$NODE_BIN"
+if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
+  ynx_ui_kv "node_bin" "$NODE_BIN"
+fi
 
 if [[ "$PLAN_ONLY" -eq 1 ]]; then
   ynx_ui_note "Plan-only mode: chain workspace and binary resolution succeeded."
@@ -220,7 +240,10 @@ if [[ "$PLAN_ONLY" -eq 1 ]]; then
   CMD+=(--plan-only)
 fi
 
-YNX_BIN="$NODE_BIN" "${CMD[@]}"
+YNX_BIN="$NODE_BIN" \
+YNX_UI_GLOBAL_MODE="${YNX_UI_GLOBAL_MODE:-0}" \
+YNX_UI_SUPPRESS_HEADER=1 \
+"${CMD[@]}"
 
 step "done"
 ynx_ui_note "Join + verify completed."

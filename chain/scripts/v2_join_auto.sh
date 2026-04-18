@@ -110,24 +110,81 @@ build_ynxd() {
   )
   local proxy
   local last_rc=1
+  local module_total package_total module_done package_done pct line
+  local mod_log build_log
+
+  module_total="$(go list -m -mod=mod all 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
+  package_total="$(go list -deps ./cmd/ynxd 2>/dev/null | wc -l | tr -d ' ' || echo 0)"
+  if ! [[ "$module_total" =~ ^[0-9]+$ ]]; then
+    module_total=0
+  fi
+  if ! [[ "$package_total" =~ ^[0-9]+$ ]]; then
+    package_total=0
+  fi
+
+  mod_log="$(mktemp "${TMPDIR:-/tmp}/ynx-go-mod.XXXXXX.log")"
+  build_log="$(mktemp "${TMPDIR:-/tmp}/ynx-go-build.XXXXXX.log")"
+  trap 'rm -f "$mod_log" "$build_log"' RETURN
 
   for proxy in "${proxies[@]}"; do
-    echo "Building ynxd with GOPROXY=$proxy ..."
+    ynx_ui_stdout "Building ynxd with GOPROXY=$proxy ..."
+    module_done=0
+    package_done=0
+
+    : >"$mod_log"
     if env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
       GIT_TERMINAL_PROMPT=0 \
       CGO_ENABLED=0 \
-      go mod download && \
-      env \
-        GOPROXY="${GOPROXY:-$proxy}" \
-        GOSUMDB="${GOSUMDB:-sum.golang.org}" \
-        GIT_TERMINAL_PROMPT=0 \
-        CGO_ENABLED=0 \
-        go build -buildvcs=false -o "$output_bin" ./cmd/ynxd; then
+      go mod download -json all >"$mod_log" 2>&1; then
+      while IFS= read -r line; do
+        if [[ "$line" == *'"Path":'* ]]; then
+          module_done=$((module_done + 1))
+          if (( module_total > 0 )); then
+            pct=$((44 + (module_done * 2 / module_total)))
+            if (( pct > 46 )); then
+              pct=46
+            fi
+            ynx_ui_progress "$pct" "prepare binary: download modules ${module_done}/${module_total}"
+          fi
+        fi
+      done <"$mod_log"
+      last_rc=0
+    else
+      last_rc=$?
+    fi
+    if (( last_rc != 0 )); then
+      ynx_ui_stderr "Build attempt failed with GOPROXY=$proxy during module download"
+      continue
+    fi
+
+    : >"$build_log"
+    if env \
+      GOPROXY="${GOPROXY:-$proxy}" \
+      GOSUMDB="${GOSUMDB:-sum.golang.org}" \
+      GIT_TERMINAL_PROMPT=0 \
+      CGO_ENABLED=0 \
+      go build -v -buildvcs=false -o "$output_bin" ./cmd/ynxd >"$build_log" 2>&1; then
+      while IFS= read -r line; do
+        if [[ -n "$line" && "$line" != go:\ downloading* ]]; then
+          package_done=$((package_done + 1))
+          if (( package_total > 0 )); then
+            pct=$((46 + (package_done * 2 / package_total)))
+            if (( pct > 48 )); then
+              pct=48
+            fi
+            ynx_ui_progress "$pct" "prepare binary: compile packages ${package_done}/${package_total}"
+          fi
+        fi
+      done <"$build_log"
+      last_rc=0
+    else
+      last_rc=$?
+    fi
+    if (( last_rc == 0 )); then
       return 0
     fi
-    last_rc=$?
     ynx_ui_stderr "Build attempt failed with GOPROXY=$proxy"
   done
 

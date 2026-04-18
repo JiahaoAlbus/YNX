@@ -5,17 +5,17 @@ if [[ -n "${YNX_UI_LIB_LOADED:-}" ]]; then
 fi
 YNX_UI_LIB_LOADED=1
 
-YNX_UI_KLEIN_BLUE="${YNX_UI_KLEIN_BLUE:-86;156;214}"
+YNX_UI_KLEIN_BLUE="${YNX_UI_KLEIN_BLUE:-140;196;255}"
 YNX_UI_WHITE="${YNX_UI_WHITE:-255;255;255}"
 YNX_UI_MUTED="${YNX_UI_MUTED:-188;196;216}"
 YNX_UI_WARN="${YNX_UI_WARN:-255;215;120}"
 YNX_UI_ERR="${YNX_UI_ERR:-255;120;120}"
 YNX_UI_DIM="${YNX_UI_DIM:-130;144;180}"
 YNX_UI_GREEN="${YNX_UI_GREEN:-132;214;164}"
-YNX_UI_BG_DARK="${YNX_UI_BG_DARK:-18;22;28}"
-YNX_UI_BG_PANEL="${YNX_UI_BG_PANEL:-24;30;38}"
+YNX_UI_BG_DARK="${YNX_UI_BG_DARK:-26;54;110}"
+YNX_UI_BG_PANEL="${YNX_UI_BG_PANEL:-38;78;156}"
 YNX_UI_PROGRESS_ACTIVE=0
-YNX_UI_PROGRESS_TEXT_LINES=0
+YNX_UI_PROGRESS_RENDERED_LINES=0
 
 ynx_ui_init() {
   if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
@@ -147,6 +147,7 @@ ynx_ui_flush_progress() {
     printf '\n'
   fi
   YNX_UI_PROGRESS_ACTIVE=0
+  YNX_UI_PROGRESS_RENDERED_LINES=0
 }
 
 ynx_ui_stdout() {
@@ -236,14 +237,15 @@ ynx_ui_tip_for_pct() {
 ynx_ui_progress() {
   local pct="$1"
   local text="$2"
-  local width=28
+  local width=34
   local filled=$((pct * width / 100))
-  local bar_done="" bar_todo="" tip cols stage_max tip_max stage_text tip_text line
-  local blue white dim green reset
+  local bar_done="" bar_todo="" tip stage_text tip_text
+  local blue white dim green reset panel
   blue="$(ynx_ui_color "$YNX_UI_KLEIN_BLUE")"
   white="$(ynx_ui_color "$YNX_UI_WHITE")"
   dim="$(ynx_ui_color "$YNX_UI_DIM")"
   green="$(ynx_ui_color "$YNX_UI_GREEN")"
+  panel="$(ynx_ui_bg "$YNX_UI_BG_PANEL")"
   reset="$(ynx_ui_reset)"
   if (( filled > 0 )); then
     bar_done="$(printf '%*s' "$filled" '' | tr ' ' '=')"
@@ -252,17 +254,24 @@ ynx_ui_progress() {
     bar_todo="$(printf '%*s' "$((width - filled))" '' | tr ' ' '.')"
   fi
   if [[ "${YNX_UI_COLOR:-0}" -eq 1 ]]; then
-    cols="$(ynx_ui_terminal_width)"
-    stage_max=28
-    tip_max=$((cols - 56))
-    if (( tip_max < 12 )); then
-      tip_max=12
+    if (( YNX_UI_PROGRESS_ACTIVE == 1 && YNX_UI_PROGRESS_RENDERED_LINES > 0 )); then
+      printf '\033[%sA' "$YNX_UI_PROGRESS_RENDERED_LINES"
     fi
-    stage_text="$(ynx_ui_truncate "$text" "$stage_max")"
-    tip_text="$(ynx_ui_truncate "$(ynx_ui_tip_for_pct "$pct")" "$tip_max")"
-    line="${blue}YNX${reset} ${white}[${bar_done}${bar_todo}] ${pct}%${reset} ${dim}|${reset} ${white}${stage_text}${reset} ${dim}|${reset} ${green}${tip_text}${reset}"
-    printf '\r\033[2K%b' "$line"
+    stage_text="$(ynx_ui_truncate "$text" 66)"
+    tip_text="$(ynx_ui_truncate "$(ynx_ui_tip_for_pct "$pct")" 66)"
+    printf '\033[2K%s%s' "$panel" "$blue"
+    ynx_ui_box_line "+" "=" "+" 74
+    printf '%s%s' "$panel" "$white"
+    ynx_ui_box_text "Stage    : $stage_text" 72
+    printf '%s%s' "$panel" "$white"
+    ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
+    printf '%s%s' "$panel" "$green"
+    ynx_ui_box_text "$tip_text" 72
+    printf '%s%s' "$panel" "$blue"
+    ynx_ui_box_line "+" "=" "+" 74
+    printf '%s' "$reset"
     YNX_UI_PROGRESS_ACTIVE=1
+    YNX_UI_PROGRESS_RENDERED_LINES=5
   else
     printf '[%s%s] %s%% | %s | %s\n' "$bar_done" "$bar_todo" "$pct" "$text" "$(ynx_ui_tip_for_pct "$pct")"
   fi

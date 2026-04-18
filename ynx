@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE_PATH" ]]; do
+  LINK_TARGET="$(readlink "$SOURCE_PATH")"
+  if [[ "$LINK_TARGET" == /* ]]; then
+    SOURCE_PATH="$LINK_TARGET"
+  else
+    SOURCE_PATH="$(cd "$(dirname "$SOURCE_PATH")" && pwd)/$LINK_TARGET"
+  fi
+done
+ROOT_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+YNX CLI
+
+Usage:
+  ynx help
+  ynx join [join-options]
+  ynx join-plan [join-options]
+  ynx bootstrap-plan [bootstrap-options]
+  ynx install-cli
+
+Commands:
+  help             Show this help.
+  join             Run the one-line join entrypoint.
+  join-plan        Resolve and preview the join flow without changing the machine.
+  bootstrap-plan   Resolve and preview the low-level bootstrap flow.
+  install-cli      Install a global `ynx` command by symlinking this repo copy into /usr/local/bin/ynx.
+
+Examples:
+  ./ynx join --role full-node
+  ./ynx join-plan
+  ./ynx bootstrap-plan --rpc https://rpc.ynxweb4.com --role full-node
+EOF
+}
+
+install_cli() {
+  local target="/usr/local/bin/ynx"
+  if [[ -e "$target" && ! -L "$target" ]]; then
+    echo "Refusing to overwrite non-symlink: $target" >&2
+    exit 1
+  fi
+  if [[ "$(id -u)" -eq 0 ]]; then
+    ln -sfn "$ROOT_DIR/ynx" "$target"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo ln -sfn "$ROOT_DIR/ynx" "$target"
+  else
+    echo "Need root or sudo to install into /usr/local/bin" >&2
+    exit 1
+  fi
+  echo "Installed: $target -> $ROOT_DIR/ynx"
+}
+
+cmd="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "$cmd" in
+  help|-h|--help)
+    usage
+    ;;
+  join)
+    exec "$ROOT_DIR/chain/scripts/v2_join_one_line.sh" --repo-url "$ROOT_DIR" "$@"
+    ;;
+  join-plan)
+    exec "$ROOT_DIR/chain/scripts/v2_join_one_line.sh" --repo-url "$ROOT_DIR" --plan-only "$@"
+    ;;
+  bootstrap-plan)
+    exec "$ROOT_DIR/chain/scripts/v2_validator_bootstrap.sh" --plan-only "$@"
+    ;;
+  install-cli)
+    install_cli
+    ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    echo >&2
+    usage >&2
+    exit 1
+    ;;
+esac

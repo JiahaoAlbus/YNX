@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/ynx_ui.sh"
+ynx_ui_init
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  v2_join_auto.sh [options]
+
+User-friendly one-command entry for YNX v2 join + verify.
+It auto-detects OS, discovers chain path, and runs v2_join_and_verify.sh.
+
+Options:
+  --role <full-node|validator|public-rpc>  default: interactive prompt
+  --home <path>                            default: ~/.ynx-v2-join
+  --rpc <url>                              default: https://rpc.ynxweb4.com
+  --chain-id <id>                          default: ynx_9102-1
+  --persistent-peers <list>                optional override
+  --statesync                              enable state sync (default: off)
+  --no-reset                               keep existing home
+  --port-offset <n>                        default: auto (0 or 100 if default port busy)
+  --sync-timeout <seconds>                 default: 1800
+  --peer-wait <seconds>                    default: 600
+  --rpc-wait <seconds>                     default: 300
+  --plan-only                              print resolved flow and exit
+  --yes                                    non-interactive (defaults role=full-node)
+  -h, --help                               show help
+USAGE
+}
+
+ROLE=""
+HOME_DIR="${HOME}/.ynx-v2-join"
+RPC_URL="https://rpc.ynxweb4.com"
+CHAIN_ID="ynx_9102-1"
+PERSISTENT_PEERS=""
+RESET=1
+ENABLE_STATESYNC=0
+PORT_OFFSET=""
+SYNC_TIMEOUT=1800
+PEER_WAIT=600
+RPC_WAIT=300
+YES=0
+PLAN_ONLY=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --role) ROLE="${2:-}"; shift 2 ;;
+    --home) HOME_DIR="${2:-}"; shift 2 ;;
+    --rpc) RPC_URL="${2:-}"; shift 2 ;;
+    --chain-id) CHAIN_ID="${2:-}"; shift 2 ;;
+    --persistent-peers) PERSISTENT_PEERS="${2:-}"; shift 2 ;;
+    --statesync) ENABLE_STATESYNC=1; shift ;;
+    --no-reset) RESET=0; shift ;;
+    --port-offset) PORT_OFFSET="${2:-}"; shift 2 ;;
+    --sync-timeout) SYNC_TIMEOUT="${2:-}"; shift 2 ;;
+    --peer-wait) PEER_WAIT="${2:-}"; shift 2 ;;
+    --rpc-wait) RPC_WAIT="${2:-}"; shift 2 ;;
+    --plan-only) PLAN_ONLY=1; shift ;;
+    --yes) YES=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown arg: $1" >&2; usage; exit 1 ;;
+  esac
+done
+
+for n in "$SYNC_TIMEOUT" "$PEER_WAIT" "$RPC_WAIT"; do
+  if ! [[ "$n" =~ ^[0-9]+$ ]]; then
+    echo "Timeout values must be integer" >&2
+    exit 1
+  fi
+done
+if [[ -n "$PORT_OFFSET" ]] && ! [[ "$PORT_OFFSET" =~ ^[0-9]+$ ]]; then
+  echo "--port-offset must be integer >= 0" >&2
+  exit 1
+fi
+
+OS_RAW="$(uname -s 2>/dev/null || echo unknown)"
+OS_NAME="$(echo "$OS_RAW" | tr '[:upper:]' '[:lower:]')"
+
+STEP=0
+TOTAL=6
+step() {
+  STEP=$((STEP + 1))
+  ynx_ui_step "$STEP" "$TOTAL" "$*"
+}
+
+ynx_ui_banner "Repo-local join dispatcher" "This layer detects the platform, resolves the chain workspace, finds ynxd, then invokes join + verify."
+ynx_ui_plan "Repo-local dispatcher order" \
+  "Detect operating system and decide supported mode" \
+  "Resolve the node role, interactive or non-interactive" \
+  "Locate the YNX chain workspace in the current machine" \
+  "Build or reuse the ynxd binary" \
+  "Launch join + verify with resolved parameters" \
+  "Print quick next actions for the chosen role"
+ynx_ui_kv "home" "$HOME_DIR"
+ynx_ui_kv "rpc" "$RPC_URL"
+ynx_ui_kv "chain_id" "$CHAIN_ID"
+ynx_ui_kv "port_offset" "${PORT_OFFSET:-auto}"
+ynx_ui_kv "plan_only" "$PLAN_ONLY"
+echo
+
+choose_role_interactive() {
+  echo
+  echo "Select node role:"
+  echo "  1) full-node (recommended for normal users)"
+  echo "  2) validator"
+  echo "  3) public-rpc"
+  read -r -p "Enter 1/2/3 [1]: " choice
+  case "${choice:-1}" in
+    1) ROLE="full-node" ;;
+    2) ROLE="validator" ;;
+    3) ROLE="public-rpc" ;;
+    *) echo "Invalid selection" >&2; exit 1 ;;
+  esac
+}
+
+step "detect system"
+echo "OS: $OS_RAW"
+if [[ "$OS_NAME" == *mingw* || "$OS_NAME" == *msys* || "$OS_NAME" == *cygwin* ]]; then
+  echo "Windows native is not recommended for validator. Use WSL2 and run this script inside Linux shell." >&2
+  exit 1
+fi
+
+if [[ -z "$ROLE" ]]; then
+  if [[ "$YES" -eq 1 ]]; then
+    ROLE="full-node"
+  else
+    choose_role_interactive
+  fi
+fi
+
+case "$ROLE" in
+  full-node|validator|public-rpc) ;;
+  *) echo "Invalid role: $ROLE" >&2; exit 1 ;;
+esac
+
+ynx_ui_kv "resolved_role" "$ROLE"
+if [[ "$PLAN_ONLY" -eq 1 ]]; then
+  ynx_ui_note "Plan-only mode: role resolution ran, but no workspace mutation or network action will be executed."
+fi
+
+if [[ "$OS_NAME" == *darwin* && "$ROLE" != "full-node" ]]; then
+  echo "WARNING: validator/public-rpc is strongly recommended on Linux server." >&2
+fi
+
+step "locate chain workspace"
+CHAIN_DIR=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${YNX_CHAIN_DIR:-}" && -f "${YNX_CHAIN_DIR}/cmd/ynxd/main.go" ]]; then
+  CHAIN_DIR="${YNX_CHAIN_DIR}"
+elif [[ -f "${SCRIPT_DIR}/../cmd/ynxd/main.go" && -f "${SCRIPT_DIR}/v2_join_and_verify.sh" ]]; then
+  CHAIN_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+elif [[ -f "$(pwd)/cmd/ynxd/main.go" && -f "$(pwd)/scripts/v2_join_and_verify.sh" ]]; then
+  CHAIN_DIR="$(pwd)"
+elif [[ -f "$(pwd)/chain/cmd/ynxd/main.go" && -f "$(pwd)/chain/scripts/v2_join_and_verify.sh" ]]; then
+  CHAIN_DIR="$(pwd)/chain"
+elif [[ -f "$HOME/YNX/chain/cmd/ynxd/main.go" && -f "$HOME/YNX/chain/scripts/v2_join_and_verify.sh" ]]; then
+  CHAIN_DIR="$HOME/YNX/chain"
+fi
+
+if [[ -z "$CHAIN_DIR" ]]; then
+  echo "Cannot find YNX chain workspace. Run from YNX repo root or chain dir." >&2
+  exit 1
+fi
+echo "CHAIN_DIR=$CHAIN_DIR"
+ynx_ui_kv "chain_dir" "$CHAIN_DIR"
+
+step "prepare binary"
+cd "$CHAIN_DIR"
+NODE_BIN=""
+if [[ -x "$CHAIN_DIR/ynxd" ]]; then
+  NODE_BIN="$CHAIN_DIR/ynxd"
+elif command -v ynxd >/dev/null 2>&1; then
+  NODE_BIN="$(command -v ynxd)"
+  else
+    if ! command -v go >/dev/null 2>&1; then
+      echo "go is required to build ynxd when no binary is available." >&2
+      exit 1
+    fi
+    DEFAULT_GOPROXY="https://goproxy.cn,https://proxy.golang.org,direct"
+    echo "Building ynxd..."
+    GOPROXY="${GOPROXY:-$DEFAULT_GOPROXY}" CGO_ENABLED=0 go build -buildvcs=false -o "$CHAIN_DIR/ynxd" ./cmd/ynxd
+    NODE_BIN="$CHAIN_DIR/ynxd"
+  fi
+
+echo "NODE_BIN=$NODE_BIN"
+ynx_ui_kv "node_bin" "$NODE_BIN"
+
+if [[ "$PLAN_ONLY" -eq 1 ]]; then
+  ynx_ui_note "Plan-only mode: chain workspace and binary resolution succeeded."
+  exit 0
+fi
+
+step "run join + verify"
+CMD=(
+  "$CHAIN_DIR/scripts/v2_join_and_verify.sh"
+  --role "$ROLE"
+  --home "$HOME_DIR"
+  --rpc "$RPC_URL"
+  --chain-id "$CHAIN_ID"
+  --sync-timeout "$SYNC_TIMEOUT"
+  --peer-wait "$PEER_WAIT"
+  --rpc-wait "$RPC_WAIT"
+)
+if [[ -n "$PERSISTENT_PEERS" ]]; then
+  CMD+=(--persistent-peers "$PERSISTENT_PEERS")
+fi
+if [[ -n "$PORT_OFFSET" ]]; then
+  CMD+=(--port-offset "$PORT_OFFSET")
+fi
+if [[ "$ENABLE_STATESYNC" -eq 1 ]]; then
+  CMD+=(--statesync)
+fi
+if [[ "$RESET" -eq 1 ]]; then
+  CMD+=(--reset)
+fi
+if [[ "$PLAN_ONLY" -eq 1 ]]; then
+  CMD+=(--plan-only)
+fi
+
+YNX_BIN="$NODE_BIN" "${CMD[@]}"
+
+step "done"
+ynx_ui_note "Join + verify completed."
+
+step "quick next actions"
+if [[ "$ROLE" == "full-node" ]]; then
+  echo "You joined as full-node."
+else
+  echo "Role=$ROLE joined. For validator self-delegation, run create-validator flow after funding."
+fi

@@ -128,7 +128,7 @@ build_ynxd() {
       return 0
     fi
     last_rc=$?
-    echo "Build attempt failed with GOPROXY=$proxy" >&2
+    ynx_ui_stderr "Build attempt failed with GOPROXY=$proxy"
   done
 
   return "$last_rc"
@@ -152,6 +152,7 @@ if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
 fi
 
 choose_role_interactive() {
+  ynx_ui_flush_progress
   echo
   echo "Select node role:"
   echo "  1) full-node (recommended for normal users)"
@@ -167,7 +168,7 @@ choose_role_interactive() {
 }
 
 step "detect system"
-echo "OS: $OS_RAW"
+ynx_ui_stdout "OS: $OS_RAW"
 if [[ "$OS_NAME" == *mingw* || "$OS_NAME" == *msys* || "$OS_NAME" == *cygwin* ]]; then
   echo "Windows native is not recommended for validator. Use WSL2 and run this script inside Linux shell." >&2
   exit 1
@@ -192,7 +193,7 @@ if [[ "$PLAN_ONLY" -eq 1 ]]; then
 fi
 
 if [[ "$OS_NAME" == *darwin* && "$ROLE" != "full-node" ]]; then
-  echo "WARNING: validator/public-rpc is strongly recommended on Linux server." >&2
+  ynx_ui_stderr "WARNING: validator/public-rpc is strongly recommended on Linux server."
 fi
 
 step "locate chain workspace"
@@ -214,7 +215,7 @@ if [[ -z "$CHAIN_DIR" ]]; then
   echo "Cannot find YNX chain workspace. Run from YNX repo root or chain dir." >&2
   exit 1
 fi
-echo "CHAIN_DIR=$CHAIN_DIR"
+ynx_ui_stdout "CHAIN_DIR=$CHAIN_DIR"
 if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
   ynx_ui_kv "chain_dir" "$CHAIN_DIR"
 fi
@@ -231,7 +232,7 @@ elif command -v ynxd >/dev/null 2>&1; then
       echo "go is required to build ynxd when no binary is available." >&2
       exit 1
     fi
-    echo "Building ynxd..."
+    ynx_ui_stdout "Building ynxd..."
     build_ynxd "$CHAIN_DIR/ynxd" || {
       echo "Failed to build ynxd after retrying multiple Go proxies." >&2
       exit 1
@@ -239,7 +240,7 @@ elif command -v ynxd >/dev/null 2>&1; then
     NODE_BIN="$CHAIN_DIR/ynxd"
   fi
 
-echo "NODE_BIN=$NODE_BIN"
+ynx_ui_stdout "NODE_BIN=$NODE_BIN"
 if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
   ynx_ui_kv "node_bin" "$NODE_BIN"
 fi
@@ -286,7 +287,7 @@ ynx_ui_note "Join + verify completed."
 
 step "quick next actions"
 if [[ "$ROLE" == "full-node" ]]; then
-  echo "You joined as full-node."
+  ynx_ui_stdout "You joined as full-node."
 else
-  echo "Role=$ROLE joined. For validator self-delegation, run create-validator flow after funding."
+  ynx_ui_stdout "Role=$ROLE joined. For validator self-delegation, run create-validator flow after funding."
 fi

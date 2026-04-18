@@ -224,7 +224,7 @@ prepare_workspace() {
 
   if [[ -d "$REPO_DIR/.git" ]]; then
     git -C "$REPO_DIR" fetch --progress --depth=1 origin "$REPO_BRANCH" 2>&1 | tr '\r' '\n' | while IFS= read -r line; do
-      echo "$line"
+      ynx_ui_stdout "$line"
       pct="$(workspace_progress_from_git_line "$line" || true)"
       if [[ -n "${pct:-}" ]]; then
         print_progress "$pct" "prepare workspace"
@@ -233,7 +233,7 @@ prepare_workspace() {
     git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
   else
     git clone --progress --depth=1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR" 2>&1 | while IFS= read -r line; do
-      echo "$line"
+      ynx_ui_stdout "$line"
       pct="$(workspace_progress_from_git_line "$line" || true)"
       if [[ -n "${pct:-}" ]]; then
         print_progress "$pct" "prepare workspace"
@@ -364,7 +364,7 @@ install_go_toolchain() {
 
   if [[ ! -x "$go_dir/bin/go" ]]; then
     local url="https://go.dev/dl/go${GO_VERSION}.${os}-${arch}.tar.gz"
-    echo "Installing Go ${GO_VERSION} (${os}/${arch})..."
+    ynx_ui_stdout "Installing Go ${GO_VERSION} (${os}/${arch})..."
     curl -fsSL "$url" -o "$tarball"
     rm -rf "$go_dir"
     tar -xzf "$tarball" -C "$toolchain_dir"

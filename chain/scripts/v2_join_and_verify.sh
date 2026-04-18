@@ -359,7 +359,7 @@ curl_get_retry() {
 }
 
 log() {
-  echo "[YNX-JOIN] $*"
+  ynx_ui_stdout "[YNX-JOIN] $*"
 }
 
 summarize_peer_failures() {
@@ -566,8 +566,8 @@ while true; do
     break
   fi
   if (( peer_elapsed > PEER_WAIT )); then
-    echo "WARN: no stable peer/height observation after ${PEER_WAIT}s; continuing to sync phase." >&2
-    echo "If sync later times out, check: $HOME_DIR/node.out.log" >&2
+    ynx_ui_stderr "WARN: no stable peer/height observation after ${PEER_WAIT}s; continuing to sync phase."
+    ynx_ui_stderr "If sync later times out, check: $HOME_DIR/node.out.log"
     break
   fi
   sleep 3
@@ -582,8 +582,8 @@ while true; do
   now_ts="$(date +%s)"
   elapsed=$((now_ts - start_ts))
   if (( elapsed > SYNC_TIMEOUT )); then
-    echo "Sync timeout after ${SYNC_TIMEOUT}s" >&2
-    echo "Check log: $HOME_DIR/node.out.log" >&2
+    ynx_ui_stderr "Sync timeout after ${SYNC_TIMEOUT}s"
+    ynx_ui_stderr "Check log: $HOME_DIR/node.out.log"
     summarize_peer_failures
     exit 1
   fi

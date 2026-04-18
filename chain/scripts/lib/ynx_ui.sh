@@ -14,6 +14,8 @@ YNX_UI_DIM="${YNX_UI_DIM:-130;144;180}"
 YNX_UI_GREEN="${YNX_UI_GREEN:-132;214;164}"
 YNX_UI_BG_DARK="${YNX_UI_BG_DARK:-18;22;28}"
 YNX_UI_BG_PANEL="${YNX_UI_BG_PANEL:-24;30;38}"
+YNX_UI_PROGRESS_ACTIVE=0
+YNX_UI_PROGRESS_TEXT_LINES=0
 
 ynx_ui_init() {
   if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
@@ -91,7 +93,74 @@ ynx_ui_box_wrap() {
   ' <<<"$text"
 }
 
+ynx_ui_wrap_plain() {
+  local text="$1"
+  local width="${2:-72}"
+  awk -v width="$width" '
+    function emit(line) {
+      print line
+    }
+    {
+      line=""
+      for (i = 1; i <= NF; i++) {
+        word=$i
+        if (line == "") {
+          line=word
+        } else if (length(line) + 1 + length(word) <= width) {
+          line=line " " word
+        } else {
+          emit(line)
+          line=word
+        }
+      }
+      if (line != "") emit(line)
+      if (NF == 0) emit("")
+    }
+  ' <<<"$text"
+}
+
+ynx_ui_terminal_width() {
+  local cols=100
+  if command -v tput >/dev/null 2>&1; then
+    cols="$(tput cols 2>/dev/null || echo 100)"
+  fi
+  if ! [[ "$cols" =~ ^[0-9]+$ ]] || (( cols < 60 )); then
+    cols=100
+  fi
+  echo "$cols"
+}
+
+ynx_ui_truncate() {
+  local text="$1"
+  local max="${2:-40}"
+  if (( ${#text} <= max )); then
+    printf '%s' "$text"
+  elif (( max <= 1 )); then
+    printf '%s' "${text:0:max}"
+  else
+    printf '%s…' "${text:0:$((max - 1))}"
+  fi
+}
+
+ynx_ui_flush_progress() {
+  if [[ "${YNX_UI_COLOR:-0}" -eq 1 && "${YNX_UI_PROGRESS_ACTIVE:-0}" -eq 1 ]]; then
+    printf '\n'
+  fi
+  YNX_UI_PROGRESS_ACTIVE=0
+}
+
+ynx_ui_stdout() {
+  ynx_ui_flush_progress
+  printf '%s\n' "$*"
+}
+
+ynx_ui_stderr() {
+  ynx_ui_flush_progress
+  printf '%s\n' "$*" >&2
+}
+
 ynx_ui_banner() {
+  ynx_ui_flush_progress
   if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -eq 1 ]]; then
     return 0
   fi
@@ -118,6 +187,7 @@ ynx_ui_banner() {
 }
 
 ynx_ui_plan() {
+  ynx_ui_flush_progress
   if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -eq 1 ]]; then
     return 0
   fi
@@ -166,15 +236,14 @@ ynx_ui_tip_for_pct() {
 ynx_ui_progress() {
   local pct="$1"
   local text="$2"
-  local width=36
+  local width=28
   local filled=$((pct * width / 100))
-  local bar_done="" bar_todo=""
-  local blue white dim green reset panel
+  local bar_done="" bar_todo="" tip cols stage_max tip_max stage_text tip_text line
+  local blue white dim green reset
   blue="$(ynx_ui_color "$YNX_UI_KLEIN_BLUE")"
   white="$(ynx_ui_color "$YNX_UI_WHITE")"
   dim="$(ynx_ui_color "$YNX_UI_DIM")"
   green="$(ynx_ui_color "$YNX_UI_GREEN")"
-  panel="$(ynx_ui_bg "$YNX_UI_BG_PANEL")"
   reset="$(ynx_ui_reset)"
   if (( filled > 0 )); then
     bar_done="$(printf '%*s' "$filled" '' | tr ' ' '=')"
@@ -182,21 +251,25 @@ ynx_ui_progress() {
   if (( filled < width )); then
     bar_todo="$(printf '%*s' "$((width - filled))" '' | tr ' ' '.')"
   fi
-  echo
-  printf '%s%s' "$panel" "$blue"
-  ynx_ui_box_line "+" "-" "+" 74
-  printf '%s%s' "$panel" "$white"
-  ynx_ui_box_text "Stage    : $text" 72
-  printf '%s' "$panel"
-  ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
-  printf '%s%s' "$panel" "$green"
-  ynx_ui_box_wrap "$(ynx_ui_tip_for_pct "$pct")" 72
-  printf '%s%s' "$panel" "$blue"
-  ynx_ui_box_line "+" "-" "+" 74
-  printf '%s' "$reset"
+  if [[ "${YNX_UI_COLOR:-0}" -eq 1 ]]; then
+    cols="$(ynx_ui_terminal_width)"
+    stage_max=28
+    tip_max=$((cols - 56))
+    if (( tip_max < 12 )); then
+      tip_max=12
+    fi
+    stage_text="$(ynx_ui_truncate "$text" "$stage_max")"
+    tip_text="$(ynx_ui_truncate "$(ynx_ui_tip_for_pct "$pct")" "$tip_max")"
+    line="${blue}YNX${reset} ${white}[${bar_done}${bar_todo}] ${pct}%${reset} ${dim}|${reset} ${white}${stage_text}${reset} ${dim}|${reset} ${green}${tip_text}${reset}"
+    printf '\r\033[2K%b' "$line"
+    YNX_UI_PROGRESS_ACTIVE=1
+  else
+    printf '[%s%s] %s%% | %s | %s\n' "$bar_done" "$bar_todo" "$pct" "$text" "$(ynx_ui_tip_for_pct "$pct")"
+  fi
 }
 
 ynx_ui_kv() {
+  ynx_ui_flush_progress
   local key="$1"
   local value="$2"
   local blue white reset
@@ -207,6 +280,7 @@ ynx_ui_kv() {
 }
 
 ynx_ui_note() {
+  ynx_ui_flush_progress
   local text="$1"
   local color="$YNX_UI_MUTED"
   if [[ "${2:-}" == "warn" ]]; then

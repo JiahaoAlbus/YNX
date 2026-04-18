@@ -86,13 +86,13 @@ step() {
   if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
     local pct=0
     case "$STEP" in
-      1) pct=32 ;;
+      1) pct=34 ;;
       2) pct=38 ;;
-      3) pct=44 ;;
-      4) pct=48 ;;
+      3) pct=40 ;;
+      4) pct=68 ;;
       5) pct=98 ;;
-      6) pct=99 ;;
-      *) pct=99 ;;
+      6) pct=100 ;;
+      *) pct=100 ;;
     esac
     ynx_ui_progress "$pct" "$*"
   else
@@ -130,7 +130,7 @@ build_ynxd() {
     ynx_ui_stdout "Building ynxd with GOPROXY=$proxy ..."
     module_done=0
     package_done=0
-    ynx_ui_progress 44 "prepare binary" "proxy: $proxy | phase: download modules"
+    ynx_ui_progress 40 "prepare binary" "proxy: $proxy | phase: download modules"
 
     : >"$mod_log"
     env \
@@ -146,9 +146,9 @@ build_ynxd() {
         module_done=0
       fi
       if (( module_total > 0 )); then
-        pct=$((44 + (module_done * 2 / module_total)))
-        if (( pct > 46 )); then
-          pct=46
+        pct=$((40 + (module_done * 12 / module_total)))
+        if (( pct > 52 )); then
+          pct=52
         fi
         ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
       fi
@@ -160,7 +160,7 @@ build_ynxd() {
         module_done=0
       fi
       if (( module_total > 0 )); then
-        ynx_ui_progress 46 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
+        ynx_ui_progress 52 "prepare binary" "proxy: $proxy | download modules ${module_done}/${module_total}"
       fi
       last_rc=0
     else
@@ -172,7 +172,7 @@ build_ynxd() {
     fi
 
     : >"$build_log"
-    ynx_ui_progress 46 "prepare binary" "proxy: $proxy | phase: compile packages"
+    ynx_ui_progress 52 "prepare binary" "proxy: $proxy | phase: compile packages"
     env \
       GOPROXY="${GOPROXY:-$proxy}" \
       GOSUMDB="${GOSUMDB:-sum.golang.org}" \
@@ -189,9 +189,9 @@ build_ynxd() {
         package_done=0
       fi
       if (( package_total > 0 )); then
-        pct=$((46 + (package_done * 2 / package_total)))
-        if (( pct > 48 )); then
-          pct=48
+        pct=$((52 + (package_done * 16 / package_total)))
+        if (( pct > 68 )); then
+          pct=68
         fi
         ynx_ui_progress "$pct" "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
       fi
@@ -203,7 +203,7 @@ build_ynxd() {
         package_done=0
       fi
       if (( package_total > 0 )); then
-        ynx_ui_progress 48 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
+        ynx_ui_progress 68 "prepare binary" "proxy: $proxy | compile packages ${package_done}/${package_total}"
       fi
       last_rc=0
     else

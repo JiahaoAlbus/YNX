@@ -250,17 +250,17 @@ ynx_ui_tip_for_pct() {
   local pct="${1:-0}"
   local bucket=$((pct / 10))
   case "$bucket" in
-    0) echo "TIP: YNX uses a staged join flow: fetch code, prepare node home, verify RPC, then verify sync." ;;
-    1) echo 'TIP: The CLI is designed so a fresh machine can install first, then use a stable "ynx join" command.' ;;
-    2) echo 'TIP: "ynx join-plan" is a dry-run mode. It validates the path and shows the flow without mutating the machine.' ;;
-    3) echo "TIP: A full node is the default role. Validator mode should only be used after funding and operator review." ;;
-    4) echo "TIP: The bootstrap stage validates chain-id and genesis before the node is allowed to start." ;;
-    5) echo "TIP: P2P readiness is not just port reachability. The node must keep stable peers long enough to sync blocks." ;;
-    6) echo "TIP: YNX exposes separate ports for P2P, RPC, API, gRPC, and EVM RPC. Port offset keeps local collisions out." ;;
-    7) echo "TIP: Sync verification compares your local block hash with the reference RPC at the same height." ;;
-    8) echo "TIP: A machine that can open TCP is still not necessarily accepted as a healthy peer by the network." ;;
-    9) echo 'TIP: When join completes, the same "ynx" CLI can be used again for repeatable node bring-up on new machines.' ;;
-    *) echo 'TIP: YNX is converging toward a single operator experience: install once, then use "ynx help" and "ynx join".' ;;
+    0) echo "Checking machine prerequisites before any files are changed." ;;
+    1) echo 'Preparing the working copy and entry scripts for this machine.' ;;
+    2) echo 'Preparing the toolchain or reusing an existing local binary.' ;;
+    3) echo "Resolving platform and node role for the local machine." ;;
+    4) echo "Building the node binary and preparing runtime paths." ;;
+    5) echo "Bootstrapping chain home and validating core config/genesis." ;;
+    6) echo "Starting the local node and waiting for RPC readiness." ;;
+    7) echo "Forming peers and checking whether block sync has started." ;;
+    8) echo "Comparing local height and reference height during sync." ;;
+    9) echo 'Final verification and follow-up operator steps.' ;;
+    *) echo 'Running the current stage and collecting live status.' ;;
   esac
 }
 
@@ -303,7 +303,7 @@ ynx_ui_progress() {
     printf '%s%s' "$panel" "$white"
     ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
     printf '%s%s' "$panel" "$muted"
-    ynx_ui_box_text "$tip_text" 72
+    ynx_ui_box_text "Detail   : $tip_text" 72
     printf '%s%s' "$panel" "$blue"
     ynx_ui_box_line "+" "=" "+" 74
     printf '%s' "$reset"

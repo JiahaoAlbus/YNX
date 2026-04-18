@@ -228,11 +228,11 @@ step() {
   if [[ "${YNX_UI_GLOBAL_MODE:-0}" -eq 1 ]]; then
     local pct=0
     case "$STEP" in
-      1) pct=52 ;;
-      2) pct=60 ;;
-      3) pct=66 ;;
-      4) pct=72 ;;
-      5) pct=78 ;;
+      1) pct=72 ;;
+      2) pct=78 ;;
+      3) pct=82 ;;
+      4) pct=86 ;;
+      5) pct=92 ;;
       6) pct=100 ;;
       7) pct=100 ;;
       *) pct=100 ;;
@@ -557,7 +557,7 @@ while true; do
       if (( peer_pct > 74 )); then
         peer_pct=74
       fi
-      ynx_ui_progress "$peer_pct" "wait P2P peers"
+      ynx_ui_progress "$peer_pct" "wait P2P peers" "elapsed ${peer_elapsed}s | peers ${peers_now} | max_peers ${max_peers_seen} | height ${local_height_now}"
     fi
     last_peer_print="$peer_elapsed"
   fi
@@ -632,7 +632,7 @@ while true; do
       if (( sync_pct > 98 )); then
         sync_pct=98
       fi
-      ynx_ui_progress "$sync_pct" "sync and verify blocks (height ${local_height}/${ref_height}, lag ${lag})"
+      ynx_ui_progress "$sync_pct" "sync and verify blocks" "height ${local_height}/${ref_height} | lag ${lag} | catching_up ${local_catching_up}"
     fi
     last_progress_print="$elapsed"
   fi

@@ -396,7 +396,7 @@ if [[ ! -x "$REPO_DIR/chain/ynxd" ]] && ! command -v ynxd >/dev/null 2>&1 && ! c
   }
 fi
 
-print_progress 28 "handoff to repo-local join flow"
+print_progress 30 "handoff to repo-local join flow"
 CMD=(
   "$JOIN_SCRIPT"
   --home "$HOME_DIR"

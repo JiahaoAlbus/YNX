@@ -49,6 +49,48 @@ ynx_ui_line() {
   printf '%*s' "$count" '' | tr ' ' "$ch"
 }
 
+ynx_ui_box_line() {
+  local left="$1"
+  local fill="$2"
+  local right="$3"
+  local width="${4:-72}"
+  printf '%s%s%s\n' "$left" "$(ynx_ui_line "$width" "$fill")" "$right"
+}
+
+ynx_ui_box_text() {
+  local text="$1"
+  local width="${2:-72}"
+  local padded
+  padded="$(printf '%-*s' "$width" "$text")"
+  printf '| %s |\n' "$padded"
+}
+
+ynx_ui_box_wrap() {
+  local text="$1"
+  local width="${2:-72}"
+  awk -v width="$width" '
+    function emit(line) {
+      printf("| %-*s |\n", width, line)
+    }
+    {
+      line=""
+      for (i = 1; i <= NF; i++) {
+        word=$i
+        if (line == "") {
+          line=word
+        } else if (length(line) + 1 + length(word) <= width) {
+          line=line " " word
+        } else {
+          emit(line)
+          line=word
+        }
+      }
+      if (line != "") emit(line)
+      if (NF == 0) emit("")
+    }
+  ' <<<"$text"
+}
+
 ynx_ui_banner() {
   if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -eq 1 ]]; then
     return 0
@@ -62,12 +104,17 @@ ynx_ui_banner() {
   bg="$(ynx_ui_bg "$YNX_UI_BG_DARK")"
   panel="$(ynx_ui_bg "$YNX_UI_BG_PANEL")"
   reset="$(ynx_ui_reset)"
-  printf '\n%s%s%s%s\n' "$bg" "$blue" "$(ynx_ui_line 72 '=')" "$reset"
-  printf '%s%sYNX %s%s%s\n' "$panel" "$white" "$blue" "$title" "$reset"
+  printf '\n%s' "$bg"
+  ynx_ui_box_line "+" "=" "+" 74
+  printf '%s%s' "$panel" "$white"
+  ynx_ui_box_text "YNX CLI  |  $title" 72
   if [[ -n "$subtitle" ]]; then
-    printf '%s%s%s\n' "$panel$muted" "$subtitle" "$reset"
+    printf '%s%s' "$panel" "$muted"
+    ynx_ui_box_wrap "$subtitle" 72
   fi
-  printf '%s%s%s%s\n' "$bg" "$blue" "$(ynx_ui_line 72 '=')" "$reset"
+  printf '%s' "$bg$blue"
+  ynx_ui_box_line "+" "=" "+" 74
+  printf '%s' "$reset"
 }
 
 ynx_ui_plan() {
@@ -122,11 +169,12 @@ ynx_ui_progress() {
   local width=36
   local filled=$((pct * width / 100))
   local bar_done="" bar_todo=""
-  local blue white dim green reset
+  local blue white dim green reset panel
   blue="$(ynx_ui_color "$YNX_UI_KLEIN_BLUE")"
   white="$(ynx_ui_color "$YNX_UI_WHITE")"
   dim="$(ynx_ui_color "$YNX_UI_DIM")"
   green="$(ynx_ui_color "$YNX_UI_GREEN")"
+  panel="$(ynx_ui_bg "$YNX_UI_BG_PANEL")"
   reset="$(ynx_ui_reset)"
   if (( filled > 0 )); then
     bar_done="$(printf '%*s' "$filled" '' | tr ' ' '=')"
@@ -135,12 +183,17 @@ ynx_ui_progress() {
     bar_todo="$(printf '%*s' "$((width - filled))" '' | tr ' ' '.')"
   fi
   echo
-  printf '%s[TOTAL]%s %s[%s%s]%s %s%3d%%%s %s%s%s\n' \
-    "$blue" "$reset" \
-    "$blue" "$bar_done" "$dim$bar_todo" "$reset" \
-    "$white" "$pct" "$reset" \
-    "$white" "$text" "$reset"
-  printf '%s%s%s\n' "$green" "$(ynx_ui_tip_for_pct "$pct")" "$reset"
+  printf '%s%s' "$panel" "$blue"
+  ynx_ui_box_line "+" "-" "+" 74
+  printf '%s%s' "$panel" "$white"
+  ynx_ui_box_text "Stage    : $text" 72
+  printf '%s' "$panel"
+  ynx_ui_box_text "Progress : [${bar_done}${bar_todo}] ${pct}%" 72
+  printf '%s%s' "$panel" "$green"
+  ynx_ui_box_wrap "$(ynx_ui_tip_for_pct "$pct")" 72
+  printf '%s%s' "$panel" "$blue"
+  ynx_ui_box_line "+" "-" "+" 74
+  printf '%s' "$reset"
 }
 
 ynx_ui_kv() {

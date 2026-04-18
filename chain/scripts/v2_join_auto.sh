@@ -100,6 +100,40 @@ step() {
   fi
 }
 
+build_ynxd() {
+  local output_bin="$1"
+  shift || true
+  local -a proxies=(
+    "https://proxy.golang.org,direct"
+    "https://goproxy.io,direct"
+    "https://goproxy.cn,direct"
+  )
+  local proxy
+  local last_rc=1
+
+  for proxy in "${proxies[@]}"; do
+    echo "Building ynxd with GOPROXY=$proxy ..."
+    if env \
+      GOPROXY="${GOPROXY:-$proxy}" \
+      GOSUMDB="${GOSUMDB:-sum.golang.org}" \
+      GIT_TERMINAL_PROMPT=0 \
+      CGO_ENABLED=0 \
+      go mod download && \
+      env \
+        GOPROXY="${GOPROXY:-$proxy}" \
+        GOSUMDB="${GOSUMDB:-sum.golang.org}" \
+        GIT_TERMINAL_PROMPT=0 \
+        CGO_ENABLED=0 \
+        go build -buildvcs=false -o "$output_bin" ./cmd/ynxd; then
+      return 0
+    fi
+    last_rc=$?
+    echo "Build attempt failed with GOPROXY=$proxy" >&2
+  done
+
+  return "$last_rc"
+}
+
 if [[ "${YNX_UI_SUPPRESS_HEADER:-0}" -ne 1 ]]; then
   ynx_ui_banner "Repo-local join dispatcher" "This layer detects the platform, resolves the chain workspace, finds ynxd, then invokes join + verify."
   ynx_ui_plan "Repo-local dispatcher order" \
@@ -197,9 +231,11 @@ elif command -v ynxd >/dev/null 2>&1; then
       echo "go is required to build ynxd when no binary is available." >&2
       exit 1
     fi
-    DEFAULT_GOPROXY="https://goproxy.cn,https://proxy.golang.org,direct"
     echo "Building ynxd..."
-    GOPROXY="${GOPROXY:-$DEFAULT_GOPROXY}" CGO_ENABLED=0 go build -buildvcs=false -o "$CHAIN_DIR/ynxd" ./cmd/ynxd
+    build_ynxd "$CHAIN_DIR/ynxd" || {
+      echo "Failed to build ynxd after retrying multiple Go proxies." >&2
+      exit 1
+    }
     NODE_BIN="$CHAIN_DIR/ynxd"
   fi
 

@@ -19,7 +19,8 @@ Options:
   --rpc <url>                              default: https://rpc.ynxweb4.com
   --chain-id <id>                          default: ynx_9102-1
   --persistent-peers <list>                optional override
-  --statesync                              enable state sync (default: off)
+  --statesync                              enable state sync (default: on for public testnet)
+  --no-statesync                           force disable state sync and replay from genesis
   --no-reset                               keep existing home
   --port-offset <n>                        default: auto (0 or 100 if default port busy)
   --sync-timeout <seconds>                 default: 1800
@@ -37,7 +38,7 @@ RPC_URL="https://rpc.ynxweb4.com"
 CHAIN_ID="ynx_9102-1"
 PERSISTENT_PEERS=""
 RESET=1
-ENABLE_STATESYNC=0
+ENABLE_STATESYNC=1
 PORT_OFFSET=""
 SYNC_TIMEOUT=1800
 PEER_WAIT=600
@@ -53,6 +54,7 @@ while [[ $# -gt 0 ]]; do
     --chain-id) CHAIN_ID="${2:-}"; shift 2 ;;
     --persistent-peers) PERSISTENT_PEERS="${2:-}"; shift 2 ;;
     --statesync) ENABLE_STATESYNC=1; shift ;;
+    --no-statesync) ENABLE_STATESYNC=0; shift ;;
     --no-reset) RESET=0; shift ;;
     --port-offset) PORT_OFFSET="${2:-}"; shift 2 ;;
     --sync-timeout) SYNC_TIMEOUT="${2:-}"; shift 2 ;;

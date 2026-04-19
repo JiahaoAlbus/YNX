@@ -23,7 +23,8 @@ Options:
   --peer-wait <seconds>                    default: 600
   --rpc-wait <seconds>                     default: 300
   --port-offset <n>                        default: auto (0 or 100 if default port busy)
-  --statesync                              enable statesync (default: off)
+  --statesync                              enable statesync (default: on for public testnet)
+  --no-statesync                           force disable state sync and replay from genesis
   --install-deps                           auto install missing deps (default: on)
   --no-install-deps                        disable auto install missing deps
   --go-version <version>                   default: 1.25.7
@@ -44,7 +45,7 @@ SYNC_TIMEOUT=1800
 PEER_WAIT=600
 RPC_WAIT=300
 PORT_OFFSET=""
-ENABLE_STATESYNC=0
+ENABLE_STATESYNC=1
 INSTALL_DEPS=1
 GO_VERSION="1.25.7"
 REPO_URL="https://github.com/JiahaoAlbus/YNX.git"
@@ -64,6 +65,7 @@ while [[ $# -gt 0 ]]; do
     --rpc-wait) RPC_WAIT="${2:-}"; shift 2 ;;
     --port-offset) PORT_OFFSET="${2:-}"; shift 2 ;;
     --statesync) ENABLE_STATESYNC=1; shift ;;
+    --no-statesync) ENABLE_STATESYNC=0; shift ;;
     --install-deps) INSTALL_DEPS=1; shift ;;
     --no-install-deps) INSTALL_DEPS=0; shift ;;
     --go-version) GO_VERSION="${2:-}"; shift 2 ;;

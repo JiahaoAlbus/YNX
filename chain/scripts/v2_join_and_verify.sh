@@ -22,7 +22,7 @@ Options:
   --chain-id <id>                          default: ynx_9102-1
   --persistent-peers <list>                default: built-in canonical peers
   --minimum-gas-prices <value>             default: 0.000000007anyxt
-  --statesync                              enable state sync bootstrap (default: off)
+  --statesync                              enable state sync bootstrap (default: on for public testnet)
   --no-statesync                           force disable state sync bootstrap
   --lag-max <blocks>                       default: 20
   --port-offset <n>                        default: auto(0 or 100 if 36657 busy)
@@ -53,7 +53,7 @@ CHAIN_ID="ynx_9102-1"
 PERSISTENT_PEERS_DEFAULT="2ad7e37b93f8622c68e2a1d19704eff896f0fe44@34.96.222.28:36656,a80950f1fa6daa5372ee7c394269accf1d8d7e5b@34.150.93.74:36656,67caa675018f89f4cb467a45b8c96b4ff9bc11b1@34.92.114.34:36656"
 PERSISTENT_PEERS="$PERSISTENT_PEERS_DEFAULT"
 MIN_GAS_PRICES="0.000000007anyxt"
-ENABLE_STATESYNC=0
+ENABLE_STATESYNC=1
 LAG_MAX=20
 PORT_OFFSET=""
 SYNC_TIMEOUT=1800

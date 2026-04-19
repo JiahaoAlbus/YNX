@@ -478,6 +478,19 @@ if ! jq -e '.chain_id != null and .app_state != null' "$HOME_DIR/config/genesis.
   exit 1
 fi
 
+# Keep public join nodes protocol-compatible with the live YNX public testnet.
+# The current GCP bootstrap/RPC/service peers run with CometBFT PEX disabled;
+# enabling PEX adds channel 0x00 and causes remote peers to close the handshake.
+if [[ -f "$HOME_DIR/config/config.toml" ]]; then
+  awk '
+    BEGIN { section = "" }
+    /^\[/ { section = $0 }
+    section == "[p2p]" && $1 == "pex" { print "pex = false"; next }
+    { print }
+  ' "$HOME_DIR/config/config.toml" >"$HOME_DIR/config/config.toml.tmp"
+  mv "$HOME_DIR/config/config.toml.tmp" "$HOME_DIR/config/config.toml"
+fi
+
 step "start local node"
 log "start local node process"
 if pgrep -f "${NODE_BIN} start --home ${HOME_DIR}" >/dev/null 2>&1; then

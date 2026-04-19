@@ -506,7 +506,7 @@ set_top_level_key "$CONFIG_TOML" "persistent_peers" "\"$PERSISTENT_PEERS\""
 set_top_level_key "$CONFIG_TOML" "addr_book_strict" "false"
 set_top_level_key "$CONFIG_TOML" "proxy_app" "\"tcp://127.0.0.1:${ABCI_PORT}\""
 set_section_key "$CONFIG_TOML" "rpc" "laddr" "\"tcp://127.0.0.1:${RPC_PORT}\""
-set_section_key "$CONFIG_TOML" "p2p" "pex" "true"
+set_section_key "$CONFIG_TOML" "p2p" "pex" "false"
 set_section_key "$CONFIG_TOML" "p2p" "laddr" "\"tcp://0.0.0.0:${P2P_PORT}\""
 
 statesync_mode="disabled"

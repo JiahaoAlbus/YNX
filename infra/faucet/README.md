@@ -32,8 +32,9 @@ Required runtime inputs:
 
 Optional controls:
 - `FAUCET_AMOUNT` (default `1000000000000000000`)
+- `FAUCET_GAS` (default `auto`, public testnet uses `250000`)
 - `FAUCET_GAS_PRICES` (default `0anyxt`)
-- `FAUCET_GAS_ADJUSTMENT` (default `1.2`)
+- `FAUCET_GAS_ADJUSTMENT` (default `2.0`)
 - `FAUCET_RATE_LIMIT_SECONDS` (default `3600`)
 - `FAUCET_MAX_PER_DAY` (default `3`)
 - `FAUCET_IP_RATE_LIMIT_SECONDS` (default `60`)
@@ -60,3 +61,15 @@ node server.js
 - `GET /faucet?address=...` — convenience query param
 
 Responses are JSON and include `txhash` on success.
+
+
+## Public testnet runtime
+
+The live public faucet uses:
+
+- `FAUCET_KEY=validator`
+- `FAUCET_KEYRING=test`
+- `FAUCET_GAS=250000`
+- `FAUCET_GAS_PRICES=0.000000007anyxt`
+
+Fixed gas is used because low auto-gas estimates can broadcast but fail at block inclusion.

@@ -47,7 +47,17 @@ cd YNX/chain
 ./scripts/v2_local_complete.sh all
 ```
 
-### 3) Validators
+### 3) Node Operators / Validators
+
+Install the YNX CLI and join from a clean Linux machine:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx.sh | bash
+export PATH="$HOME/.local/bin:$PATH"
+ynx join --role full-node
+```
+
+For consensus-validator candidates, use `ynx join --role validator` after operator review and funding. The CLI defaults to state sync for the public testnet so new machines do not replay incompatible historical genesis state.
 
 Use the **zero-start** join manuals below (EN/ZH).  
 These guides start from a clean machine and include complete bootstrap paths.

@@ -2,7 +2,7 @@
 
 Status: active  
 Audience: public users, builders, node operators, consensus validator candidates  
-Last updated: 2026-03-21
+Last updated: 2026-04-19
 
 ## 1. Purpose
 
@@ -12,7 +12,25 @@ Use this page to quickly decide your path, then jump to the full manual.
 
 ## 1.1 If you opened this page on a fresh machine (from zero)
 
-Run this baseline first, even if you are not sure which path you will choose:
+Fast path for a clean Linux server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx.sh | bash
+export PATH="$HOME/.local/bin:$PATH"
+ynx join --role full-node
+```
+
+Validator candidate path:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx.sh | bash
+export PATH="$HOME/.local/bin:$PATH"
+ynx join --role validator
+```
+
+The public testnet join flow defaults to state sync. This is required for current live-testnet compatibility because fresh nodes should sync from the live state snapshot instead of replaying old genesis history.
+
+Manual fallback:
 
 ```bash
 sudo apt-get update -y

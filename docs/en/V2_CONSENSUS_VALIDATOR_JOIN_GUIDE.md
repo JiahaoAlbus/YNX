@@ -2,7 +2,7 @@
 
 Status: active  
 Type: external manual  
-Last updated: 2026-03-21
+Last updated: 2026-04-19
 
 ## 1. Scope
 
@@ -136,7 +136,7 @@ Broadcast transaction:
   --keyring-backend os \
   --chain-id ynx_9102-1 \
   --node http://127.0.0.1:36657 \
-  --gas auto --gas-adjustment 1.2 --gas-prices 0.00000001anyxt \
+  --gas 450000 --fees 450000000000000anyxt \
   --yes -o json
 ```
 
@@ -185,7 +185,7 @@ sudo systemctl status ynx-v2-watchdog --no-pager
 Use non-zero gas price:
 
 ```bash
---gas-prices 0.00000001anyxt
+--gas 450000 --fees 450000000000000anyxt
 ```
 
 ### `account not found`

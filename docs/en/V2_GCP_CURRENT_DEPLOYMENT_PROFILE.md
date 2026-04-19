@@ -1,7 +1,7 @@
 # YNX v2 GCP Current Deployment Profile
 
 Status: active  
-Last updated: 2026-04-17
+Last updated: 2026-04-19
 
 ## Purpose
 
@@ -10,14 +10,14 @@ Use it as the source of truth for endpoint routing, node roles, and security swi
 
 ## Baseline
 
-- Repo baseline: `main` @ `c4e9a75`
+- Repo baseline: `main` @ `1c6f693` or later
 - Domain: `ynxweb4.com`
 - Public testnet chain id: `ynx_9102-1`
 - EVM chain id: `0x238e`
 
 ## Active GCP Topology
 
-- Bootstrap node: `34.96.134.119`
+- Bootstrap node: `34.96.222.28`
 - RPC node: `34.150.93.74`
 - Service node: `34.92.114.34`
 
@@ -31,7 +31,7 @@ All three nodes are currently:
 
 - `ynx-v2-bootstrap-1`
   - internal IP: `10.170.0.2`
-  - external IP: `34.96.134.119`
+  - external IP: `34.96.222.28`
   - boot disk: `200GB`, `pd-balanced`, Ubuntu 22.04
   - deletion protection: `false`
   - shielded VM: `vTPM=true`, integrity monitoring=true, secure boot=false
@@ -47,6 +47,21 @@ All three nodes are currently:
   - boot disk: `80GB`, `pd-standard`, Ubuntu 22.04
   - deletion protection: `false`
   - shielded VM: `vTPM=true`, integrity monitoring=true, secure boot=false
+
+
+## Tencent Validator Extension (live)
+
+These Tencent Cloud machines are active public-testnet validators. They extend the GCP core instead of replacing it.
+
+- `43.162.100.54` — `ynx-tencent-sv`, Silicon Valley, `BOND_STATUS_BONDED`, voting power `99`
+- `43.164.132.81` — `ynx-tencent-seoul`, Seoul, `BOND_STATUS_BONDED`, voting power `99`
+- `43.134.23.58` — `ynx-tencent-singapore`, Singapore, `BOND_STATUS_BONDED`, voting power `100`
+
+Security profile:
+
+- Validators must keep P2P reachable on `36656/tcp`.
+- RPC/API/EVM/gRPC can be public for diagnostics, but validator operators should prefer local-only RPC unless the node is intentionally serving public traffic.
+- Current clean-machine joins should use state sync, not genesis replay.
 
 ## Public Domain Routing
 
@@ -64,7 +79,7 @@ All three nodes are currently:
 ## Network Descriptor Truth (live)
 
 - Seed / persistent peer:
-  - `4873f5737444f3fb3eced7035e0afc0fc1192110@34.96.134.119:36656`
+  - `2ad7e37b93f8622c68e2a1d19704eff896f0fe44@34.96.222.28:36656`
 - Descriptor endpoint:
   - `https://indexer.ynxweb4.com/ynx/network-descriptor`
 
@@ -76,6 +91,18 @@ All three nodes are currently:
 - Web4 hub:
   - `enforce_policy=true`
   - `internal_authorizer_enabled=true`
+
+
+## Faucet Runtime State (live)
+
+- Public DNS: `faucet.ynxweb4.com` -> `34.92.114.34`
+- Runtime key: `FAUCET_KEY=validator`
+- Runtime keyring: `FAUCET_KEYRING=test`
+- Fixed gas: `FAUCET_GAS=250000`
+- Gas price: `0.000000007anyxt`
+- Verified successful grant tx: `40A543EDD0592EB250D4CE5DD4A3914A68BF7DF4FE581B0DD2A4E3D14FD72989`
+
+The fixed gas setting is intentional. On this chain, faucet sends with low auto-gas can broadcast successfully but fail when included because the final write cost exceeds the estimate.
 
 ## Provisioning Defaults (from deploy script)
 

@@ -41,8 +41,9 @@ const FAUCET_CHAIN_ID = process.env.FAUCET_CHAIN_ID || "ynx_9002-1";
 const FAUCET_NODE = process.env.FAUCET_NODE || "http://127.0.0.1:26657";
 const FAUCET_DENOM = process.env.FAUCET_DENOM || "anyxt";
 const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || "1000000000000000000";
+const FAUCET_GAS = process.env.FAUCET_GAS || "auto";
 const FAUCET_GAS_PRICES = process.env.FAUCET_GAS_PRICES || "0anyxt";
-const FAUCET_GAS_ADJUSTMENT = process.env.FAUCET_GAS_ADJUSTMENT || "1.2";
+const FAUCET_GAS_ADJUSTMENT = process.env.FAUCET_GAS_ADJUSTMENT || "2.0";
 const FAUCET_CORS_ALLOW_ORIGIN = process.env.FAUCET_CORS_ALLOW_ORIGIN || "*";
 const FAUCET_CORS_ALLOW_METHODS = process.env.FAUCET_CORS_ALLOW_METHODS || "GET,POST,OPTIONS";
 const FAUCET_CORS_ALLOW_HEADERS = process.env.FAUCET_CORS_ALLOW_HEADERS || "content-type,x-ynx-payment";
@@ -200,7 +201,7 @@ function sendTokens(toAddress) {
       "--home",
       FAUCET_HOME,
       "--gas",
-      "auto",
+      FAUCET_GAS,
       "--gas-adjustment",
       FAUCET_GAS_ADJUSTMENT,
       "--gas-prices",

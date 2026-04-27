@@ -9,7 +9,7 @@ Legacy notice (2026-04-12):
 - This is a v0 bootstrap design document.
 - Current operator baseline for live public testnet is v2:
   - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
-  - `docs/en/V2_GCP_CURRENT_DEPLOYMENT_PROFILE.md`
+  - `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
 
 ## 0. Purpose
 

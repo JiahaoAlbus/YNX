@@ -6,11 +6,11 @@ Canonical language: English
 
 Legacy notice:
 - This checklist is kept for historical release traceability of `ynx_9002-1`.
-- Current active baseline is `ynx_9102-1` on GCP domain endpoints.
+- Current active baseline is `ynx_9102-1` on `ynxweb4.com` domain endpoints.
 - Use:
   - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md`
   - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
-  - `docs/en/V2_GCP_CURRENT_DEPLOYMENT_PROFILE.md`
+  - `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
 
 ## 1. Network Snapshot (Current)
 

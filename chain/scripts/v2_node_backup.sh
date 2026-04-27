@@ -62,6 +62,12 @@ do
   fi
 done
 
+for d in "$YNX_HOME"/keyring-*; do
+  if [[ -d "$d" ]]; then
+    paths+=("$(basename "$d")")
+  fi
+done
+
 if [[ "$INCLUDE_CHAIN_DATA" == "1" && -d "$YNX_HOME/data" ]]; then
   if [[ " ${paths[*]} " != *" data "* ]]; then
     paths+=("data")
@@ -75,7 +81,21 @@ fi
 
 (
   cd "$YNX_HOME"
-  tar -czf "$ARCHIVE" "${paths[@]}"
+  tar_stderr="$(mktemp)"
+  tar_status=0
+  if ! tar --warning=no-file-changed -czf "$ARCHIVE" "${paths[@]}" 2>"$tar_stderr"; then
+    tar_status=$?
+  fi
+
+  if [[ "$tar_status" -ne 0 ]]; then
+    filtered_stderr="$(grep -vE '^(tar: .*: file changed as we read it|tar: Exiting with failure status due to previous errors)$' "$tar_stderr" || true)"
+    if [[ -n "$filtered_stderr" ]]; then
+      cat "$tar_stderr" >&2
+      rm -f "$tar_stderr"
+      exit "$tar_status"
+    fi
+  fi
+  rm -f "$tar_stderr"
 )
 sha256sum "$ARCHIVE" >"${ARCHIVE}.sha256"
 

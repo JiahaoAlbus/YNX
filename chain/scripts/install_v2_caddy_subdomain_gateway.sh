@@ -5,7 +5,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  install_v2_caddy_subdomain_gateway.sh <base_domain> [tls_email]
+  install_v2_caddy_subdomain_gateway.sh <base_domain> [tls_email] [--hosts rpc,evm,...]
 
 Example:
   ./scripts/install_v2_caddy_subdomain_gateway.sh ynxweb4.com ops@ynxweb4.com
@@ -25,16 +25,55 @@ Purpose:
 Notes:
   - DNS A records for all subdomains must point to this server IP.
   - TCP 80/443 must be open in cloud firewall/security group.
+  - Use --hosts to install only the subdomains this server should terminate.
 EOF
 }
 
 BASE_DOMAIN="${1:-}"
-TLS_EMAIL="${2:-}"
+TLS_EMAIL=""
+HOSTS_CSV="${YNX_CADDY_HOSTS_CSV:-all}"
 
 if [[ -z "$BASE_DOMAIN" || "$BASE_DOMAIN" == "-h" || "$BASE_DOMAIN" == "--help" ]]; then
   usage
   exit 1
 fi
+
+shift
+if [[ $# -gt 0 && "$1" != --* && "$1" != "-h" && "$1" != "--help" ]]; then
+  TLS_EMAIL="$1"
+  shift
+fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --hosts)
+      HOSTS_CSV="${2:-}"
+      if [[ -z "$HOSTS_CSV" ]]; then
+        echo "--hosts requires a value" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+HOSTS_CSV="$(echo "$HOSTS_CSV" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+has_host() {
+  local host="$1"
+  if [[ "$HOSTS_CSV" == "all" ]]; then
+    return 0
+  fi
+  [[ ",$HOSTS_CSV," == *",$host,"* ]]
+}
 
 if [[ "$(id -u)" -eq 0 ]]; then
   SUDO=""
@@ -118,7 +157,8 @@ if [[ -n "$TLS_EMAIL" ]]; then
   echo "TLS email provided (${TLS_EMAIL}), using default Caddy ACME account configuration."
 fi
 
-run_root tee /etc/caddy/conf.d/ynx-v2-gateway.caddy >/dev/null <<EOF
+TMP_CADDY="$(mktemp)"
+cat >"$TMP_CADDY" <<EOF
 (ynx_api_headers) {
   @preflight method OPTIONS
   header {
@@ -126,8 +166,16 @@ run_root tee /etc/caddy/conf.d/ynx-v2-gateway.caddy >/dev/null <<EOF
     Access-Control-Allow-Methods "GET,POST,OPTIONS"
     Access-Control-Allow-Headers "Content-Type,Authorization,X-Requested-With,x-ynx-payment"
   }
-  respond @preflight 204
+	respond @preflight 204
 }
+EOF
+
+append_site() {
+  cat >>"$TMP_CADDY"
+}
+
+if has_host "rpc"; then
+  append_site <<EOF
 
 rpc.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -135,8 +183,13 @@ rpc.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "evm"; then
+  append_site <<EOF
 
 evm.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -151,8 +204,13 @@ evm.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "evm-ws"; then
+  append_site <<EOF
 
 evm-ws.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -160,8 +218,13 @@ evm-ws.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "rest"; then
+  append_site <<EOF
 
 rest.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -169,8 +232,13 @@ rest.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "grpc"; then
+  append_site <<EOF
 
 grpc.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -178,8 +246,13 @@ grpc.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "faucet"; then
+  append_site <<EOF
 
 faucet.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -187,8 +260,13 @@ faucet.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "indexer"; then
+  append_site <<EOF
 
 indexer.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -196,8 +274,13 @@ indexer.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "explorer"; then
+  append_site <<EOF
 
 explorer.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -205,8 +288,13 @@ explorer.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "ai"; then
+  append_site <<EOF
 
 ai.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -214,8 +302,13 @@ ai.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
+EOF
+fi
+
+if has_host "web4"; then
+  append_site <<EOF
 
 web4.${BASE_DOMAIN} {
   import ynx_api_headers
@@ -223,9 +316,13 @@ web4.${BASE_DOMAIN} {
     header_down -Access-Control-Allow-Origin
     header_down -Access-Control-Allow-Methods
     header_down -Access-Control-Allow-Headers
-  }
+	}
 }
 EOF
+fi
+
+run_root install -m 0644 "$TMP_CADDY" /etc/caddy/conf.d/ynx-v2-gateway.caddy
+rm -f "$TMP_CADDY"
 
 run_root caddy fmt --overwrite /etc/caddy/Caddyfile >/dev/null
 run_root caddy fmt --overwrite /etc/caddy/conf.d/ynx-v2-gateway.caddy >/dev/null
@@ -234,14 +331,5 @@ run_root systemctl enable --now caddy >/dev/null
 run_root systemctl restart caddy
 
 echo "Caddy YNX v2 HTTPS gateway installed."
-echo "Set DNS A records to this server for:"
-echo "  rpc.${BASE_DOMAIN}"
-echo "  evm.${BASE_DOMAIN}"
-echo "  evm-ws.${BASE_DOMAIN}"
-echo "  rest.${BASE_DOMAIN}"
-echo "  grpc.${BASE_DOMAIN}"
-echo "  faucet.${BASE_DOMAIN}"
-echo "  indexer.${BASE_DOMAIN}"
-echo "  explorer.${BASE_DOMAIN}"
-echo "  ai.${BASE_DOMAIN}"
-echo "  web4.${BASE_DOMAIN}"
+echo "Configured hosts: ${HOSTS_CSV}"
+echo "Set DNS A records to this server for the configured subdomains."

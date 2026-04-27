@@ -1,12 +1,16 @@
 # YNX v2 GCP Current Deployment Profile
 
-Status: active  
-Last updated: 2026-04-19
+Status: archived (decommissioned)  
+Last updated: 2026-04-28
+
+Decommission notice (2026-04-28):
+- Live baseline moved to Tencent Cloud:
+  - `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
 
 ## Purpose
 
-This document is the current operations baseline for the YNX v2 public testnet on GCP.
-Use it as the source of truth for endpoint routing, node roles, and security switches.
+This document records the former operations baseline for the YNX v2 public testnet on GCP.
+It is kept for audit/traceability and should not be treated as the current routing baseline.
 
 ## Baseline
 

@@ -5,13 +5,19 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  v2_public_testnet_deploy.sh <user@host> <ssh_key_path> [--reset] [--from-local|--from-remote-git] [--smoke-write]
+  v2_public_testnet_deploy.sh <user@host> <ssh_key_path> [--reset] [--from-local|--from-remote-git] [--smoke-write] [--join-live] [--live-descriptor <url>] [--live-rpc <url>]
 
 Deploy YNX v2 Web4 public-testnet stack to a Linux server.
 
 Default sync mode:
   --from-local (default) : sync current local repo files to remote before build/deploy
   --from-remote-git      : pull from remote GitHub repo only
+
+Bootstrap mode:
+  default                : bootstrap a fresh local testnet home
+  --join-live            : join an existing live YNX network via descriptor/RPC and then install public services
+  --live-descriptor      : descriptor URL/path used with --join-live
+  --live-rpc             : fallback RPC URL/path used with --join-live
 
 Environment:
   YNX_REPO_URL       default: https://github.com/JiahaoAlbus/YNX.git
@@ -20,6 +26,7 @@ Environment:
   YNX_CHAIN_ID       default: ynx_9102-1
   YNX_EVM_CHAIN_ID   default: 9102
   YNX_PROFILE        default: web4-global-stable
+  YNX_MONIKER        default: ynx-v2-web4
   YNX_P2P_PORT       default: 36656
   YNX_RPC_PORT       default: 36657
   YNX_REST_PORT      default: 31317
@@ -39,6 +46,9 @@ Environment:
   YNX_PUBLIC_BASE_DOMAIN  optional: ynxweb4.com (enables https subdomain endpoints)
   YNX_PUBLIC_SCHEME       default: https when base domain is set, else http
   YNX_PUBLIC_*_URL        optional explicit endpoint overrides
+  YNX_LIVE_ROLE      default: public-rpc
+  YNX_LIVE_DESCRIPTOR_URL default: https://indexer.ynxweb4.com/ynx/network-descriptor
+  YNX_LIVE_RPC_URL   default: empty
   USER_NAME          default: remote current user
 EOF
 }
@@ -48,6 +58,9 @@ SSH_KEY="${2:-}"
 RESET=0
 SYNC_MODE="local"
 SMOKE_WRITE=0
+BOOTSTRAP_MODE="fresh"
+LIVE_DESCRIPTOR_ARG=""
+LIVE_RPC_ARG=""
 
 if [[ -z "$REMOTE_HOST" || -z "$SSH_KEY" ]]; then
   usage
@@ -73,6 +86,26 @@ while [[ $# -gt 0 ]]; do
       SMOKE_WRITE=1
       shift
       ;;
+    --join-live)
+      BOOTSTRAP_MODE="join-live"
+      shift
+      ;;
+    --live-descriptor)
+      LIVE_DESCRIPTOR_ARG="${2:-}"
+      if [[ -z "$LIVE_DESCRIPTOR_ARG" ]]; then
+        echo "--live-descriptor requires a value" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    --live-rpc)
+      LIVE_RPC_ARG="${2:-}"
+      if [[ -z "$LIVE_RPC_ARG" ]]; then
+        echo "--live-rpc requires a value" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -91,6 +124,7 @@ YNX_HOME="${YNX_HOME:-\$HOME/.ynx-v2}"
 YNX_CHAIN_ID="${YNX_CHAIN_ID:-ynx_9102-1}"
 YNX_EVM_CHAIN_ID="${YNX_EVM_CHAIN_ID:-9102}"
 YNX_PROFILE="${YNX_PROFILE:-web4-global-stable}"
+YNX_MONIKER="${YNX_MONIKER:-ynx-v2-web4}"
 YNX_P2P_PORT="${YNX_P2P_PORT:-36656}"
 YNX_RPC_PORT="${YNX_RPC_PORT:-36657}"
 YNX_REST_PORT="${YNX_REST_PORT:-31317}"
@@ -113,6 +147,9 @@ AI_MAX_VAULTS="${AI_MAX_VAULTS:-50000}"
 WEB4_MAX_INTENTS="${WEB4_MAX_INTENTS:-200000}"
 WEB4_MAX_CLAIMS="${WEB4_MAX_CLAIMS:-200000}"
 WEB4_MAX_SESSIONS="${WEB4_MAX_SESSIONS:-300000}"
+YNX_LIVE_ROLE="${YNX_LIVE_ROLE:-public-rpc}"
+YNX_LIVE_DESCRIPTOR_URL="${YNX_LIVE_DESCRIPTOR_URL:-https://indexer.ynxweb4.com/ynx/network-descriptor}"
+YNX_LIVE_RPC_URL="${YNX_LIVE_RPC_URL:-}"
 REMOTE_RESET="$RESET"
 REMOTE_SMOKE_WRITE="$SMOKE_WRITE"
 LOCAL_REPO_DIR="${LOCAL_REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -169,6 +206,8 @@ PUBLIC_EXPLORER_URL="${YNX_PUBLIC_EXPLORER_URL:-$DEFAULT_PUBLIC_EXPLORER_URL}"
 PUBLIC_AI_URL="${YNX_PUBLIC_AI_GATEWAY_URL:-$DEFAULT_PUBLIC_AI_URL}"
 PUBLIC_WEB4_URL="${YNX_PUBLIC_WEB4_HUB_URL:-$DEFAULT_PUBLIC_WEB4_URL}"
 PUBLIC_DESCRIPTOR_URL="${YNX_DESCRIPTOR_URL_OVERRIDE:-$PUBLIC_INDEXER_URL/ynx/network-descriptor}"
+LIVE_DESCRIPTOR_URL="${LIVE_DESCRIPTOR_ARG:-$YNX_LIVE_DESCRIPTOR_URL}"
+LIVE_RPC_URL="${LIVE_RPC_ARG:-$YNX_LIVE_RPC_URL}"
 
 if [[ "$SYNC_MODE" == "local" ]]; then
   if [[ ! -d "$LOCAL_REPO_DIR/chain" || ! -f "$LOCAL_REPO_DIR/README.md" ]]; then
@@ -338,7 +377,30 @@ if [[ "\$RESET_FLAG" == "1" ]]; then
   BOOTSTRAP_ARGS+=(--reset)
 fi
 
-if [[ "\$RESET_FLAG" == "1" || ! -f "\$V2_HOME/config/genesis.json" ]]; then
+if [[ "$BOOTSTRAP_MODE" == "join-live" ]]; then
+  JOIN_ARGS=(--home "\$V2_HOME" --role "$YNX_LIVE_ROLE" --moniker "$YNX_MONIKER")
+  if [[ -n "$LIVE_DESCRIPTOR_URL" ]]; then
+    JOIN_ARGS+=(--descriptor "$LIVE_DESCRIPTOR_URL")
+  elif [[ -n "$LIVE_RPC_URL" ]]; then
+    JOIN_ARGS+=(--rpc "$LIVE_RPC_URL")
+  else
+    echo "join-live requested but no live descriptor or RPC source was provided." >&2
+    exit 1
+  fi
+  if [[ -n "\$SEEDS_OVERRIDE" ]]; then
+    JOIN_ARGS+=(--seeds "\$SEEDS_OVERRIDE")
+  fi
+  if [[ -n "\$PERSISTENT_PEERS_OVERRIDE" ]]; then
+    JOIN_ARGS+=(--persistent-peers "\$PERSISTENT_PEERS_OVERRIDE")
+  fi
+  if [[ "\${#BOOTSTRAP_ARGS[@]}" -gt 0 ]]; then
+    JOIN_ARGS+=("\${BOOTSTRAP_ARGS[@]}")
+  fi
+  YNX_BIN="\$REPO_DIR/chain/ynxd" \
+  YNX_UI_SUPPRESS_HEADER=1 \
+  "\$REPO_DIR/chain/scripts/v2_validator_bootstrap.sh" "\${JOIN_ARGS[@]}"
+  YNX_HOME="\$V2_HOME" "\$REPO_DIR/chain/scripts/v2_profile_apply.sh" "\$PROFILE"
+elif [[ "\$RESET_FLAG" == "1" || ! -f "\$V2_HOME/config/genesis.json" ]]; then
   if [[ "\${#BOOTSTRAP_ARGS[@]}" -gt 0 ]]; then
     YNX_HOME="\$V2_HOME" \
     YNX_CHAIN_ID="\$CHAIN_ID" \
@@ -367,6 +429,31 @@ if [[ -n "\$SEEDS_OVERRIDE" ]]; then
 fi
 if [[ -n "\$PERSISTENT_PEERS_OVERRIDE" ]]; then
   INSTALL_PERSISTENT_PEERS="\$PERSISTENT_PEERS_OVERRIDE"
+fi
+
+read_p2p_value() {
+  local key="\$1"
+  awk -v key="$key" '
+    BEGIN { in_p2p=0 }
+    /^\[p2p\][[:space:]]*$/ { in_p2p=1; next }
+    /^\[[^]]+\][[:space:]]*$/ { in_p2p=0; next }
+    in_p2p==1 {
+      if ($0 ~ "^[[:space:]]*"key"[[:space:]]*=") {
+        sub("^[^=]*=[[:space:]]*", "", $0)
+        gsub(/[[:space:]]+$/, "", $0)
+        gsub(/^\"|\"$/, "", $0)
+        print $0
+        exit
+      }
+    }
+  ' "\$V2_HOME/config/config.toml" 2>/dev/null || true
+}
+
+if [[ -z "\$INSTALL_SEEDS" ]]; then
+  INSTALL_SEEDS="\$(read_p2p_value seeds || true)"
+fi
+if [[ -z "\$INSTALL_PERSISTENT_PEERS" ]]; then
+  INSTALL_PERSISTENT_PEERS="\$(read_p2p_value persistent_peers || true)"
 fi
 
 YNX_REPO_DIR="\$REPO_DIR" \

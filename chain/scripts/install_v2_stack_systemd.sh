@@ -19,6 +19,7 @@ Environment:
   YNX_REPO_DIR         default: $HOME/YNX
   YNX_HOME             default: $HOME/.ynx-v2
   YNX_CHAIN_ID         default: ynx_9102-1
+  YNX_EVM_CHAIN_ID     default: 9102
   YNX_DENOM            default: anyxt
   USER_NAME            default: current user
   YNX_P2P_PORT         default: 36656
@@ -97,6 +98,7 @@ INFRA_DIR="$YNX_REPO_DIR/infra"
 
 YNX_HOME="${YNX_HOME:-$HOME/.ynx-v2}"
 YNX_CHAIN_ID="${YNX_CHAIN_ID:-ynx_9102-1}"
+YNX_EVM_CHAIN_ID="${YNX_EVM_CHAIN_ID:-9102}"
 YNX_DENOM="${YNX_DENOM:-anyxt}"
 USER_NAME="${USER_NAME:-$(id -un)}"
 YNX_P2P_PORT="${YNX_P2P_PORT:-36656}"
@@ -211,11 +213,37 @@ set_section_key "$APP_TOML" "json-rpc" "address" "\"0.0.0.0:${YNX_EVM_PORT}\""
 set_section_key "$APP_TOML" "json-rpc" "ws-address" "\"0.0.0.0:${YNX_EVM_WS_PORT}\""
 set_section_key "$APP_TOML" "evm" "geth-metrics-address" "\"127.0.0.1:${YNX_GETH_METRICS_PORT}\""
 
+set_root_key() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { done=0 }
+    {
+      if ($0 ~ "^[[:space:]]*"key"[[:space:]]*=" && done==0) {
+        print key" = "value
+        done=1
+      } else {
+        print
+      }
+    }
+    END {
+      if (done==0) {
+        print key" = "value
+      }
+    }
+  ' "$file" >"$file.tmp"
+  mv "$file.tmp" "$file"
+}
+
+set_root_key "$APP_TOML" "evm-chain-id" "$YNX_EVM_CHAIN_ID"
+
 run_root install -d -m 0755 /etc/ynx-v2
 run_root tee /etc/ynx-v2/env >/dev/null <<EOF
 YNX_REPO_DIR=$YNX_REPO_DIR
 YNX_HOME=$YNX_HOME
 YNX_CHAIN_ID=$YNX_CHAIN_ID
+YNX_EVM_CHAIN_ID=$YNX_EVM_CHAIN_ID
 YNX_DENOM=$YNX_DENOM
 INDEXER_RPC=$INDEXER_RPC
 EXPLORER_INDEXER=$EXPLORER_INDEXER

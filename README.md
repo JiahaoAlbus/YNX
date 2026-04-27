@@ -97,6 +97,11 @@ Index:
 
 ## Operator Quick Commands
 
+Current ops baseline:
+
+- EN: `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
+- ZH: `docs/zh/V2_腾讯云_当前部署配置清单.md`
+
 ### Deploy public testnet to a server
 
 ```bash

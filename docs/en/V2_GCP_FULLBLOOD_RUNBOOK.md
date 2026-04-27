@@ -1,5 +1,10 @@
 # YNX v2 GCP Fullblood Runbook
 
+Deprecated notice (2026-04-28):
+- Live baseline is now on Tencent Cloud:
+  - `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
+- This runbook is kept for historical traceability.
+
 ## Goal
 
 Deploy and keep a three-node YNX v2 public-testnet stack healthy on GCP:
@@ -117,4 +122,3 @@ If using `ynxweb4.com`, map:
 - `explorer.<domain>` -> service node IP
 - `ai.<domain>` -> service node IP
 - `web4.<domain>` -> service node IP
-

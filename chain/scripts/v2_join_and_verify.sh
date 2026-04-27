@@ -50,7 +50,7 @@ MONIKER="$(hostname)-ynx"
 HOME_DIR="${HOME}/.ynx-v2-join"
 RPC_URL="https://rpc.ynxweb4.com"
 CHAIN_ID="ynx_9102-1"
-PERSISTENT_PEERS_DEFAULT="2ad7e37b93f8622c68e2a1d19704eff896f0fe44@34.96.222.28:36656,a80950f1fa6daa5372ee7c394269accf1d8d7e5b@34.150.93.74:36656,67caa675018f89f4cb467a45b8c96b4ff9bc11b1@34.92.114.34:36656"
+PERSISTENT_PEERS_DEFAULT="c97ce9fdf76d2634651e4cb9cbb12dbad8327037@43.153.202.237:36656"
 PERSISTENT_PEERS="$PERSISTENT_PEERS_DEFAULT"
 MIN_GAS_PRICES="0.000000007anyxt"
 ENABLE_STATESYNC=1
@@ -479,8 +479,8 @@ if ! jq -e '.chain_id != null and .app_state != null' "$HOME_DIR/config/genesis.
 fi
 
 # Keep public join nodes protocol-compatible with the live YNX public testnet.
-# The current GCP bootstrap/RPC/service peers run with CometBFT PEX disabled;
-# enabling PEX adds channel 0x00 and causes remote peers to close the handshake.
+# The canonical public peers run with CometBFT PEX disabled; enabling PEX adds
+# channel 0x00 and can cause peers to close the handshake.
 if [[ -f "$HOME_DIR/config/config.toml" ]]; then
   awk '
     BEGIN { section = "" }

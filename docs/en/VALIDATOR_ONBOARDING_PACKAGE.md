@@ -9,7 +9,7 @@ Legacy notice:
 - Current public testnet onboarding and endpoints are in:
   - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
   - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md`
-  - `docs/en/V2_GCP_CURRENT_DEPLOYMENT_PROFILE.md`
+  - `docs/en/V2_TENCENT_CURRENT_DEPLOYMENT_PROFILE.md`
 
 ## 1. Network Parameters
 

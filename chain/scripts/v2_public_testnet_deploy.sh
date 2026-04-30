@@ -447,7 +447,7 @@ fi
 
 read_p2p_value() {
   local key="\$1"
-  awk -v key="$key" '
+  awk -v key="\$key" '
     BEGIN { in_p2p=0 }
     /^\[p2p\][[:space:]]*$/ { in_p2p=1; next }
     /^\[[^]]+\][[:space:]]*$/ { in_p2p=0; next }

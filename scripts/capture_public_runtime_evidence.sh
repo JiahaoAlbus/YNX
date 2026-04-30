@@ -38,6 +38,7 @@ INDEXER_VALIDATORS_URL="${YNX_INDEXER_VALIDATORS_URL:-https://indexer.ynxweb4.co
 EXPLORER_CONFIG_URL="${YNX_EXPLORER_CONFIG_URL:-https://explorer.ynxweb4.com/config}"
 AI_HEALTH_URL="${YNX_AI_HEALTH_URL:-https://ai.ynxweb4.com/health}"
 WEB4_OVERVIEW_URL="${YNX_WEB4_OVERVIEW_URL:-https://web4.ynxweb4.com/web4/overview}"
+BLOCK_ADVANCE_SEC="${YNX_BLOCK_ADVANCE_SEC:-8}"
 
 EXPECTED_CHAIN_ID="${YNX_EXPECTED_CHAIN_ID:-ynx_9102-1}"
 EXPECTED_EVM_CHAIN_ID_HEX="${YNX_EXPECTED_EVM_CHAIN_ID_HEX:-0x238e}"
@@ -77,6 +78,8 @@ fetch_json indexer_validators "${INDEXER_VALIDATORS_URL}"
 fetch_json explorer_config "${EXPLORER_CONFIG_URL}"
 fetch_json ai_health "${AI_HEALTH_URL}"
 fetch_json web4_overview "${WEB4_OVERVIEW_URL}"
+sleep "${BLOCK_ADVANCE_SEC}"
+fetch_json rpc_status_after "${RPC_STATUS_URL}"
 
 EVM_OUT="${OUTPUT_DIR}/responses/evm_chain_id.json"
 if curl -fsS --max-time 15 -H "content-type: application/json" --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' "${EVM_RPC_URL}" > "${EVM_OUT}"; then
@@ -94,6 +97,12 @@ overview_track="$(jq -r '.track // empty' "${OUTPUT_DIR}/responses/indexer_overv
 evm_chain_id="$(jq -r '.result // empty' "${OUTPUT_DIR}/responses/evm_chain_id.json" 2>/dev/null || true)"
 web4_ok="$(jq -r '.ok // empty' "${OUTPUT_DIR}/responses/web4_overview.json" 2>/dev/null || true)"
 ai_chain_id="$(jq -r '.chain_id // empty' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+rpc_height_before="$(jq -r '.result.sync_info.latest_block_height // "0"' "${OUTPUT_DIR}/responses/rpc_status.json" 2>/dev/null || echo 0)"
+rpc_height_after="$(jq -r '.result.sync_info.latest_block_height // "0"' "${OUTPUT_DIR}/responses/rpc_status_after.json" 2>/dev/null || echo 0)"
+rpc_height_delta=0
+if [[ "${rpc_height_before}" =~ ^[0-9]+$ && "${rpc_height_after}" =~ ^[0-9]+$ ]]; then
+  rpc_height_delta=$((rpc_height_after - rpc_height_before))
+fi
 
 if [[ "${rpc_chain_id}" == "${EXPECTED_CHAIN_ID}" ]]; then check_ok; else check_fail; fi
 if [[ "${rest_chain_id}" == "${EXPECTED_CHAIN_ID}" ]]; then check_ok; else check_fail; fi
@@ -103,6 +112,7 @@ if [[ "${overview_track}" == "${EXPECTED_TRACK}" ]]; then check_ok; else check_f
 if [[ "${evm_chain_id}" == "${EXPECTED_EVM_CHAIN_ID_HEX}" ]]; then check_ok; else check_fail; fi
 if [[ "${ai_chain_id}" == "${EXPECTED_CHAIN_ID}" ]]; then check_ok; else check_fail; fi
 if [[ "${web4_ok}" == "true" ]]; then check_ok; else check_fail; fi
+if (( rpc_height_delta > 0 )); then check_ok; else check_fail; fi
 
 {
   echo "# YNX Public Runtime Evidence"
@@ -117,6 +127,9 @@ if [[ "${web4_ok}" == "true" ]]; then check_ok; else check_fail; fi
   echo "## Endpoint values"
   echo
   echo "- rpc_chain_id: ${rpc_chain_id:-n/a}"
+  echo "- rpc_height_before: ${rpc_height_before:-n/a}"
+  echo "- rpc_height_after: ${rpc_height_after:-n/a}"
+  echo "- rpc_height_delta_${BLOCK_ADVANCE_SEC}s: ${rpc_height_delta}"
   echo "- rest_chain_id: ${rest_chain_id:-n/a}"
   echo "- faucet_chain_id: ${faucet_chain_id:-n/a}"
   echo "- indexer_chain_id: ${overview_chain_id:-n/a}"

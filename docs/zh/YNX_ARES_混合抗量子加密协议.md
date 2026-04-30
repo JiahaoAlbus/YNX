@@ -146,6 +146,12 @@ ARES 不承诺能防实现漏洞、终端失陷、内鬼、侧信道、供应链
 6. 对治理、金库、升级、桥、root policy 强制双签；
 7. 扩展到高价值 Web4 agent 动作。
 
+当前实现锚点：
+
+- `packages/sdk/src/ares.ts` 已提供 canonical payload hash、ARES digest、envelope hash、EVM 经典签名/恢复、strict mode、observe mode、nonce replay hook、policy check、可插拔后量子验证回调。
+- `packages/sdk/test/ares.test.ts` 已覆盖 strict hybrid、observe mode、payload 篡改拒绝、nonce 重放拒绝、canonical JSON hash。
+- 真正的 `ML-DSA` / `SLH-DSA` provider 必须在主网 strict enforcement 前接入经过审计的库。
+
 ## 9. 非目标
 
 ARES v1 不做：

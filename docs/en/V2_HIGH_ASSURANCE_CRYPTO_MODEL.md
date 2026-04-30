@@ -129,6 +129,8 @@ Priority order:
 4. rehearse migration on public testnet;
 5. enforce hybrid verification only after ecosystem tooling and audits are ready.
 
+Current SDK anchor: `packages/sdk/src/ares.ts` implements ARES envelope construction and verification with pluggable PQ verification. It is suitable for testnet observe mode and for auditor review, but strict mainnet mode still requires audited `ML-DSA` / `SLH-DSA` provider integration.
+
 ## 8. References
 
 - NIST FIPS 203: `https://csrc.nist.gov/pubs/fips/203/final`

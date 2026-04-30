@@ -146,6 +146,12 @@ ARES does not claim immunity against implementation bugs, compromised endpoints,
 6. Require dual signatures for governance, treasury, upgrade, bridge, and root policy actions.
 7. Expand enforcement to high-value Web4 agent actions.
 
+Current implementation anchor:
+
+- `packages/sdk/src/ares.ts` provides canonical payload hashing, ARES digest construction, envelope hashing, EVM-compatible classical signing/recovery, strict mode, observe mode, nonce replay hooks, policy checks, and pluggable post-quantum verification callbacks.
+- `packages/sdk/test/ares.test.ts` verifies strict hybrid mode, observe mode, payload-mutation rejection, nonce-replay rejection, and canonical JSON hashing.
+- Real `ML-DSA` / `SLH-DSA` providers must be supplied through audited libraries before strict mainnet enforcement.
+
 ## 9. Non-Goals
 
 ARES v1 does not:

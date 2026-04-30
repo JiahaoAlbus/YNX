@@ -194,3 +194,4 @@ Generated artifacts:
 - High-assurance crypto baseline: [`docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`](docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md)
 - YNX ARES hybrid crypto protocol: [`docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`](docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md)
 - Non-custodial business boundary: [`docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`](docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md)
+- ARES SDK utility: `packages/sdk/src/ares.ts`

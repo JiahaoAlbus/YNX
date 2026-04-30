@@ -85,6 +85,10 @@ Last updated: 2026-04-30
 - `NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating boundary.
 - `V2_COMPANY_HANDOFF.md` — local-complete to company-rollout handoff set.
 
+## 3.1 SDK Security Utilities (`/packages/sdk/src`)
+
+- `ares.ts` — ARES hybrid envelope hashing, signing, verification, strict/observe modes, nonce replay hooks, and pluggable PQ verifier.
+
 ## 4. Chinese Docs (`/docs/zh`)
 
 - `V2_公开测试网手册.md`

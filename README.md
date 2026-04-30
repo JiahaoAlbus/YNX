@@ -135,7 +135,7 @@ This script validates:
 
 - existence/readability of 6 public join manuals
 - zero-start semantics in EN/ZH manuals
-- README / docs indexes / release notes reference coverage
+- README / docs indexes / release notes reference coverage, including security and non-custodial boundary docs
 
 Report output:
 
@@ -191,3 +191,6 @@ Generated artifacts:
 - Public websites should call HTTPS endpoints only.
 - Testnet is for testing only; do not use real production funds.
 - Never commit private keys, mnemonics, or `.env` secrets.
+- High-assurance crypto baseline: [`docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`](docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md)
+- YNX ARES hybrid crypto protocol: [`docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`](docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md)
+- Non-custodial business boundary: [`docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`](docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md)

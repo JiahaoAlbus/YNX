@@ -2,7 +2,7 @@
 
 Status: Template (fill before submission)  
 Track: `v2-web4`  
-Last updated: 2026-03-21
+Last updated: 2026-04-30
 
 ---
 
@@ -43,6 +43,9 @@ Protocol and behavior references:
 - `docs/en/YNX_v2_WEB4_API.md`
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
 - `docs/en/V2_SECURITY_MODEL.md`
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
 
 Out-of-scope (customize if needed):
 
@@ -55,8 +58,9 @@ Out-of-scope (customize if needed):
 2. validator liveness/double-sign handling
 3. policy/session privilege escalation (`/web4/*`)
 4. settlement and challenge integrity (`/ai/*`)
-5. faucet abuse / anti-drain controls
-6. replay, auth bypass, and request-signature misuse
+5. hybrid classical + post-quantum envelope verification for high-value actions
+6. faucet abuse / anti-drain controls
+7. replay, auth bypass, and request-signature misuse
 
 ## E. Security evidence (attach latest outputs)
 

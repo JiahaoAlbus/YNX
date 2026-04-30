@@ -1,7 +1,7 @@
 # YNX v2 Public Testnet - Files and Functions
 
 Status: Active  
-Last updated: 2026-03-07
+Last updated: 2026-04-30
 
 ## 1. Chain Scripts (`/chain/scripts`)
 
@@ -80,6 +80,9 @@ Last updated: 2026-03-07
 - `YNX_v2_EXECUTION_PLAN.md` — delivery workstreams and milestones.
 - `WEB4_FOR_YNX.md` — Web4 interpretation in YNX.
 - `V2_SECURITY_MODEL.md` — enforced owner/policy/session/vault boundaries.
+- `V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline.
+- `YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — hybrid classical + post-quantum action-envelope profile.
+- `NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating boundary.
 - `V2_COMPANY_HANDOFF.md` — local-complete to company-rollout handoff set.
 
 ## 4. Chinese Docs (`/docs/zh`)

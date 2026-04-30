@@ -1,7 +1,7 @@
 # YNX 文档索引（中文）
 
 状态：active  
-最后更新：2026-04-28
+最后更新：2026-04-30
 
 ## 对外公开文档（适合网站 Docs 展示）
 
@@ -12,6 +12,9 @@
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图
+- `docs/zh/V2_高保证加密与抗量子安全模型.md`：高保证加密与抗量子迁移基线
+- `docs/zh/YNX_ARES_混合抗量子加密协议.md`：YNX ARES 混合抗量子协议说明
+- `docs/zh/YNX_非托管商业与合规边界.md`：非托管、非交易所、非稳定币、非 KYC 商业边界
 
 ## 内部运维文档（不建议在对外网站导航展示）
 
@@ -24,6 +27,9 @@
 - `docs/zh/V2_审计与合规提交包.md`：可直接用于平台填报的提交包模板
 - `docs/zh/V2_平台提交流程手册.md`：按平台提交清单与标准答案库
 - `docs/zh/V2_平台提交邮箱对照表.md`：平台提交流程中的邮箱使用和历史对照
+- `docs/zh/V2_高保证加密与抗量子安全模型.md`：主网前密码学门禁和安全分层
+- `docs/zh/YNX_ARES_混合抗量子加密协议.md`：Web4 高价值动作的双签信封协议
+- `docs/zh/YNX_非托管商业与合规边界.md`：公司收入、监管边界和 NYXT 归零预案
 - `docs/zh/PUBLIC_TESTNET_PLAYBOOK.md`：历史公测流程文档
 - `docs/zh/开放测试网下一步执行清单.md`：内部推进清单
 - `docs/zh/YNX_定位与卖点.md`：定位与宣发草案

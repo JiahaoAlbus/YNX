@@ -95,8 +95,18 @@ check_reference_coverage() {
   local zh_pub="docs/zh/V2_公开测试网加入手册.md"
   local zh_node="docs/zh/V2_验证节点加入手册.md"
   local zh_cons="docs/zh/V2_共识验证人加入手册.md"
+  local en_crypto="docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md"
+  local en_ares="docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md"
+  local en_business="docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md"
+  local zh_crypto="docs/zh/V2_高保证加密与抗量子安全模型.md"
+  local zh_ares="docs/zh/YNX_ARES_混合抗量子加密协议.md"
+  local zh_business="docs/zh/YNX_非托管商业与合规边界.md"
 
   for needle in "${en_pub}" "${en_node}" "${en_cons}" "${zh_pub}" "${zh_node}" "${zh_cons}"; do
+    contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
+  done
+
+  for needle in "${en_crypto}" "${en_ares}" "${en_business}"; do
     contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
   done
 
@@ -104,7 +114,15 @@ check_reference_coverage() {
     contains_fixed "${en_index}" "${needle}" || failures+=("docs/en/INDEX.md missing ${needle}")
   done
 
+  for needle in "${en_crypto}" "${en_ares}" "${en_business}"; do
+    contains_fixed "${en_index}" "${needle}" || failures+=("docs/en/INDEX.md missing ${needle}")
+  done
+
   for needle in "${zh_pub}" "${zh_node}" "${zh_cons}"; do
+    contains_fixed "${zh_index}" "${needle}" || failures+=("docs/zh/INDEX.md missing ${needle}")
+  done
+
+  for needle in "${zh_crypto}" "${zh_ares}" "${zh_business}"; do
     contains_fixed "${zh_index}" "${needle}" || failures+=("docs/zh/INDEX.md missing ${needle}")
   done
 
@@ -114,7 +132,7 @@ check_reference_coverage() {
   done
 
   if (( ${#failures[@]} == 0 )); then
-    record_check "13" "README/INDEX/RELEASE references coverage" "PASS" "all required guide references found"
+    record_check "13" "README/INDEX/RELEASE references coverage" "PASS" "all required guide and security references found"
   else
     local detail
     detail="$(printf '%s; ' "${failures[@]}")"

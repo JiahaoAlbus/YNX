@@ -1,7 +1,7 @@
 # YNX v2 Security Model
 
 Status: Active  
-Last updated: 2026-03-07  
+Last updated: 2026-04-30
 Canonical language: English
 
 ## 1. Security Priority
@@ -97,3 +97,13 @@ The public-testnet stack may move to mainnet candidate only if:
 - release artifacts are reproducible,
 - validator onboarding is deterministic,
 - observability and incident handling are documented.
+
+## 9. High-Assurance Crypto Extension
+
+The security model is extended by:
+
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum migration baseline.
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid classical + post-quantum envelope protocol.
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — business and compliance boundary that keeps YNX non-custodial.
+
+YNX MUST NOT replace live consensus cryptography directly on public testnet without a staged migration, validator compatibility proof, and external review. High-value Web4, governance, treasury, upgrade, and policy actions should adopt hybrid verification first.

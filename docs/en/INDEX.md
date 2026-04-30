@@ -1,7 +1,7 @@
 # YNX Documentation Index (English)
 
 Status: Active  
-Last updated: 2026-04-28
+Last updated: 2026-04-30
 
 ## Public Docs (Website-safe)
 
@@ -12,6 +12,9 @@ Last updated: 2026-04-28
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid crypto protocol profile
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial business and compliance boundary
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
 - `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface
 
@@ -29,6 +32,9 @@ Last updated: 2026-04-28
 - `docs/en/V2_AUDIT_COMPLIANCE_EXECUTION_GUIDE.md` — week-by-week pre-audit + compliance execution plan
 - `docs/en/V2_AUDIT_SUBMISSION_PACKET.md` — platform-ready submission packet template
 - `docs/en/V2_PLATFORM_SUBMISSION_PLAYBOOK.md` — platform-by-platform submit checklist and answer bank
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — cryptographic assurance gates before mainnet
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — hybrid classical + post-quantum envelope protocol
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating model
 
 ## Core Specs
 
@@ -40,6 +46,9 @@ Last updated: 2026-04-28
 - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — v2 public testnet deployment and operations
 - `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md` — local-only complete runbook
 - `docs/en/V2_SECURITY_MODEL.md` — v2 control, key, payment, and mutation boundaries
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — v2 high-assurance cryptography and post-quantum migration model
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid cryptographic protocol
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial commercial and compliance scope
 - `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
 - `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — v2 validator bootstrap quickstart
 - `docs/en/V2_SMOKE_AND_VERIFY.md` — v2 verification and write-path smoke testing

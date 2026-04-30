@@ -2,7 +2,7 @@
 
 Status: Active  
 Track: `v2-web4`  
-Last updated: 2026-03-21
+Last updated: 2026-04-30
 
 ## 1. Goal
 
@@ -28,6 +28,9 @@ This command prepares:
 - `docs/en/V2_AUDIT_SUBMISSION_PACKET.md`
 - `docs/zh/V2_审计与合规提交包.md`
 - `docs/en/V2_SECURITY_MODEL.md`
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
 - `docs/en/RELEASE_YNXWEB4.md`
 - `docs/en/YNX_v2_WEB4_SPEC.md`
 - `docs/en/YNX_v2_WEB4_API.md`
@@ -76,6 +79,14 @@ Public endpoints:
 Security model sentence:
 
 `YNX enforces sovereignty order owner > policy > session key > agent action, with policy-bounded delegation and auditable machine-execution flows.`
+
+High-assurance crypto sentence:
+
+`YNX ARES adds a staged hybrid classical + post-quantum envelope for high-value Web4, governance, treasury, upgrade, and policy actions while preserving current EVM/Cosmos compatibility.`
+
+Business boundary sentence:
+
+`YNX is designed as non-custodial infrastructure: no user asset custody, no exchange matching engine, no stablecoin issuance, and no consumer KYC business by default.`
 
 Audit scope sentence:
 

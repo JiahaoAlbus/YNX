@@ -2,7 +2,7 @@
 
 Status: Active  
 Track: `v2-web4`  
-Last updated: 2026-03-21
+Last updated: 2026-04-30
 
 ## 1. Goal
 
@@ -60,13 +60,16 @@ Required deliverables:
    - API auth/session misuse (`/web4/*`)
    - settlement dispute abuse (`/ai/*`)
 2. Risk register with severity, owner, remediation ETA.
-3. Compliance control mapping draft:
+3. High-assurance crypto and post-quantum migration review:
+   - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`
+   - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`
+4. Compliance control mapping draft:
    - access control
    - change management
    - logging and retention
    - incident response
    - key/secret handling
-4. Confirm evidence paths and naming conventions.
+5. Confirm evidence paths and naming conventions.
 
 Exit criteria:
 
@@ -151,6 +154,9 @@ Certification strategy:
 - `docs/en/RELEASE_YNXWEB4.md`
 - `docs/zh/YNXWEB4_版本说明.md`
 - `docs/en/V2_SECURITY_MODEL.md`
+- `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md`
+- `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`
+- `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
 - `docs/en/V2_SMOKE_AND_VERIFY.md`
 - `scripts/verify_docs_readiness.sh`
 - `scripts/prepare_audit_compliance_pack.sh`

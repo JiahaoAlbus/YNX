@@ -14,8 +14,9 @@ require (
 	cosmossdk.io/tools/confix v0.1.2
 	cosmossdk.io/x/evidence v0.2.0
 	cosmossdk.io/x/feegrant v0.2.0
-	cosmossdk.io/x/upgrade v0.2.0
 	github.com/cometbft/cometbft v0.38.19
+	github.com/cometbft/cometbft/api v1.1.0-rc1
+	github.com/cometbft/cometbft/v2 v2.0.0-rc1
 	github.com/cosmos/cosmos-db v1.1.3
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/cosmos-sdk v0.54.0-rc.1
@@ -80,8 +81,6 @@ require (
 	github.com/cockroachdb/redact v1.1.6 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20250429170803-42689b6311bb // indirect
 	github.com/cometbft/cometbft-db v1.0.4 // indirect
-	github.com/cometbft/cometbft/api v1.1.0-rc1 // indirect
-	github.com/cometbft/cometbft/v2 v2.0.0-rc1 // indirect
 	github.com/consensys/gnark-crypto v0.18.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
@@ -273,6 +272,8 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	// patch CometBFT v2 /net_info JSON marshaling bug (map[byte] keys)
+	github.com/cometbft/cometbft/v2 => ./third_party/cometbft-v2
 	// local fork to avoid cgo-only secp256k1 usage
 	github.com/cosmos/evm => ./third_party/cosmos-evm
 	// pin IBC-Go to a CometBFT v2 compatible commit (no tagged release yet)

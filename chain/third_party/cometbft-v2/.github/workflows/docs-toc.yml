@@ -1,0 +1,24 @@
+# Verify that important design docs have ToC entries.
+name: Check documentation ToC
+on:
+  pull_request:
+    paths:
+      - docs/architecture/**
+      - docs/rfc/**
+  push:
+    branches:
+      - main
+    paths:
+      - docs/architecture/**
+      - docs/rfc/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make check-docs-toc

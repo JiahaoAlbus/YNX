@@ -841,8 +841,6 @@ github.com/cometbft/cometbft-db v1.0.4 h1:cezb8yx/ZWcF124wqUtAFjAuDksS1y1yXedvtp
 github.com/cometbft/cometbft-db v1.0.4/go.mod h1:M+BtHAGU2XLrpUxo3Nn1nOCcnVCiLM9yx5OuT0u5SCA=
 github.com/cometbft/cometbft/api v1.1.0-rc1 h1:NdlXfp4wialMwJ+1ds1DBtfysdxErUxg8/AaqgT0ifQ=
 github.com/cometbft/cometbft/api v1.1.0-rc1/go.mod h1:Ivh6nSCTJPQOyfQo8dgnyu/T88it092sEqSrZSmTQN8=
-github.com/cometbft/cometbft/v2 v2.0.0-rc1 h1:3QyDHTFzH3a1N6c2jt03kFDCxM/hgUvhzDYBVnPVXY8=
-github.com/cometbft/cometbft/v2 v2.0.0-rc1/go.mod h1:/ze08eO171CqUqTqAE7FW7ydUJIVkgp6e2svpYvIR3c=
 github.com/consensys/gnark-crypto v0.18.0 h1:vIye/FqI50VeAr0B3dx+YjeIvmc3LWz4yEfbWBpTUf0=
 github.com/consensys/gnark-crypto v0.18.0/go.mod h1:L3mXGFTe1ZN+RSJ+CLjUt9x7PNdx8ubaYfDROyp2Z8c=
 github.com/containerd/continuity v0.3.0 h1:nisirsYROK15TAMVukJOUyGJjz4BNQJBVsNvAXZJ/eg=

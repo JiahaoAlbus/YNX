@@ -1,7 +1,7 @@
 # YNX v2 Tencent Cloud Current Deployment Profile
 
 Status: active  
-Last updated: 2026-04-28
+Last updated: 2026-05-01
 
 ## Purpose
 
@@ -17,15 +17,15 @@ Use it as the source of truth for endpoint routing, node roles, and security swi
 
 ## Active Tencent Topology (live)
 
-Current production routing is **single-host / all-in-one**:
+Current production routing is **single public-service host plus three validator peers**:
 
 - Tencent Cloud Lighthouse
   - region: Singapore (Singapore Zone 2)
   - instance id: `lhins-kewmg5r7`
   - public IPv4: `43.153.202.237`
   - OS: Ubuntu
-  - moniker: `ynx-tencent-singapore`
-  - node id: `c97ce9fdf76d2634651e4cb9cbb12dbad8327037`
+  - moniker: `ynx-v2-web4`
+  - node id: `7b8bf4128aeb20e12648086a9fa9b6c4a28cb4e7`
 
 Installed services (systemd):
 
@@ -36,6 +36,18 @@ Installed services (systemd):
 - `ynx-v2-ai-gateway.service`
 - `ynx-v2-web4-hub.service`
 - `caddy.service` (HTTPS gateway)
+
+Validator peer nodes:
+
+- `43.162.100.54`: `ynx-tencent-sv`, node id `aac4cf1eff04ea0bbfdb0762808553ef820d16d2`, service `ynx-v2-peer.service`
+- `43.164.132.81`: `ynx-tencent-seoul`, node id `ca7292a1529787d34983158934db8c29162d0060`, service `ynx-v2-peer.service`
+- `43.134.23.58`: `ynx-tencent-singapore-peer`, node id `c3fdd22c9df6c26dc9cbad88c65c5a1fb1cf0598`, service `ynx-v2-peer.service`
+
+Current strict readiness target:
+
+- public peers: `3`
+- bonded validators: `4`
+- validator signing: `4/4`
 
 ## Public Domain Routing (current)
 
@@ -59,13 +71,19 @@ All public subdomains terminate TLS on the Tencent host via Caddy and reverse-pr
 
 If you change routing (IP / host split), you MUST ensure the descriptor stays accurate, since the join CLI relies on it.
 
+Current canonical persistent peer:
+
+```text
+7b8bf4128aeb20e12648086a9fa9b6c4a28cb4e7@43.153.202.237:36656
+```
+
 ## Public Ingress Ports (Tencent)
 
 Cloud firewall (Lighthouse firewall rules) must allow at minimum:
 
 - TCP `80` from `0.0.0.0/0` (ACME HTTP challenge / redirects)
 - TCP `443` from `0.0.0.0/0` (HTTPS gateway)
-- TCP `36656` from `0.0.0.0/0` (YNX P2P)
+- TCP `36656` from `0.0.0.0/0` (YNX P2P, required on all validator/full-node peers)
 
 Local listening ports (expected on the host):
 
@@ -85,4 +103,3 @@ Local listening ports (expected on the host):
 
 GCP was previously used for the live baseline. As of **2026-04-28**, public routing and services are migrated to Tencent.
 Historical GCP runbooks remain in `docs/en/V2_GCP_*` for audit/traceability, but they are not the current baseline.
-

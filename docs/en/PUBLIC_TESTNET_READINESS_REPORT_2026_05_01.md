@@ -1,6 +1,6 @@
 # YNX Public Testnet Readiness Report — 2026-05-01
 
-Status: Degraded public testnet readiness
+Status: Strict public testnet readiness passed
 Generated from local operator verification on 2026-05-01
 Canonical language: English
 
@@ -8,11 +8,11 @@ Canonical language: English
 
 YNX public testnet services are live and usable for builders, demos, API integration, Web4 workflow testing, and AI settlement workflow testing.
 
-The testnet is not yet industry-grade for decentralized public-network claims because public P2P redundancy and validator-set diversity are below the required threshold:
+The testnet now meets the current strict public-testnet readiness gate:
 
-- public RPC `/net_info`: `n_peers=0`;
-- public validator set: `1` validator;
-- industry-grade public testnet target: at least `2` reachable public peers and at least `4` independently operated validators before broad mainnet-candidate messaging.
+- public RPC `/net_info`: `n_peers=3`;
+- public validator set: `4` bonded validators;
+- strict readiness: `27 PASS`, `0 WARN`, `0 FAIL`.
 
 ## Verified Working Surfaces
 
@@ -20,7 +20,7 @@ Runtime evidence passed:
 
 - docs readiness: `13/13 PASS`;
 - public runtime evidence: `20/20 PASS`;
-- extreme readiness in degraded mode: `25 PASS`, `0 WARN`, `2 FAIL`;
+- strict extreme readiness: `27 PASS`, `0 WARN`, `0 FAIL`;
 - RPC: live, correct chain ID, block height advancing;
 - EVM JSON-RPC: live, `eth_chainId=0x238e`;
 - REST: live, correct chain ID;
@@ -36,7 +36,7 @@ Observed runtime sample:
 - EVM chain ID: `0x238e`;
 - track: `v2-web4`;
 - block advancement: `+12` blocks over `8s`;
-- validator signing: `1/1`.
+- validator signing: `4/4`.
 
 ## Verified Write-Path Smoke
 
@@ -85,25 +85,20 @@ Environment note:
 
 - plain `go test` without `CGO_ENABLED=0` is blocked on this Mac by the local Xcode license prompt, not by a YNX code failure.
 
-## Current Blocking Gap
+## Current Validator / Peer Topology
 
-The remaining gap is network decentralization and public P2P resilience.
+The public network is currently backed by one canonical public service node plus three Tencent validator peers:
 
-Required action:
+- `43.153.202.237`: canonical public service node, moniker `ynx-v2-web4`, node id `7b8bf4128aeb20e12648086a9fa9b6c4a28cb4e7`;
+- `43.162.100.54`: Silicon Valley validator peer, moniker `ynx-tencent-sv`, node id `aac4cf1eff04ea0bbfdb0762808553ef820d16d2`;
+- `43.164.132.81`: Seoul validator peer, moniker `ynx-tencent-seoul`, node id `ca7292a1529787d34983158934db8c29162d0060`;
+- `43.134.23.58`: Singapore validator peer, moniker `ynx-tencent-singapore-peer`, node id `c3fdd22c9df6c26dc9cbad88c65c5a1fb1cf0598`.
 
-1. Restore SSH access to the three secondary Tencent nodes or create replacement nodes.
-2. Run each as a synced full node or validator candidate.
-3. Open TCP `36656` on each node.
-4. Configure persistent peers on the canonical node and the secondary nodes.
-5. Re-run `scripts/public_testnet_extreme_readiness.sh`.
-6. Do not present the network as mainnet-candidate until the script passes strict mode.
+Operational notes:
 
-Current secondary-node access status from local operator check:
-
-- `43.162.100.54`: SSH key rejected;
-- `43.164.132.81`: SSH key rejected;
-- `43.134.23.58`: SSH key rejected after host-key mismatch was bypass-tested with isolated known-host handling;
-- `43.153.202.237`: accessible and running the canonical full public service stack.
+- P2P uses TCP `36656` on all four nodes.
+- Join/bootstrap nodes must keep CometBFT PEX enabled because the canonical public peer advertises the PEX channel.
+- The secondary validators were seeded from a canonical data snapshot, then promoted with `MsgCreateValidator` and additional delegation so all validators have non-zero voting power and sign the live chain.
 
 ## Industry Readiness Classification
 
@@ -111,10 +106,10 @@ Current secondary-node access status from local operator check:
 - Web4 / AI write path: PASS.
 - Documentation readiness: PASS.
 - Local code tests: PASS.
-- P2P redundancy: FAIL.
-- Validator decentralization: FAIL.
+- P2P redundancy: PASS.
+- Validator decentralization: PASS.
 
-Overall: public testnet is usable, but not yet industry-grade decentralized readiness.
+Overall: public testnet passes the current strict readiness gate.
 
 Strict readiness command:
 
@@ -122,7 +117,8 @@ Strict readiness command:
 ./scripts/public_testnet_extreme_readiness.sh
 ```
 
-Current strict blockers:
+Latest strict result:
 
-- `public_p2p_peers`: `n_peers=0`, required minimum `2`;
-- `validator_set_size`: `validators=1`, required minimum `4`.
+- `public_p2p_peers`: `n_peers=3`, required minimum `2`;
+- `validator_set_size`: `validators=4`, required minimum `4`;
+- `validator_signing`: `signed=4/4`.

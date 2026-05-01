@@ -50,7 +50,7 @@ MONIKER="$(hostname)-ynx"
 HOME_DIR="${HOME}/.ynx-v2-join"
 RPC_URL="https://rpc.ynxweb4.com"
 CHAIN_ID="ynx_9102-1"
-PERSISTENT_PEERS_DEFAULT="c97ce9fdf76d2634651e4cb9cbb12dbad8327037@43.153.202.237:36656"
+PERSISTENT_PEERS_DEFAULT="7b8bf4128aeb20e12648086a9fa9b6c4a28cb4e7@43.153.202.237:36656"
 PERSISTENT_PEERS="$PERSISTENT_PEERS_DEFAULT"
 MIN_GAS_PRICES="0.000000007anyxt"
 ENABLE_STATESYNC=1
@@ -479,13 +479,13 @@ if ! jq -e '.chain_id != null and .app_state != null' "$HOME_DIR/config/genesis.
 fi
 
 # Keep public join nodes protocol-compatible with the live YNX public testnet.
-# The canonical public peers run with CometBFT PEX disabled; enabling PEX adds
-# channel 0x00 and can cause peers to close the handshake.
+# The canonical public peer advertises the PEX channel, so join nodes must keep
+# PEX enabled or the CometBFT channel negotiation can fail during SecretConn.
 if [[ -f "$HOME_DIR/config/config.toml" ]]; then
   awk '
     BEGIN { section = "" }
     /^\[/ { section = $0 }
-    section == "[p2p]" && $1 == "pex" { print "pex = false"; next }
+    section == "[p2p]" && $1 == "pex" { print "pex = true"; next }
     { print }
   ' "$HOME_DIR/config/config.toml" >"$HOME_DIR/config/config.toml.tmp"
   mv "$HOME_DIR/config/config.toml.tmp" "$HOME_DIR/config/config.toml"

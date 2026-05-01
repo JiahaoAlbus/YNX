@@ -5,6 +5,13 @@ Track: `v2-web4`
 Chain ID: `ynx_9102-1`  
 EVM chain ID: `9102` / `0x238e`
 
+Latest launch-grade testnet gate:
+
+```bash
+./scripts/public_testnet_extreme_readiness.sh --output-dir output/readiness_launch_grade_current
+# PASS=35 WARN=0 FAIL=0
+```
+
 ## Runtime Snapshot
 
 Observed from the public HTTPS endpoints on 2026-05-02 Asia/Shanghai:
@@ -13,6 +20,7 @@ Observed from the public HTTPS endpoints on 2026-05-02 Asia/Shanghai:
 - The chain was not catching up and continued producing blocks during repeated checks.
 - Indexer height tracked live chain height during the check window.
 - Public P2P port `36656` was reachable on the observed validator/full-node IPs.
+- The launch-grade readiness gate checked staking bonded status, jailed status, slashing signing health, latest-block signatures, and indexer signing view.
 
 ## Validator Set
 
@@ -29,7 +37,7 @@ Indexer `/validators` also reported `total=4` and `signed_count=4`.
 
 ## Gaps To Close
 
-1. Public RPC/REST gateway stability needs hardening. During testing, single-shot fetches occasionally failed with TLS or timeout errors even though retries showed the chain was still advancing.
+1. Public RPC/REST gateway stability is now covered by retrying launch-grade checks, but production-quality HA still requires at least one additional public gateway or failover path.
 2. Validator independence is still limited. The live set has four bonded validators, but the observed topology is still concentrated in the same deployment family. Mainnet-candidate positioning requires independent operators and failure domains.
 3. AI Gateway and Web4 Hub are adequate for public-testnet workflows but still use single-instance JSON-file persistence. Production operation needs external durable storage, backup/restore, migrations, and multi-instance deployment.
 4. Explorer and Indexer are useful for health and overview checks but still lack mature explorer depth: address pages, transaction detail UX, contract event views, validator detail pages, governance pages, and richer search.
@@ -40,6 +48,6 @@ Indexer `/validators` also reported `total=4` and `signed_count=4`.
 
 Use:
 
-`YNX public testnet is live and usable, with core services and a four-validator bonded set online. Mainnet-candidate readiness still depends on stronger public endpoint reliability, independent validator expansion, production-grade service persistence, and external security review.`
+`YNX public testnet is live and launch-grade for testnet operation, with core services, public P2P reachability, and a four-validator bonded set online. Mainnet-candidate readiness still depends on independent validator expansion, production-grade service persistence, and external security review.`
 
 Do not claim production, mainnet-candidate, institution-ready, or fully decentralized validator status yet.

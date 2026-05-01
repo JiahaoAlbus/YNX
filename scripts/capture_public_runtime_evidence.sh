@@ -39,6 +39,9 @@ EXPLORER_CONFIG_URL="${YNX_EXPLORER_CONFIG_URL:-https://explorer.ynxweb4.com/con
 AI_HEALTH_URL="${YNX_AI_HEALTH_URL:-https://ai.ynxweb4.com/health}"
 WEB4_OVERVIEW_URL="${YNX_WEB4_OVERVIEW_URL:-https://web4.ynxweb4.com/web4/overview}"
 BLOCK_ADVANCE_SEC="${YNX_BLOCK_ADVANCE_SEC:-8}"
+FETCH_RETRIES="${YNX_FETCH_RETRIES:-4}"
+FETCH_RETRY_DELAY_SEC="${YNX_FETCH_RETRY_DELAY_SEC:-2}"
+FETCH_TIMEOUT_SEC="${YNX_FETCH_TIMEOUT_SEC:-15}"
 
 EXPECTED_CHAIN_ID="${YNX_EXPECTED_CHAIN_ID:-ynx_9102-1}"
 EXPECTED_EVM_CHAIN_ID_HEX="${YNX_EXPECTED_EVM_CHAIN_ID_HEX:-0x238e}"
@@ -61,12 +64,45 @@ fetch_json() {
   local name="$1"
   local url="$2"
   local out="${OUTPUT_DIR}/responses/${name}.json"
-  if curl -fsS --max-time 15 "${url}" > "${out}"; then
-    check_ok
-  else
-    echo "{\"ok\":false,\"error\":\"fetch_failed\",\"url\":\"${url}\"}" > "${out}"
-    check_fail
-  fi
+  local tmp="${out}.tmp"
+  local attempt=1
+  while (( attempt <= FETCH_RETRIES )); do
+    if curl -fsS --max-time "${FETCH_TIMEOUT_SEC}" "${url}" > "${tmp}"; then
+      mv "${tmp}" "${out}"
+      check_ok
+      return
+    fi
+    rm -f "${tmp}"
+    if (( attempt < FETCH_RETRIES )); then
+      sleep "${FETCH_RETRY_DELAY_SEC}"
+    fi
+    attempt=$((attempt + 1))
+  done
+  echo "{\"ok\":false,\"error\":\"fetch_failed\",\"url\":\"${url}\",\"attempts\":${FETCH_RETRIES}}" > "${out}"
+  check_fail
+}
+
+post_json() {
+  local name="$1"
+  local url="$2"
+  local body="$3"
+  local out="${OUTPUT_DIR}/responses/${name}.json"
+  local tmp="${out}.tmp"
+  local attempt=1
+  while (( attempt <= FETCH_RETRIES )); do
+    if curl -fsS --max-time "${FETCH_TIMEOUT_SEC}" -H "content-type: application/json" --data "${body}" "${url}" > "${tmp}"; then
+      mv "${tmp}" "${out}"
+      check_ok
+      return
+    fi
+    rm -f "${tmp}"
+    if (( attempt < FETCH_RETRIES )); then
+      sleep "${FETCH_RETRY_DELAY_SEC}"
+    fi
+    attempt=$((attempt + 1))
+  done
+  echo "{\"ok\":false,\"error\":\"fetch_failed\",\"url\":\"${url}\",\"attempts\":${FETCH_RETRIES}}" > "${out}"
+  check_fail
 }
 
 fetch_json rpc_status "${RPC_STATUS_URL}"
@@ -82,12 +118,7 @@ sleep "${BLOCK_ADVANCE_SEC}"
 fetch_json rpc_status_after "${RPC_STATUS_URL}"
 
 EVM_OUT="${OUTPUT_DIR}/responses/evm_chain_id.json"
-if curl -fsS --max-time 15 -H "content-type: application/json" --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' "${EVM_RPC_URL}" > "${EVM_OUT}"; then
-  check_ok
-else
-  echo '{"ok":false,"error":"fetch_failed"}' > "${EVM_OUT}"
-  check_fail
-fi
+post_json evm_chain_id "${EVM_RPC_URL}" '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 
 rpc_chain_id="$(jq -r '.result.node_info.network // empty' "${OUTPUT_DIR}/responses/rpc_status.json" 2>/dev/null || true)"
 rest_chain_id="$(jq -r '.default_node_info.network // empty' "${OUTPUT_DIR}/responses/rest_node_info.json" 2>/dev/null || true)"
@@ -121,6 +152,8 @@ if (( rpc_height_delta > 0 )); then check_ok; else check_fail; fi
   echo "- Expected Chain ID: ${EXPECTED_CHAIN_ID}"
   echo "- Expected EVM Chain ID: ${EXPECTED_EVM_CHAIN_ID_HEX}"
   echo "- Expected Track: ${EXPECTED_TRACK}"
+  echo "- Fetch retries: ${FETCH_RETRIES}"
+  echo "- Fetch timeout seconds: ${FETCH_TIMEOUT_SEC}"
   echo "- Checks passed: ${PASS_COUNT}"
   echo "- Checks failed: ${FAIL_COUNT}"
   echo

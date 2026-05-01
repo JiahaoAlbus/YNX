@@ -47,7 +47,20 @@ cd YNX/chain
 ./scripts/v2_local_complete.sh all
 ```
 
-### 3) Node Operators / Validators
+### 3) AI/Web4 settlement demo
+
+Run the official local demo for the core AI-agent flow: bounded Web4 policy, session key, AI job, result commit, finalize, and vault reward settlement.
+
+```bash
+./scripts/ai_web4_settlement_demo.sh
+```
+
+Docs:
+
+- EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
+- ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
+
+### 4) Node Operators / Validators
 
 Install the YNX CLI and join from a clean Linux machine:
 

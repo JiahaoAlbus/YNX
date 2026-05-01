@@ -1,7 +1,7 @@
 # YNX Testnet-to-Mainnet Parity & Advantages
 
 Status: active  
-Last updated: 2026-02-17  
+Last updated: 2026-05-01
 Canonical language: English
 
 ## 1) Product principle
@@ -17,6 +17,12 @@ The intended difference is economic value (test tokens vs real-value assets), no
 - Same governance parameter surface (on-chain parameters and process)
 - Same node interfaces: RPC, REST, EVM JSON-RPC, P2P
 - Same operational stack: faucet, indexer, explorer, health checks
+
+Current caveat on 2026-05-01:
+
+- service parity is working;
+- Web4 / AI write-path workflows are working;
+- P2P and validator redundancy are not yet at industry-grade mainnet-candidate thresholds.
 
 ## 3) Current competitive position
 

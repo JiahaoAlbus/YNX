@@ -83,11 +83,18 @@ Last updated: 2026-04-30
 - `V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline.
 - `YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — hybrid classical + post-quantum action-envelope profile.
 - `NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating boundary.
+- `PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current public testnet service/write/P2P readiness report.
+- `MAINNET_AND_INDUSTRY_READINESS_GATES.md` — strict launch and industry-readiness gates.
+- `PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company setup, legal, and launch paperwork checklist.
 - `V2_COMPANY_HANDOFF.md` — local-complete to company-rollout handoff set.
 
 ## 3.1 SDK Security Utilities (`/packages/sdk/src`)
 
 - `ares.ts` — ARES hybrid envelope hashing, signing, verification, strict/observe modes, nonce replay hooks, and pluggable PQ verifier.
+
+## 3.2 Readiness Scripts (`/scripts`)
+
+- `public_testnet_extreme_readiness.sh` — read-only public endpoint, P2P, validator, service, and chain-readiness gate.
 
 ## 4. Chinese Docs (`/docs/zh`)
 

@@ -195,3 +195,6 @@ Generated artifacts:
 - YNX ARES hybrid crypto protocol: [`docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md`](docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md)
 - Non-custodial business boundary: [`docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`](docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md)
 - ARES SDK utility: `packages/sdk/src/ares.ts`
+- Current readiness report: [`docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md`](docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md)
+- Mainnet / industry gates: [`docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md`](docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md)
+- Non-technical launch packet: [`docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md`](docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md)

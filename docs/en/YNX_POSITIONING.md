@@ -1,12 +1,16 @@
 # YNX Positioning (EN)
 
 Status: active  
-Last updated: 2026-02-25  
+Last updated: 2026-05-01
 Canonical language: English
 
 ## One-line positioning
 
-YNX is an **AI-native Web4 chain** with **Ethereum-grade developer UX** and **high-performance execution targets**.
+YNX is an **AI-native Web4 public execution network** with **EVM-compatible developer access**, machine-payment workflows, and owner-policy-session controls for human and agent execution.
+
+Current public-testnet wording:
+
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The network is still completing public P2P and validator redundancy before mainnet-candidate status.`
 
 ## Why users choose YNX
 
@@ -24,6 +28,8 @@ YNX competes on:
 - AI/Web4 workload readiness,
 - observability of governance and operations,
 - scalable validator onboarding.
+
+YNX should not claim mainnet-candidate or decentralized-validator readiness until `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` passes.
 
 ## Machine-readable positioning endpoint
 

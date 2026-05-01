@@ -1,8 +1,8 @@
 # YNX Releases 2 — Current Status Snapshot
 
 Status: active  
-Date: 2026-04-12  
-Tag target: `f9d314e`
+Date: 2026-05-01
+Tag target: current `main`
 
 ## Scope
 
@@ -13,15 +13,17 @@ This release updates the public testnet from baseline launch to a mainnet-parity
 - Explorer now surfaces positioning and governance metadata.
 - One-command health verification now validates positioning fields.
 - Controlled server upgrade script added (pull/build/restart/verify).
+- Current readiness report and industry gates added.
 
 ## Network snapshot at release time
 
 - Chain ID: `ynx_9102-1`
 - EVM chain ID: `0x238e`
-- Latest height snapshot: `13805`
+- Latest height snapshot: see `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md`
 - Catching up: `false`
 - No base fee: `true`
-- Services: `ynx-node`, `ynx-faucet`, `ynx-indexer`, `ynx-explorer` = active
+- Services: `ynx-node`, `ynx-faucet`, `ynx-indexer`, `ynx-explorer`, `ynx-ai-gateway`, `ynx-web4-hub` = active
+- Caveat: public P2P peers and validator-set size are below industry-grade mainnet-candidate thresholds.
 
 ## Public endpoints
 
@@ -48,3 +50,6 @@ This release updates the public testnet from baseline launch to a mainnet-parity
 - `docs/en/YNX_POSITIONING.md`
 - `docs/zh/YNX_定位与卖点.md`
 - `docs/en/MAINNET_PARITY_AND_ADVANTAGES.md`
+- `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md`
+- `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md`
+- `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md`

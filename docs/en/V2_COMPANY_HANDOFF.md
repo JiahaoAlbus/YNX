@@ -1,7 +1,7 @@
 # YNX v2 Company Handoff
 
 Status: Active  
-Last updated: 2026-03-07  
+Last updated: 2026-05-01
 Canonical language: English
 
 ## 1. Purpose
@@ -60,6 +60,11 @@ The package contains:
 - public testnet playbook,
 - local runbook,
 - security model,
+- high-assurance crypto model,
+- non-custodial business boundary,
+- public testnet readiness report,
+- mainnet and industry readiness gates,
+- non-technical launch packet,
 - file/function map.
 
 ## 7. Exit Condition for “Local Complete”
@@ -71,3 +76,14 @@ YNX v2 is considered locally complete for company handoff when:
 - a single command can generate the company handoff bundle,
 - a multi-validator local simulation path exists,
 - API contracts and operator documentation are committed.
+
+## 8. Exit Condition for “Industry-Grade Public Testnet”
+
+YNX v2 is considered industry-grade public-testnet ready only when:
+
+- `./scripts/verify_submission_readiness.sh` passes,
+- HTTPS Web4/AI write-path smoke passes,
+- `./scripts/public_testnet_extreme_readiness.sh` passes in strict mode,
+- public RPC `/net_info` reports at least 2 peers,
+- validator set has at least 4 independently operated validators or validator candidates,
+- latest readiness report is updated and linked from the docs index.

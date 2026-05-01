@@ -15,6 +15,9 @@ Last updated: 2026-04-30
 - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid crypto protocol profile
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial business and compliance boundary
+- `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current testnet service/write/P2P readiness report
+- `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
+- `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
 - `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface
 
@@ -35,6 +38,9 @@ Last updated: 2026-04-30
 - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — cryptographic assurance gates before mainnet
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — hybrid classical + post-quantum envelope protocol
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating model
+- `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current operator-verified readiness and blockers
+- `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — industry launch gates and strict readiness command
+- `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch paperwork and answer bank
 
 ## Core Specs
 
@@ -49,6 +55,9 @@ Last updated: 2026-04-30
 - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — v2 high-assurance cryptography and post-quantum migration model
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid cryptographic protocol
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial commercial and compliance scope
+- `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — public testnet readiness snapshot
+- `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — strict readiness gates
+- `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch packet
 - `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
 - `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — v2 validator bootstrap quickstart
 - `docs/en/V2_SMOKE_AND_VERIFY.md` — v2 verification and write-path smoke testing

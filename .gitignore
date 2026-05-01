@@ -4,6 +4,7 @@ dist
 coverage
 .env
 .env.*
+!.env*.example
 packages/contracts/artifacts
 packages/contracts/cache
 packages/contracts/deployments

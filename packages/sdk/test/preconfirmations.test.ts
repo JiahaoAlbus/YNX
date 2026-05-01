@@ -1,12 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { SigningKey, computeAddress, concat, hexlify } from "ethers";
+import { SigningKey, computeAddress, concat, getBytes, hexlify } from "ethers";
 import { computePreconfirmDigestV0, verifyPreconfirmReceiptV0 } from "../src/preconfirmations.js";
+
+const SECP256K1_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
 
 function goStyleSignatureBytes(digest: string, privKey: string): string {
   const key = new SigningKey(privKey);
   const sig = key.sign(digest);
   const v = sig.yParity; // 0 | 1
   return hexlify(concat([sig.r, sig.s, Uint8Array.from([v])]));
+}
+
+function toHighSSignature(signature: string): string {
+  const bytes = getBytes(signature);
+  const s = BigInt(hexlify(bytes.slice(32, 64)));
+  const highS = (SECP256K1_N - s).toString(16).padStart(64, "0");
+  bytes.set(getBytes(`0x${highS}`), 32);
+  if (bytes[64] === 0) bytes[64] = 1;
+  else if (bytes[64] === 1) bytes[64] = 0;
+  else if (bytes[64] === 27) bytes[64] = 28;
+  else if (bytes[64] === 28) bytes[64] = 27;
+  return hexlify(bytes);
 }
 
 describe("preconfirmations (v0)", () => {
@@ -84,6 +98,68 @@ describe("preconfirmations (v0)", () => {
 
     expect(res.ok).toBe(true);
     expect(res.validSigners.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does not count duplicate signer entries toward threshold", () => {
+    const privKey = "0x59c6995e998f97a5a0044966f094538b292c0acdf0f39c6a9c3d6f64b87b84c1";
+    const signer = computeAddress(new SigningKey(privKey).publicKey);
+    const digest = computePreconfirmDigestV0({
+      status: "included",
+      chainId: "ynx_9001-1",
+      evmChainId: 9001n,
+      txHash: "0x" + "55".repeat(32),
+      targetBlock: 3n,
+      issuedAt: 3n,
+    });
+    const signature = goStyleSignatureBytes(digest, privKey);
+
+    const res = verifyPreconfirmReceiptV0({
+      status: "included",
+      chainId: "ynx_9001-1",
+      evmChainId: "0x2329",
+      txHash: "0x" + "55".repeat(32),
+      targetBlock: "0x3",
+      issuedAt: "0x3",
+      signer,
+      digest,
+      signature,
+      signers: [signer, signer],
+      signatures: [signature, signature],
+      threshold: 2,
+    });
+
+    expect(res.ok).toBe(false);
+    expect(res.validSigners).toEqual([signer]);
+    expect(res.reason).toBe("insufficient valid signatures");
+  });
+
+  it("rejects high-s malleable signatures", () => {
+    const privKey = "0x59c6995e998f97a5a0044966f094538b292c0acdf0f39c6a9c3d6f64b87b84c1";
+    const signer = computeAddress(new SigningKey(privKey).publicKey);
+    const digest = computePreconfirmDigestV0({
+      status: "pending",
+      chainId: "ynx_9001-1",
+      evmChainId: 9001n,
+      txHash: "0x" + "66".repeat(32),
+      targetBlock: 4n,
+      issuedAt: 4n,
+    });
+    const signature = toHighSSignature(goStyleSignatureBytes(digest, privKey));
+
+    const res = verifyPreconfirmReceiptV0({
+      status: "pending",
+      chainId: "ynx_9001-1",
+      evmChainId: "0x2329",
+      txHash: "0x" + "66".repeat(32),
+      targetBlock: "0x4",
+      issuedAt: "0x4",
+      signer,
+      digest,
+      signature,
+    });
+
+    expect(res.ok).toBe(false);
+    expect(res.reason).toBe("insufficient valid signatures");
   });
 
   it("fails on digest mismatch", () => {

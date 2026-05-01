@@ -112,3 +112,54 @@ test("internal authorization consumes session ops and spend for AI actions", asy
   assert.equal(authorized.remaining_ops, 1);
   assert.equal(authorized.remaining_spend, 75);
 });
+
+test("policy owner actions require owner secret, not public owner name", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-owner-secret-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "public-owner-name",
+        name: "policy-owner-secret",
+      },
+    }),
+    201
+  );
+
+  const publicOwnerAttempt = await requestJson(
+    `http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`,
+    {
+      method: "POST",
+      headers: { "x-ynx-owner": "public-owner-name" },
+      body: { capabilities: ["intent.create"] },
+    }
+  );
+  assert.equal(publicOwnerAttempt.status, 401);
+  assert.equal(publicOwnerAttempt.body.error, "owner_auth_failed");
+
+  const secretAttempt = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: { capabilities: ["intent.create"] },
+    }),
+    201
+  );
+  assert.equal(secretAttempt.ok, true);
+  assert.ok(secretAttempt.token);
+});

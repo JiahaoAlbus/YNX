@@ -91,6 +91,28 @@ function hashSecret(input) {
   return crypto.createHash("sha256").update(String(input)).digest("hex");
 }
 
+function readHeader(req, name) {
+  const value = req.headers[name];
+  if (Array.isArray(value)) return value[0] || "";
+  return value || "";
+}
+
+function timingSafeEqualHex(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (!/^[0-9a-f]{64}$/i.test(a) || !/^[0-9a-f]{64}$/i.test(b)) return false;
+  return crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
+}
+
+function secretMatchesHash(secret, expectedHash) {
+  if (!secret || !expectedHash) return false;
+  return timingSafeEqualHex(hashSecret(secret), String(expectedHash));
+}
+
+function secretEquals(candidate, expected) {
+  if (!candidate || !expected) return false;
+  return timingSafeEqualHex(hashSecret(candidate), hashSecret(expected));
+}
+
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -322,16 +344,13 @@ function resetPolicyDaily(policy) {
 }
 
 function verifyOwner(req, policy) {
-  const ownerToken = req.headers["x-ynx-owner"] || "";
-  if (!ownerToken) return false;
-  const candidateHash = hashSecret(ownerToken);
-  return candidateHash === policy.owner_secret_hash || String(ownerToken) === String(policy.owner);
+  return secretMatchesHash(readHeader(req, "x-ynx-owner"), policy.owner_secret_hash);
 }
 
 function findSessionByToken(token) {
   if (!token) return null;
   const tokenHash = hashSecret(token);
-  return state.sessions.find((item) => item.token_hash === tokenHash) || null;
+  return state.sessions.find((item) => timingSafeEqualHex(tokenHash, String(item.token_hash || ""))) || null;
 }
 
 function validateSessionForAction(session, action, amount) {
@@ -384,7 +403,7 @@ function policyGuard(req, action, policyId, amount = 0) {
   if (policy.allowed_actions.length && !policy.allowed_actions.includes("*") && !policy.allowed_actions.includes(action)) {
     return { ok: false, status: 403, error: "policy_action_denied" };
   }
-  const token = req.headers["x-ynx-session"] || "";
+  const token = readHeader(req, "x-ynx-session");
   if (!token) return { ok: false, status: 401, error: "session_required" };
   const session = findSessionByToken(token);
   if (!session || session.policy_id !== policyId) return { ok: false, status: 401, error: "invalid_session" };
@@ -556,7 +575,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname === "/web4/internal/authorize") {
-    if (WEB4_INTERNAL_TOKEN && req.headers["x-ynx-internal-token"] !== WEB4_INTERNAL_TOKEN) {
+    if (WEB4_INTERNAL_TOKEN && !secretEquals(readHeader(req, "x-ynx-internal-token"), WEB4_INTERNAL_TOKEN)) {
       return json(res, 401, { ok: false, error: "internal_auth_failed" });
     }
     const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);

@@ -4,6 +4,7 @@ import { computeAddress, concat, getAddress, getBytes, hexlify, recoverAddress, 
 export const ARES_VERSION = "ynx-ares-v1";
 const ARES_DIGEST_DOMAIN = "YNX-ARES-v1";
 const ARES_ENVELOPE_HASH_DOMAIN = "YNX-ARES-envelope-hash-v1";
+const SECP256K1_HALF_N = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0n;
 
 export type AresMode = "strict" | "observe";
 export type AresClassicalScheme = "eth_secp256k1";
@@ -187,6 +188,8 @@ function normalizeSignatureForRecovery(signature: string): string {
   const bytes = getBytes(signature);
   if (bytes.length !== 65) throw new Error(`Invalid classical signature length: ${bytes.length}`);
   const mutable = new Uint8Array(bytes);
+  const s = BigInt(hexlify(mutable.slice(32, 64)));
+  if (s > SECP256K1_HALF_N) throw new Error("Invalid classical signature s: high-s signatures are not accepted");
   const v = mutable[64] ?? 0;
   if (v === 0 || v === 1) mutable[64] = v + 27;
   if (mutable[64] !== 27 && mutable[64] !== 28) throw new Error(`Invalid classical signature v: ${mutable[64]}`);

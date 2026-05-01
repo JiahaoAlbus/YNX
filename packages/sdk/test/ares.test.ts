@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { computeAddress, SigningKey } from "ethers";
+import { computeAddress, getBytes, hexlify, SigningKey } from "ethers";
 import {
   computeAresPayloadHash,
   createAresEnvelopeV1,
@@ -10,9 +10,22 @@ import {
 const privKey = "0x59c6995e998f97a5a0044966f094538b292c0acdf0f39c6a9c3d6f64b87b84c1";
 const account = computeAddress(new SigningKey(privKey).publicKey);
 const pqSecret = "test-pq-secret";
+const SECP256K1_N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
 
 function testPqSignature(digest: string, secret: string): string {
   return `0x${createHash("sha3-256").update(JSON.stringify({ digest, secret })).digest("hex")}`;
+}
+
+function toHighSSignature(signature: string): string {
+  const bytes = getBytes(signature);
+  const s = BigInt(hexlify(bytes.slice(32, 64)));
+  const highS = (SECP256K1_N - s).toString(16).padStart(64, "0");
+  bytes.set(getBytes(`0x${highS}`), 32);
+  if (bytes[64] === 0) bytes[64] = 1;
+  else if (bytes[64] === 1) bytes[64] = 0;
+  else if (bytes[64] === 27) bytes[64] = 28;
+  else if (bytes[64] === 28) bytes[64] = 27;
+  return hexlify(bytes);
 }
 
 describe("ares envelopes (v1)", () => {
@@ -117,6 +130,34 @@ describe("ares envelopes (v1)", () => {
     });
     expect(replayed.ok).toBe(false);
     expect(replayed.reason).toBe("nonce_replay");
+  });
+
+  it("rejects high-s malleable classical signatures", async () => {
+    const payload = { action: "agent.create", params: { name: "malleability-test" } };
+    const envelope = await createAresEnvelopeV1({
+      chainId: "ynx_9102-1",
+      appId: "web4-hub",
+      account,
+      policyId: "policy_4",
+      sessionId: "session_4",
+      capabilitySet: ["agent.create"],
+      nonce: "nonce_4",
+      issuedAt: "2026-05-01T00:00:00.000Z",
+      expiresAt: "2026-05-01T00:10:00.000Z",
+      payload,
+      classicalPrivateKey: privKey,
+      pqPubkeyRef: "ml-dsa-test-pubkey",
+      pqSigner: (digest) => testPqSignature(digest, pqSecret),
+    });
+    envelope.classical_signature = toHighSSignature(envelope.classical_signature);
+
+    const result = await verifyAresEnvelopeV1(envelope, payload, {
+      mode: "observe",
+      now: new Date("2026-05-01T00:01:00.000Z"),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("high-s");
   });
 
   it("canonicalizes JSON payload hashes by key order", () => {

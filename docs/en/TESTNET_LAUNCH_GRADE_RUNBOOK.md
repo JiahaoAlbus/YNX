@@ -44,6 +44,19 @@ Capture evidence:
 ./scripts/capture_public_runtime_evidence.sh
 ```
 
+Continuous monitor:
+
+```bash
+scripts/testnet_launch_grade_monitor.sh
+```
+
+For alert webhooks:
+
+```bash
+ALERT_WEBHOOK_URL=https://example.invalid/hook \
+  scripts/testnet_launch_grade_monitor.sh
+```
+
 ## Validator Standard
 
 Minimum public-testnet standard:

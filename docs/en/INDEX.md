@@ -18,6 +18,7 @@ Last updated: 2026-04-30
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current testnet service/write/P2P readiness report
 - `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
@@ -43,6 +44,7 @@ Last updated: 2026-04-30
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current operator-verified readiness and blockers
 - `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — industry launch gates and strict readiness command
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch paperwork and answer bank
 
@@ -62,6 +64,7 @@ Last updated: 2026-04-30
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — public testnet readiness snapshot
 - `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — strict readiness gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch packet
 - `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
@@ -96,6 +99,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_POSITIONING.md`
 - `docs/en/RELEASES_2_CURRENT_STATUS.md`
 - `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md`
 - `docs/en/VALIDATOR_RECRUITMENT_POST.md`
 - `docs/en/VALIDATOR_SIGNUP_REVIEW_TEMPLATE.md`
 - `docs/en/VALIDATOR_GOOGLE_FORM_TEMPLATE.md`

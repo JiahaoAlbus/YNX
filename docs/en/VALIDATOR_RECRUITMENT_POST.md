@@ -18,9 +18,10 @@ YNX Public Testnet is open for validator onboarding.
 
 How to join:
 
-1. Follow `README.md` Path B to run your node.
-2. Follow `README.md` Path D to prepare validator info.
-3. Run `README.md` Path G (`validator_onboard_safe.sh`) for safe join.
+1. Follow `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` to choose the validator path.
+2. Follow `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md` to run and sync a node.
+3. Follow `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md` to submit `create-validator`.
+4. Send the fields in `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md`.
 
 Required submit fields:
 
@@ -34,7 +35,9 @@ Required submit fields:
 Reference docs:
 
 - `README.md`
-- `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md`
+- `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md`
 - `docs/en/VALIDATOR_SIGNUP_REVIEW_TEMPLATE.md`
 
 ## 中文版本
@@ -52,9 +55,10 @@ YNX 公测网现已开放验证人接入。
 
 加入步骤：
 
-1. 按 `README.md` 的 Path B 部署节点。
-2. 按 `README.md` 的 Path D 生成验证人资料。
-3. 按 `README.md` 的 Path G 运行 `validator_onboard_safe.sh` 安全接入。
+1. 按 `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` 选择 validator 路径。
+2. 按 `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md` 运行并同步节点。
+3. 按 `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md` 提交 `create-validator`。
+4. 按 `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` 提交资料。
 
 提交信息：
 
@@ -68,5 +72,7 @@ YNX 公测网现已开放验证人接入。
 参考文档：
 
 - `README.md`
-- `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md`
+- `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md`
+- `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md`
 - `docs/en/VALIDATOR_SIGNUP_REVIEW_TEMPLATE.md`

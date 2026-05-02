@@ -22,6 +22,7 @@ Last updated: 2026-04-30
 - `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
+- `docs/en/WEBSITE_REBUILD_GEMINI_PROMPT.md` — canonical from-scratch website rebuild prompt and docs-sync requirements
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
 - `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface
 
@@ -69,6 +70,7 @@ Last updated: 2026-04-30
 - `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — strict readiness gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch packet
+- `docs/en/WEBSITE_REBUILD_GEMINI_PROMPT.md` — canonical from-scratch website rebuild prompt
 - `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
 - `docs/en/V2_VALIDATOR_BOOTSTRAP.md` — v2 validator bootstrap quickstart
 - `docs/en/V2_SMOKE_AND_VERIFY.md` — v2 verification and write-path smoke testing

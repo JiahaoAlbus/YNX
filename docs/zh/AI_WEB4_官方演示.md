@@ -43,6 +43,35 @@ output/ai_web4_demo/<run-id>/
 6. job finalize 后，从 vault 自动结算 reward。
 7. 输出每一步 JSON 证据文件。
 
+预期终端输出形态：
+
+```text
+YNX AI/Web4 settlement demo
+Run id: demo_<timestamp>
+Web4: http://127.0.0.1:18091
+AI:   http://127.0.0.1:18090
+
+1. Created Web4 policy: policy_demo_<timestamp>
+2. Issued bounded session key: session_demo_<timestamp>
+3. Created AI payment vault: vault_demo_<timestamp>
+4. Published AI job: job_demo_<timestamp>
+5. Worker committed result hash: <sha256>
+6. Finalized job and settled reward payment: pay_<id>
+```
+
+证据文件：
+
+```text
+output/ai_web4_demo/<run-id>/01_policy.json
+output/ai_web4_demo/<run-id>/02_session.json
+output/ai_web4_demo/<run-id>/03_vault.json
+output/ai_web4_demo/<run-id>/04_job_created.json
+output/ai_web4_demo/<run-id>/05_job_committed.json
+output/ai_web4_demo/<run-id>/06_job_finalized.json
+output/ai_web4_demo/<run-id>/07_ai_stats.json
+output/ai_web4_demo/<run-id>/08_web4_overview.json
+```
+
 ## 4. 用线上服务跑
 
 如果要指向已部署的服务，可以显式传入 URL：
@@ -65,3 +94,20 @@ AI_URL=https://ai.ynxweb4.com \
 - AI 任务有结果承诺、挑战窗口、最终结算和审计记录；
 - 机器支付不是应用私有逻辑，而是 YNX Web4/AI 协议面的一部分。
 
+## 6. 官网文档集成要求
+
+官网不能把本文档手写成一份过期的静态数据。官网应在构建时从 YNX 核心仓库同步本文档，并按需作为 markdown 加载：
+
+```text
+/docs/zh/ai-web4-official-demo
+```
+
+推荐同步规则：
+
+```text
+sourcePath: docs/zh/AI_WEB4_官方演示.md
+publicPath: /docs/zh/ai-web4-official-demo.md
+route: /docs/zh/ai-web4-official-demo
+category: Chinese Docs
+tags: ai, web4, demo, settlement, policy, session, vault
+```

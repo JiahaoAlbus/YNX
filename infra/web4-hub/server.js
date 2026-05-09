@@ -1,7 +1,9 @@
 const fs = require("fs");
 const http = require("http");
+const https = require("https");
 const path = require("path");
 const crypto = require("crypto");
+const net = require("net");
 
 function loadEnvFile(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return;
@@ -73,6 +75,51 @@ function requireValidBody(res, body) {
   const status = body.__parse_error === "payload_too_large" ? 413 : 400;
   json(res, status, { ok: false, error: body.__parse_error });
   return false;
+}
+
+function requestRaw(targetUrl, options = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(targetUrl);
+    const transport = url.protocol === "https:" ? https : http;
+    const body = options.body === undefined || options.body === null ? "" : String(options.body);
+    const req = transport.request(
+      {
+        method: options.method || "GET",
+        hostname: url.hostname,
+        port: url.port || (url.protocol === "https:" ? 443 : 80),
+        path: `${url.pathname}${url.search}`,
+        timeout: options.timeout_ms || 10000,
+        headers: {
+          ...(body ? { "content-length": Buffer.byteLength(body) } : {}),
+          ...(options.headers || {}),
+        },
+      },
+      (upstream) => {
+        const chunks = [];
+        let size = 0;
+        const maxBytes = options.max_response_bytes || 65536;
+        upstream.on("data", (chunk) => {
+          if (size >= maxBytes) return;
+          const remaining = maxBytes - size;
+          const slice = chunk.length > remaining ? chunk.subarray(0, remaining) : chunk;
+          chunks.push(slice);
+          size += slice.length;
+        });
+        upstream.on("end", () => {
+          resolve({
+            status: upstream.statusCode || 0,
+            headers: upstream.headers,
+            body: Buffer.concat(chunks).toString("utf8"),
+            truncated: size >= maxBytes,
+          });
+        });
+      }
+    );
+    req.on("timeout", () => req.destroy(new Error("upstream_timeout")));
+    req.on("error", reject);
+    if (body) req.write(body);
+    req.end();
+  });
 }
 
 function nowIso() {
@@ -151,7 +198,9 @@ const DEFAULT_ALLOWED_ACTIONS = [
   "ai.job.challenge",
   "ai.job.finalize",
   "ai.payment.charge",
+  "tool.execute",
 ];
+const DEFAULT_ALLOWED_SERVICE_HOSTS = ["*"];
 
 function normalizeState(loaded) {
   const source = loaded && typeof loaded === "object" ? loaded : {};
@@ -162,6 +211,8 @@ function normalizeState(loaded) {
     claims: Array.isArray(source.claims) ? source.claims : [],
     policies: Array.isArray(source.policies) ? source.policies : [],
     sessions: Array.isArray(source.sessions) ? source.sessions : [],
+    tools: Array.isArray(source.tools) ? source.tools : [],
+    tool_calls: Array.isArray(source.tool_calls) ? source.tool_calls : [],
     wallet_bootstraps: Array.isArray(source.wallet_bootstraps) ? source.wallet_bootstraps : [],
     audit_logs: Array.isArray(source.audit_logs) ? source.audit_logs : [],
   };
@@ -186,8 +237,13 @@ const WEB4_MAX_INTENTS = parseInt(process.env.WEB4_MAX_INTENTS || "200000", 10);
 const WEB4_MAX_CLAIMS = parseInt(process.env.WEB4_MAX_CLAIMS || "200000", 10);
 const WEB4_MAX_POLICIES = parseInt(process.env.WEB4_MAX_POLICIES || "100000", 10);
 const WEB4_MAX_SESSIONS = parseInt(process.env.WEB4_MAX_SESSIONS || "300000", 10);
+const WEB4_MAX_TOOLS = parseInt(process.env.WEB4_MAX_TOOLS || "50000", 10);
+const WEB4_MAX_TOOL_CALLS = parseInt(process.env.WEB4_MAX_TOOL_CALLS || "500000", 10);
 const WEB4_MAX_BOOTSTRAPS = parseInt(process.env.WEB4_MAX_BOOTSTRAPS || "100000", 10);
 const WEB4_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.WEB4_PERSIST_DEBOUNCE_MS || "200", 10));
+const WEB4_TOOL_TIMEOUT_MS = Math.max(1000, parseInt(process.env.WEB4_TOOL_TIMEOUT_MS || "10000", 10) || 10000);
+const WEB4_TOOL_RESPONSE_LIMIT_BYTES = Math.max(1024, parseInt(process.env.WEB4_TOOL_RESPONSE_LIMIT_BYTES || "65536", 10) || 65536);
+const WEB4_ALLOW_PRIVATE_TOOL_URLS = process.env.WEB4_ALLOW_PRIVATE_TOOL_URLS === "1";
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -219,6 +275,8 @@ function trimStateForRetention() {
   if (WEB4_MAX_CLAIMS > 0 && state.claims.length > WEB4_MAX_CLAIMS) state.claims = state.claims.slice(0, WEB4_MAX_CLAIMS);
   if (WEB4_MAX_POLICIES > 0 && state.policies.length > WEB4_MAX_POLICIES) state.policies = state.policies.slice(0, WEB4_MAX_POLICIES);
   if (WEB4_MAX_SESSIONS > 0 && state.sessions.length > WEB4_MAX_SESSIONS) state.sessions = state.sessions.slice(0, WEB4_MAX_SESSIONS);
+  if (WEB4_MAX_TOOLS > 0 && state.tools.length > WEB4_MAX_TOOLS) state.tools = state.tools.slice(0, WEB4_MAX_TOOLS);
+  if (WEB4_MAX_TOOL_CALLS > 0 && state.tool_calls.length > WEB4_MAX_TOOL_CALLS) state.tool_calls = state.tool_calls.slice(0, WEB4_MAX_TOOL_CALLS);
   if (WEB4_MAX_BOOTSTRAPS > 0 && state.wallet_bootstraps.length > WEB4_MAX_BOOTSTRAPS) {
     state.wallet_bootstraps = state.wallet_bootstraps.slice(0, WEB4_MAX_BOOTSTRAPS);
   }
@@ -279,6 +337,10 @@ function findPolicy(policyId) {
   return state.policies.find((item) => item.policy_id === policyId);
 }
 
+function findTool(toolId) {
+  return state.tools.find((item) => item.tool_id === toolId);
+}
+
 function addAudit(event, payload) {
   state.audit_logs.unshift({
     audit_id: randomId("audit"),
@@ -328,6 +390,8 @@ function summarizeStats() {
     claims: state.claims.length,
     policies: state.policies.length,
     sessions_active: state.sessions.filter((item) => item.status === "active").length,
+    tools: state.tools.length,
+    tool_calls: state.tool_calls.length,
     bootstraps: state.wallet_bootstraps.length,
     intent_by_status: intentByStatus,
     agent_by_status: agentByStatus,
@@ -357,12 +421,21 @@ function validateSessionForAction(session, action, amount) {
   if (!session) return { ok: false, error: "session_required" };
   if (session.status !== "active") return { ok: false, error: "session_inactive" };
   if (new Date(session.expires_at).getTime() <= Date.now()) return { ok: false, error: "session_expired" };
-  if (!session.capabilities.includes("*") && !session.capabilities.includes(action)) {
+  if (!allowsPattern(session.capabilities, action)) {
     return { ok: false, error: "capability_denied" };
   }
   if (session.ops_used >= session.max_ops) return { ok: false, error: "session_ops_exceeded" };
   if (session.spend_used + amount > session.max_spend) return { ok: false, error: "session_spend_exceeded" };
   return { ok: true };
+}
+
+function allowsPattern(patterns, value) {
+  if (!Array.isArray(patterns) || patterns.length === 0) return false;
+  if (patterns.includes("*") || patterns.includes(value)) return true;
+  return patterns.some((pattern) => {
+    if (typeof pattern !== "string" || !pattern.endsWith("*")) return false;
+    return value.startsWith(pattern.slice(0, -1));
+  });
 }
 
 function validatePolicyAction(policy, amount) {
@@ -400,7 +473,7 @@ function policyGuard(req, action, policyId, amount = 0) {
   const policy = findPolicy(policyId);
   const policyCheck = validatePolicyAction(policy, amount);
   if (!policyCheck.ok) return { ok: false, status: 403, error: policyCheck.error };
-  if (policy.allowed_actions.length && !policy.allowed_actions.includes("*") && !policy.allowed_actions.includes(action)) {
+  if (policy.allowed_actions.length && !allowsPattern(policy.allowed_actions, action)) {
     return { ok: false, status: 403, error: "policy_action_denied" };
   }
   const token = readHeader(req, "x-ynx-session");
@@ -424,6 +497,13 @@ function createPolicy(body) {
         ? body.allowed_actions
         : DEFAULT_ALLOWED_ACTIONS
     ),
+    allowed_tools: uniqueStrings(Array.isArray(body.allowed_tools) && body.allowed_tools.length ? body.allowed_tools : ["*"]),
+    allowed_tool_hosts: uniqueStrings(
+      Array.isArray(body.allowed_tool_hosts) && body.allowed_tool_hosts.length ? body.allowed_tool_hosts : ["*"]
+    ).map((item) => item.toLowerCase()),
+    allowed_service_hosts: uniqueStrings(
+      Array.isArray(body.allowed_service_hosts) && body.allowed_service_hosts.length ? body.allowed_service_hosts : DEFAULT_ALLOWED_SERVICE_HOSTS
+    ).map((item) => item.toLowerCase()),
     max_total_spend: toNumber(body.max_total_spend, 0),
     max_daily_spend: toNumber(body.max_daily_spend, 0),
     max_children: Math.max(0, parseInt(body.max_children || "0", 10) || 0),
@@ -439,6 +519,91 @@ function createPolicy(body) {
     updated_at: nowIso(),
   };
   return { policy, owner_secret: ownerSecret };
+}
+
+function sanitizeHeaders(headers) {
+  const out = {};
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return out;
+  for (const [key, value] of Object.entries(headers)) {
+    const normalizedKey = key.toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(normalizedKey)) continue;
+    if (["host", "connection", "content-length", "transfer-encoding"].includes(normalizedKey)) continue;
+    if (typeof value === "string" && value.length <= 4096) out[normalizedKey] = value;
+  }
+  return out;
+}
+
+function isPrivateHost(hostname) {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  const ipType = net.isIP(host);
+  if (ipType === 4) {
+    const parts = host.split(".").map((part) => Number(part));
+    return (
+      parts[0] === 10 ||
+      parts[0] === 127 ||
+      (parts[0] === 169 && parts[1] === 254) ||
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] === 192 && parts[1] === 168)
+    );
+  }
+  if (ipType === 6) return host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80");
+  return false;
+}
+
+function normalizeTool(body) {
+  const baseUrl = new URL(String(body.base_url || ""));
+  if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("invalid_base_url_protocol");
+  if (baseUrl.username || baseUrl.password) throw new Error("base_url_credentials_not_allowed");
+  if (!WEB4_ALLOW_PRIVATE_TOOL_URLS && isPrivateHost(baseUrl.hostname)) throw new Error("private_tool_url_not_allowed");
+  return {
+    tool_id: body.tool_id || randomId("tool"),
+    name: body.name || body.tool_id || "external-tool",
+    description: body.description || "",
+    kind: body.kind || "http",
+    status: "active",
+    base_url: baseUrl.origin,
+    allowed_methods: uniqueStrings(Array.isArray(body.allowed_methods) && body.allowed_methods.length ? body.allowed_methods : ["GET", "POST"]).map((item) =>
+      item.toUpperCase()
+    ),
+    allowed_paths: uniqueStrings(Array.isArray(body.allowed_paths) && body.allowed_paths.length ? body.allowed_paths : ["/"]),
+    default_headers: sanitizeHeaders(body.default_headers || {}),
+    cost_per_call: toNumber(body.cost_per_call, 0),
+    owner: body.owner || "",
+    metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : {},
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
+}
+
+function pathAllowed(patterns, pathname) {
+  return patterns.some((pattern) => {
+    if (pattern === "*" || pattern === "/*") return true;
+    if (pattern.endsWith("*")) return pathname.startsWith(pattern.slice(0, -1));
+    return pathname === pattern;
+  });
+}
+
+function validateToolCall(policy, tool, body) {
+  if (!tool) return { ok: false, status: 404, error: "tool_not_found" };
+  if (tool.status !== "active") return { ok: false, status: 403, error: `tool_${tool.status}` };
+  if (policy) {
+    if (!allowsPattern(policy.allowed_tools || ["*"], tool.tool_id)) return { ok: false, status: 403, error: "policy_tool_denied" };
+    const host = new URL(tool.base_url).hostname.toLowerCase();
+    if (!allowsPattern(policy.allowed_tool_hosts || ["*"], host)) return { ok: false, status: 403, error: "policy_tool_host_denied" };
+  }
+  const method = String(body.method || "GET").toUpperCase();
+  if (!tool.allowed_methods.includes(method)) return { ok: false, status: 403, error: "tool_method_denied" };
+  const rawPath = String(body.path || "/");
+  if (!rawPath.startsWith("/")) return { ok: false, status: 400, error: "tool_path_must_be_absolute" };
+  const target = new URL(rawPath, tool.base_url);
+  if (target.origin !== new URL(tool.base_url).origin) return { ok: false, status: 403, error: "tool_origin_escape_denied" };
+  if (!pathAllowed(tool.allowed_paths, target.pathname)) return { ok: false, status: 403, error: "tool_path_denied" };
+  return { ok: true, method, target };
+}
+
+function hashBody(body) {
+  return crypto.createHash("sha256").update(String(body || "")).digest("hex");
 }
 
 function issueSession(policy, body) {
@@ -465,6 +630,57 @@ function issueSession(policy, body) {
     updated_at: nowIso(),
   };
   return { session, token };
+}
+
+function authorizeAction(req, body, options = {}) {
+  if (!body || typeof body !== "object") return { ok: false, status: 400, error: "invalid_body" };
+  if (!body.policy_id) return { ok: false, status: 400, error: "policy_id_required" };
+  if (!body.action) return { ok: false, status: 400, error: "action_required" };
+
+  const amount = toNumber(body.amount, 0);
+  const guard = policyGuard(req, body.action, body.policy_id, amount);
+  if (!guard.ok) return { ok: false, status: guard.status, error: guard.error };
+
+  const resourceHost = String(body.resource_host || body.host || "").trim().toLowerCase();
+  if (resourceHost && guard.policy) {
+    if (!allowsPattern(guard.policy.allowed_service_hosts || DEFAULT_ALLOWED_SERVICE_HOSTS, resourceHost)) {
+      return { ok: false, status: 403, error: "policy_service_host_denied" };
+    }
+  }
+
+  const consume = options.forceConsume === true || body.consume !== false;
+  if (consume) {
+    applySpend(guard.policy, guard.session, amount);
+    addAudit("policy.authorized", {
+      policy_id: body.policy_id,
+      action: body.action,
+      amount,
+      session_id: guard.session?.session_id || "",
+      resource_host: resourceHost,
+      resource: body.resource || "",
+      context: body.context || {},
+      source: options.source || "unknown",
+    });
+    persist();
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    payload: {
+      ok: true,
+      policy_id: guard.policy?.policy_id || body.policy_id,
+      session_id: guard.session?.session_id || "",
+      action: body.action,
+      consumed: consume,
+      resource_host: resourceHost || "",
+      resource: body.resource || "",
+      remaining_ops: guard.session ? Math.max(0, guard.session.max_ops - guard.session.ops_used) : null,
+      remaining_spend: guard.session ? Math.max(0, guard.session.max_spend - guard.session.spend_used) : null,
+      session_expires_at: guard.session?.expires_at || "",
+      authorized_at: nowIso(),
+    },
+  };
 }
 
 function createWalletBootstrap(body) {
@@ -574,37 +790,159 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, items: state.audit_logs.slice(0, limit) });
   }
 
+  if (req.method === "GET" && url.pathname === "/web4/tools") {
+    return json(res, 200, { ok: true, items: state.tools });
+  }
+
+  if (req.method === "POST" && url.pathname === "/web4/tools") {
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    if (body.tool_id && !ensureUnique(state.tools, "tool_id", body.tool_id)) {
+      return json(res, 409, { ok: false, error: "tool_id_exists" });
+    }
+    let tool;
+    try {
+      tool = normalizeTool(body);
+    } catch (error) {
+      return json(res, 400, { ok: false, error: error && error.message ? error.message : "invalid_tool" });
+    }
+    state.tools.unshift(tool);
+    addAudit("tool.registered", { tool_id: tool.tool_id, base_url: tool.base_url, allowed_paths: tool.allowed_paths });
+    persist();
+    return json(res, 201, { ok: true, tool });
+  }
+
+  if (segments[0] === "web4" && segments[1] === "tools" && segments[2]) {
+    const toolId = segments[2];
+    const action = segments[3] || "";
+    const tool = findTool(toolId);
+
+    if (req.method === "GET" && !action) {
+      if (!tool) return json(res, 404, { ok: false, error: "tool_not_found" });
+      return json(res, 200, { ok: true, tool });
+    }
+
+    if (req.method === "POST" && action === "execute") {
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      const policyId = body.policy_id || "";
+      const amount = toNumber(body.amount, tool?.cost_per_call || 0);
+      const guard = policyGuard(req, "tool.execute", policyId, amount);
+      if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
+      const toolCheck = validateToolCall(guard.policy, tool, body);
+      if (!toolCheck.ok) return json(res, toolCheck.status, { ok: false, error: toolCheck.error });
+
+      const requestBody =
+        body.body === undefined || body.body === null
+          ? ""
+          : typeof body.body === "string"
+            ? body.body
+            : JSON.stringify(body.body);
+      const headers = {
+        ...tool.default_headers,
+        ...sanitizeHeaders(body.headers || {}),
+        ...(requestBody && !sanitizeHeaders(body.headers || {})["content-type"] ? { "content-type": "application/json" } : {}),
+      };
+      const callId = body.call_id || randomId("call");
+      const startedAt = nowIso();
+      applySpend(guard.policy, guard.session, amount);
+
+      try {
+        const upstream = await requestRaw(toolCheck.target.toString(), {
+          method: toolCheck.method,
+          headers,
+          body: requestBody,
+          timeout_ms: Math.min(WEB4_TOOL_TIMEOUT_MS, Math.max(1000, parseInt(body.timeout_ms || WEB4_TOOL_TIMEOUT_MS, 10) || WEB4_TOOL_TIMEOUT_MS)),
+          max_response_bytes: WEB4_TOOL_RESPONSE_LIMIT_BYTES,
+        });
+        const responseHash = hashBody(upstream.body);
+        let parsedBody = null;
+        try {
+          parsedBody = upstream.body ? JSON.parse(upstream.body) : null;
+        } catch {
+          parsedBody = null;
+        }
+        const call = {
+          call_id: callId,
+          tool_id: tool.tool_id,
+          policy_id: guard.policy?.policy_id || policyId,
+          session_id: guard.session?.session_id || "",
+          method: toolCheck.method,
+          path: `${toolCheck.target.pathname}${toolCheck.target.search}`,
+          target_host: toolCheck.target.hostname,
+          amount,
+          request_hash: hashBody(requestBody),
+          response_hash: responseHash,
+          status: upstream.status >= 200 && upstream.status < 400 ? "succeeded" : "failed",
+          upstream_status: upstream.status,
+          truncated: upstream.truncated,
+          started_at: startedAt,
+          completed_at: nowIso(),
+        };
+        state.tool_calls.unshift(call);
+        addAudit("tool.executed", {
+          call_id: call.call_id,
+          tool_id: tool.tool_id,
+          policy_id: call.policy_id,
+          session_id: call.session_id,
+          upstream_status: call.upstream_status,
+          amount,
+        });
+        persist();
+        return json(res, 200, {
+          ok: true,
+          call,
+          upstream: {
+            status: upstream.status,
+            content_type: upstream.headers["content-type"] || "",
+            body: parsedBody === null ? upstream.body : parsedBody,
+            response_hash: responseHash,
+            truncated: upstream.truncated,
+          },
+        });
+      } catch (error) {
+        const call = {
+          call_id: callId,
+          tool_id: tool.tool_id,
+          policy_id: guard.policy?.policy_id || policyId,
+          session_id: guard.session?.session_id || "",
+          method: toolCheck.method,
+          path: `${toolCheck.target.pathname}${toolCheck.target.search}`,
+          target_host: toolCheck.target.hostname,
+          amount,
+          request_hash: hashBody(requestBody),
+          response_hash: "",
+          status: "failed",
+          upstream_status: 0,
+          error: error && error.message ? error.message : "tool_call_failed",
+          started_at: startedAt,
+          completed_at: nowIso(),
+        };
+        state.tool_calls.unshift(call);
+        addAudit("tool.failed", { call_id: call.call_id, tool_id: tool.tool_id, error: call.error, amount });
+        persist();
+        return json(res, 502, { ok: false, error: call.error, call });
+      }
+    }
+  }
+
   if (req.method === "POST" && url.pathname === "/web4/internal/authorize") {
     if (WEB4_INTERNAL_TOKEN && !secretEquals(readHeader(req, "x-ynx-internal-token"), WEB4_INTERNAL_TOKEN)) {
       return json(res, 401, { ok: false, error: "internal_auth_failed" });
     }
     const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
     if (!requireValidBody(res, body)) return;
-    if (!body.policy_id) return json(res, 400, { ok: false, error: "policy_id_required" });
-    if (!body.action) return json(res, 400, { ok: false, error: "action_required" });
+    const decision = authorizeAction(req, body, { source: "internal_authorizer" });
+    if (!decision.ok) return json(res, decision.status, { ok: false, error: decision.error });
+    return json(res, 200, decision.payload);
+  }
 
-    const guard = policyGuard(req, body.action, body.policy_id, toNumber(body.amount, 0));
-    if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
-
-    if (body.consume !== false) {
-      applySpend(guard.policy, guard.session, toNumber(body.amount, 0));
-      addAudit("policy.authorized", {
-        policy_id: body.policy_id,
-        action: body.action,
-        amount: toNumber(body.amount, 0),
-        session_id: guard.session?.session_id || "",
-        context: body.context || {},
-      });
-      persist();
-    }
-
-    return json(res, 200, {
-      ok: true,
-      policy_id: guard.policy?.policy_id || body.policy_id,
-      session_id: guard.session?.session_id || "",
-      remaining_ops: guard.session ? Math.max(0, guard.session.max_ops - guard.session.ops_used) : null,
-      remaining_spend: guard.session ? Math.max(0, guard.session.max_spend - guard.session.spend_used) : null,
-    });
+  if (req.method === "POST" && url.pathname === "/web4/authorize") {
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const decision = authorizeAction(req, body, { source: "third_party_gateway" });
+    if (!decision.ok) return json(res, decision.status, { ok: false, error: decision.error });
+    return json(res, 200, decision.payload);
   }
 
   if (req.method === "POST" && url.pathname === "/web4/wallet/bootstrap") {

@@ -404,6 +404,80 @@ test("rejects generic third-party actions outside service host allowlist", async
   assert.equal(denied.body.error, "policy_service_host_denied");
 });
 
+test("authorizes a batch of third-party actions with single session", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-generic-batch-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-batch",
+        allowed_actions: ["service.invoke"],
+        allowed_service_hosts: ["api.partner.example.com"],
+        max_total_spend: 200,
+        max_daily_spend: 200,
+      },
+    }),
+    201
+  );
+
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["service.invoke"],
+        max_ops: 10,
+        max_spend: 100,
+      },
+    }),
+    201
+  );
+
+  const batch = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/authorize/batch`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        requests: [
+          {
+            policy_id: created.policy.policy_id,
+            action: "service.invoke",
+            amount: 3,
+            resource_host: "api.partner.example.com",
+            resource: "crm/ticket/create",
+          },
+          {
+            policy_id: created.policy.policy_id,
+            action: "service.invoke",
+            amount: 4,
+            resource_host: "api.partner.example.com",
+            resource: "crm/ticket/update",
+          },
+        ],
+      },
+    }),
+    200
+  );
+  assert.equal(batch.ok, true);
+  assert.equal(batch.count, 2);
+  assert.equal(batch.items[1].remaining_spend, 93);
+});
+
 test("rejects third-party tool calls outside registered paths", async (t) => {
   const port = await getFreePort();
   const toolPort = await getFreePort();

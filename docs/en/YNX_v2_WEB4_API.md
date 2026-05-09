@@ -60,6 +60,15 @@ YNX v2 Web4 APIs follow sovereignty order:
     - `ok`, `policy_id`, `session_id`
     - `remaining_ops`, `remaining_spend`, `session_expires_at`
 
+- `POST /web4/authorize/batch`
+  - Purpose: authorize multiple actions in one round trip for multi-step agent workflows
+  - Required body field:
+    - `requests` (array, max 100 items)
+  - Each request item supports the same fields as `/web4/authorize`
+  - If any item fails validation, the whole batch returns an error with `index`
+  - On success, returns:
+    - `ok`, `count`, `items[]`
+
 - `POST /web4/internal/authorize`
   - Same decision model, intended for trusted internal gateways
   - Optional `x-ynx-internal-token` check when configured

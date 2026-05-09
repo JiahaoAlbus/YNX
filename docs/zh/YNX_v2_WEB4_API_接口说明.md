@@ -60,6 +60,18 @@ YNX v2 Web4 API 的执行顺序是：
     - `ok`、`policy_id`、`session_id`
     - `remaining_ops`、`remaining_spend`、`session_expires_at`
 
+- `POST /web4/authorize/batch`
+  - 作用：一次请求里批量授权多步动作，适合多步骤 Agent 流程
+  - 请求体必填：
+    - `requests`（数组，最多 100 条）
+  - `requests` 每一项支持与 `/web4/authorize` 相同字段
+  - 语义：
+    - 先全量 dry-run 校验（不扣减）
+    - 任意一项失败则整批失败，并返回失败项 `index`
+    - 全部通过后再顺序真实扣减并授权
+  - 成功返回：
+    - `ok`、`count`、`items[]`
+
 - `POST /web4/internal/authorize`
   - 与上面相同的决策模型，主要给内部网关使用
   - 配置了 `x-ynx-internal-token` 时会做内部鉴权

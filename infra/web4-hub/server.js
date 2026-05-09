@@ -945,6 +945,37 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, decision.payload);
   }
 
+  if (req.method === "POST" && url.pathname === "/web4/authorize/batch") {
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const requests = Array.isArray(body.requests) ? body.requests : [];
+    if (!requests.length) return json(res, 400, { ok: false, error: "requests_required" });
+    if (requests.length > 100) return json(res, 400, { ok: false, error: "too_many_requests" });
+
+    // Pass 1: validate all operations in dry-run mode (no consumption).
+    const dryResults = [];
+    for (let i = 0; i < requests.length; i += 1) {
+      const reqBody = { ...requests[i], consume: false };
+      const dry = authorizeAction(req, reqBody, { source: "third_party_gateway_batch_dryrun" });
+      if (!dry.ok) {
+        return json(res, dry.status, { ok: false, error: dry.error, index: i, dry_results: dryResults });
+      }
+      dryResults.push(dry.payload);
+    }
+
+    // Pass 2: consume in order once all checks pass.
+    const consumed = [];
+    for (let i = 0; i < requests.length; i += 1) {
+      const reqBody = { ...requests[i], consume: true };
+      const live = authorizeAction(req, reqBody, { source: "third_party_gateway_batch" });
+      if (!live.ok) {
+        return json(res, live.status, { ok: false, error: live.error, index: i, consumed });
+      }
+      consumed.push(live.payload);
+    }
+    return json(res, 200, { ok: true, count: consumed.length, items: consumed });
+  }
+
   if (req.method === "POST" && url.pathname === "/web4/wallet/bootstrap") {
     const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
     if (!requireValidBody(res, body)) return;

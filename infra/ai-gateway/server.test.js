@@ -135,6 +135,78 @@ test("enforces web4-backed policy authorization for vault creation", async (t) =
   assert.equal(created.vault.policy_id, policy.policy.policy_id);
 });
 
+test("denies AI action when policy service host allowlist does not include gateway host", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-host-deny-");
+  const web4Dir = await makeTempDir("ynx-web4-host-deny-");
+  const internalToken = "test-internal-token-host-deny";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-host-deny",
+        allowed_actions: ["ai.vault.create"],
+        allowed_service_hosts: ["api.partner.example.com"],
+      },
+    }),
+    201
+  );
+
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.vault.create"],
+        ttl_sec: 600,
+      },
+    }),
+    201
+  );
+
+  const denied = await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults`, {
+    method: "POST",
+    headers: { "x-ynx-session": session.token },
+    body: {
+      owner: "owner-host-deny",
+      balance: 100,
+      policy_id: policy.policy.policy_id,
+    },
+  });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.error, "policy_service_host_denied");
+});
+
 test("rejects x402 delivery when settled payment resource does not match request", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-ai-x402-");

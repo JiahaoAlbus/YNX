@@ -373,25 +373,45 @@ async function authorizeViaWeb4(req, action, options = {}) {
   const sessionToken = req.headers["x-ynx-session"] || "";
   if (!sessionToken) return { ok: false, status: 401, error: "session_required" };
 
+  const resourceHost = String(options.resource_host || req.headers.host || "")
+    .trim()
+    .split(":")[0]
+    .toLowerCase();
+  const payload = {
+    policy_id: policyId,
+    action,
+    amount: toNumber(options.amount, 0),
+    consume: options.consume !== false,
+    resource_host: resourceHost,
+    resource: options.resource || "",
+    context: {
+      request_id: options.request_id || req.headers["x-request-id"] || "",
+      resource: options.resource || "",
+      reason: options.reason || "",
+    },
+  };
+
   try {
-    const response = await postJson(
-      `${AI_WEB4_HUB_URL}/web4/internal/authorize`,
-      {
-        policy_id: policyId,
-        action,
-        amount: toNumber(options.amount, 0),
-        consume: options.consume !== false,
-        context: {
-          request_id: options.request_id || req.headers["x-request-id"] || "",
-          resource: options.resource || "",
-          reason: options.reason || "",
-        },
-      },
+    let response = await postJson(
+      `${AI_WEB4_HUB_URL}/web4/authorize`,
+      payload,
       {
         "x-ynx-session": sessionToken,
-        ...(AI_WEB4_INTERNAL_TOKEN ? { "x-ynx-internal-token": AI_WEB4_INTERNAL_TOKEN } : {}),
       }
     );
+
+    // Backward compatibility for older hubs that only expose internal authorize.
+    if (response.status === 404 || response.payload?.error === "not_found") {
+      response = await postJson(
+        `${AI_WEB4_HUB_URL}/web4/internal/authorize`,
+        payload,
+        {
+          "x-ynx-session": sessionToken,
+          ...(AI_WEB4_INTERNAL_TOKEN ? { "x-ynx-internal-token": AI_WEB4_INTERNAL_TOKEN } : {}),
+        }
+      );
+    }
+
     if (response.status < 200 || response.status >= 300 || response.payload.ok !== true) {
       return {
         ok: false,

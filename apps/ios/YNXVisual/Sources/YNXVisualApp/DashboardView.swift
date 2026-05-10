@@ -108,6 +108,22 @@ struct DashboardView: View {
                     select(.actions, mode: .bridge)
                 }
                 ActionCard(
+                    title: "AI Settlement",
+                    detail: "Inspect live AI stats and settlement workflow.",
+                    symbol: "cpu",
+                    accent: .green
+                ) {
+                    select(.ai)
+                }
+                ActionCard(
+                    title: "Docs & Manual",
+                    detail: "Open bridge, API, testnet, and iOS feature manuals.",
+                    symbol: "doc.text",
+                    accent: .indigo
+                ) {
+                    select(.docs)
+                }
+                ActionCard(
                     title: "Live Network Monitor",
                     detail: "Inspect RPC/REST/EVM/Faucet/Indexer health in real-time.",
                     symbol: "waveform.path.ecg.rectangle",

@@ -57,49 +57,64 @@ struct RootView: View {
             WalletView()
         case .actions:
             ChainActionsView(selectedMode: $selectedActionMode)
+        case .ai:
+            AISettlementView()
         case .browser:
             YNXBrowserView()
         case .monitor:
             NetworkView()
+        case .docs:
+            DocsView()
         }
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 4) {
-            ForEach(YNXTab.allCases) { tab in
-                Button {
-                    withAnimation(YNXTheme.standard) {
-                        selectedTab = tab
-                    }
-                } label: {
-                    VStack(spacing: 6) {
-                        ZStack {
-                            if selectedTab == tab {
-                                Capsule()
-                                    .fill(YNXTheme.klein)
-                                    .frame(width: 48, height: 32)
-                                    .matchedGeometryEffect(id: "tab-pill", in: tabNamespace)
-                            }
-                            Image(systemName: tab.symbol)
-                            .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(selectedTab == tab ? .white : YNXTheme.muted)
-                        }
-                        Text(tab.rawValue)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(selectedTab == tab ? YNXTheme.klein : YNXTheme.muted)
-                    }
-                    .padding(.vertical, 2)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(YNXTab.allCases) { tab in
+                    tabButton(tab)
                 }
-                .buttonStyle(PressableButtonStyle())
             }
+            .padding(.horizontal, 6)
         }
         .padding(8)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay(Capsule().stroke(.white.opacity(0.72), lineWidth: 1))
         .shadow(color: YNXTheme.klein.opacity(0.16), radius: 24, x: 0, y: 12)
+    }
+
+    private func tabButton(_ tab: YNXTab) -> some View {
+        Button {
+            withAnimation(YNXTheme.standard) {
+                selectedTab = tab
+            }
+        } label: {
+            VStack(spacing: 6) {
+                tabIcon(tab)
+                Text(tab.rawValue)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(selectedTab == tab ? YNXTheme.klein : YNXTheme.muted)
+            }
+            .padding(.vertical, 2)
+            .frame(width: 72)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+
+    private func tabIcon(_ tab: YNXTab) -> some View {
+        ZStack {
+            if selectedTab == tab {
+                Capsule()
+                    .fill(YNXTheme.klein)
+                    .frame(width: 48, height: 32)
+                    .matchedGeometryEffect(id: "tab-pill", in: tabNamespace)
+            }
+            Image(systemName: tab.symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(selectedTab == tab ? .white : YNXTheme.muted)
+        }
     }
 }
 

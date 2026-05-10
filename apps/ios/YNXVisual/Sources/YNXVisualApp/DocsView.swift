@@ -6,8 +6,11 @@ struct DocsView: View {
         DocLink(title: "AI/Web4 Official Demo", detail: "Run policy, session, vault, job, and settlement.", symbol: "sparkles.rectangle.stack", url: URL(string: "https://ynxweb4.com/docs/en/ai-web4-official-demo")!),
         DocLink(title: "Validator Onboarding", detail: "External validator setup and responsibilities.", symbol: "shield.lefthalf.filled", url: URL(string: "https://ynxweb4.com/docs/en/external-validator-onboarding")!),
         DocLink(title: "Universal Bridge Method", detail: "Cross-chain asset onboarding and gateway flow.", symbol: "link.badge.plus", url: URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/docs/en/UNIVERSAL_BRIDGE_METHOD.md")!),
+        DocLink(title: "YNX iOS Feature Manual", detail: "Full in-app entry map for all testnet features.", symbol: "iphone", url: URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/docs/en/YNX_IOS_FEATURE_MANUAL.md")!),
         DocLink(title: "Web4 API", detail: "Policy-bounded delegation API reference.", symbol: "curlybraces", url: URL(string: "https://ynxweb4.com/docs/en/ynx-v2-web4-api")!),
-        DocLink(title: "AI Settlement API", detail: "Job, commit, finalize, and reward settlement.", symbol: "cpu", url: URL(string: "https://ynxweb4.com/docs/en/ynx-v2-ai-settlement-api")!)
+        DocLink(title: "AI Settlement API", detail: "Job, commit, finalize, and reward settlement.", symbol: "cpu", url: URL(string: "https://ynxweb4.com/docs/en/ynx-v2-ai-settlement-api")!),
+        DocLink(title: "Third-party API Demo Script", detail: "One-command demo for policy-bounded API authorization.", symbol: "terminal", url: URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/scripts/third_party_authorize_demo.sh")!),
+        DocLink(title: "Launch-grade Monitor Script", detail: "Automated testnet gates and readiness monitor.", symbol: "chart.line.uptrend.xyaxis", url: URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/scripts/testnet_launch_grade_monitor.sh")!)
     ]
 
     var body: some View {

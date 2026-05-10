@@ -19,8 +19,10 @@ enum YNXTab: String, CaseIterable, Identifiable {
     case home = "Home"
     case wallet = "Wallet"
     case actions = "Flow"
+    case ai = "AI"
     case browser = "Browser"
     case monitor = "Network"
+    case docs = "Docs"
 
     var id: String { rawValue }
 
@@ -29,8 +31,10 @@ enum YNXTab: String, CaseIterable, Identifiable {
         case .home: "sparkles"
         case .wallet: "wallet.pass.fill"
         case .actions: "arrow.left.arrow.right"
+        case .ai: "cpu"
         case .browser: "safari"
         case .monitor: "waveform.path.ecg"
+        case .docs: "doc.text"
         }
     }
 }

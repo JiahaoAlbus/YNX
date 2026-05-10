@@ -1,7 +1,7 @@
 # YNX v2 Web4 API Reference
 
 Status: Active  
-Last updated: 2026-03-07
+Last updated: 2026-05-09
 
 ## 1. Model
 
@@ -34,13 +34,45 @@ YNX v2 Web4 APIs follow sovereignty order:
     - `max_daily_spend`
     - `max_children`
     - `replicate_cooldown_sec`
+    - `allowed_service_hosts` (third-party API host allowlist, supports `*` and prefix wildcard)
 - `GET /web4/policies/:policy_id`
 - `POST /web4/policies/:policy_id/sessions` (owner header required)
 - `POST /web4/policies/:policy_id/pause` (owner header required)
 - `POST /web4/policies/:policy_id/resume` (owner header required)
 - `POST /web4/policies/:policy_id/revoke` (owner header required)
 
-## 5. Identity and Agent
+## 5. Third-Party Authorization (Any API)
+
+- `POST /web4/authorize`
+  - Purpose: generic allow/deny decision for any external service call
+  - Required body fields:
+    - `policy_id`
+    - `action`
+  - Optional body fields:
+    - `amount` (spend units to consume if authorized)
+    - `resource_host` (target host, checked against `allowed_service_hosts`)
+    - `resource` (free-form resource tag, e.g. `crm/ticket/update`)
+    - `context` (trace metadata)
+    - `consume` (`false` for dry-run check, default `true`)
+  - Required header:
+    - `x-ynx-session`
+  - Returns:
+    - `ok`, `policy_id`, `session_id`
+    - `remaining_ops`, `remaining_spend`, `session_expires_at`
+
+- `POST /web4/authorize/batch`
+  - Purpose: authorize multiple actions in one round trip for multi-step agent workflows
+  - Required body field:
+    - `requests` (array, max 100 items)
+  - Each request item supports the same fields as `/web4/authorize`
+  - If any item fails validation, the whole batch returns an error with `index`
+  - On success, returns:
+    - `ok`, `count`, `items[]`
+
+- `POST /web4/internal/authorize`
+  - Same decision model, intended for trusted internal gateways
+  - Optional `x-ynx-internal-token` check when configured
+## 6. Identity and Agent
 
 - `GET /web4/identities`
 - `POST /web4/identities` (session required when policy enforced)
@@ -52,7 +84,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/agents/:agent_id/replicate`
   - Creates child agent under policy constraints
 
-## 6. Intent Lifecycle
+## 7. Intent Lifecycle
 
 - `GET /web4/intents`
 - `POST /web4/intents`
@@ -61,14 +93,14 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/intents/:intent_id/challenge`
 - `POST /web4/intents/:intent_id/finalize`
 
-## 7. Observability
+## 8. Observability
 
 - `GET /health`
 - `GET /web4/overview`
 - `GET /web4/stats`
 - `GET /web4/audit`
 
-## 8. Error Patterns
+## 9. Error Patterns
 
 Common error strings:
 
@@ -78,5 +110,6 @@ Common error strings:
 - `invalid_session`
 - `session_expired`
 - `session_spend_exceeded`
+- `policy_service_host_denied`
 - `replication_limit_reached`
 - `replication_cooldown`

@@ -12,10 +12,14 @@ Last updated: 2026-04-30
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo for policy, session, job, and vault reward flow
 - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid crypto protocol profile
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial business and compliance boundary
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current testnet service/write/P2P readiness report
+- `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
+- `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
@@ -39,6 +43,9 @@ Last updated: 2026-04-30
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — hybrid classical + post-quantum envelope protocol
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — no-custody/no-exchange/no-stablecoin/no-KYC operating model
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — current operator-verified readiness and blockers
+- `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
+- `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — industry launch gates and strict readiness command
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch paperwork and answer bank
 
@@ -49,6 +56,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_v2_EXECUTION_PLAN.md` — v2 delivery plan and milestones
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API endpoint reference
+- `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo
 - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — v2 public testnet deployment and operations
 - `docs/en/V2_LOCAL_COMPLETE_RUNBOOK.md` — local-only complete runbook
 - `docs/en/V2_SECURITY_MODEL.md` — v2 control, key, payment, and mutation boundaries
@@ -56,6 +64,9 @@ Last updated: 2026-04-30
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid cryptographic protocol
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` — non-custodial commercial and compliance scope
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md` — public testnet readiness snapshot
+- `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md` — current public testnet validator and service status
+- `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — strict readiness gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch packet
 - `docs/en/V2_COMPANY_HANDOFF.md` — company-ready package and canonical handoff rules
@@ -65,6 +76,7 @@ Last updated: 2026-04-30
 - `docs/en/V2_WEB4_STATUS_AND_NODE_ONBOARDING.md` — current v2 status, selling points, AI integration, and generic node onboarding target
 - `docs/en/WEB4_FOR_YNX.md` — Web4 definition and primitives used by YNX
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
+- `docs/en/UNIVERSAL_BRIDGE_METHOD.md` — generic multi-chain asset onboarding method (TRON-style coverage path)
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
 - `docs/en/Parameters_v0.md` — canonical v0 parameter registry (locked defaults)
 - `docs/en/Address_Format_v0.md` — canonical `0x...` and human-friendly `YN...` addresses
@@ -90,6 +102,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_POSITIONING.md`
 - `docs/en/RELEASES_2_CURRENT_STATUS.md`
 - `docs/en/VALIDATOR_ONBOARDING_PACKAGE.md`
+- `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md`
 - `docs/en/VALIDATOR_RECRUITMENT_POST.md`
 - `docs/en/VALIDATOR_SIGNUP_REVIEW_TEMPLATE.md`
 - `docs/en/VALIDATOR_GOOGLE_FORM_TEMPLATE.md`

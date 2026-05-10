@@ -1,6 +1,7 @@
 import { concat, getAddress, getBytes, hexlify, keccak256, recoverAddress } from "ethers";
 
 const TX_CONFIRM_DIGEST_PREFIX = "YNX_TXCONFIRM_V0";
+const SECP256K1_HALF_N = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0n;
 
 export type PreconfirmStatus = "pending" | "included" | (string & {});
 
@@ -109,6 +110,10 @@ function normalizeSignatureForRecovery(sigBytes: Uint8Array): string {
   if (sigBytes.length !== 65) {
     throw new Error(`Invalid signature length: ${sigBytes.length} (expected 65)`);
   }
+  const s = BigInt(hexlify(sigBytes.slice(32, 64)));
+  if (s > SECP256K1_HALF_N) {
+    throw new Error("Invalid signature s: high-s signatures are not accepted");
+  }
   const v = sigBytes[64] ?? 0;
   if (v === 0 || v === 1) {
     sigBytes[64] = v + 27;
@@ -168,16 +173,19 @@ export function verifyPreconfirmReceiptV0(
   }
 
   const validSigners: string[] = [];
+  const seenValidSigners = new Set<string>();
   for (let i = 0; i < signers.length; i++) {
     const sig = signatures[i] ?? "0x";
     try {
       const signer = getAddress(signers[i] ?? "0x0000000000000000000000000000000000000000");
+      if (seenValidSigners.has(signer)) continue;
       if (allowset && !allowset.has(signer)) continue;
 
       const sigBytes = getBytes(sig);
       const normalized = normalizeSignatureForRecovery(sigBytes);
       const recovered = getAddress(recoverAddress(digest, normalized));
       if (recovered !== signer) continue;
+      seenValidSigners.add(signer);
       validSigners.push(signer);
     } catch {
       continue;

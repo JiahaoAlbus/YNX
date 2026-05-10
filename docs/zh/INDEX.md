@@ -12,6 +12,7 @@
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图
+- `docs/zh/AI_WEB4_官方演示.md`：可运行的 AI/Web4 结算闭环演示
 - `docs/zh/V2_高保证加密与抗量子安全模型.md`：高保证加密与抗量子迁移基线
 - `docs/zh/YNX_ARES_混合抗量子加密协议.md`：YNX ARES 混合抗量子协议说明
 - `docs/zh/YNX_非托管商业与合规边界.md`：非托管、非交易所、非稳定币、非 KYC 商业边界

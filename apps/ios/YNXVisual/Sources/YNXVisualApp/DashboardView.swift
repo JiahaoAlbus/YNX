@@ -100,6 +100,14 @@ struct DashboardView: View {
                     select(.actions, mode: .thirdParty)
                 }
                 ActionCard(
+                    title: "Cross-chain Bridge",
+                    detail: "Universal bridge gateway entry for external assets.",
+                    symbol: "link.badge.plus",
+                    accent: YNXTheme.klein
+                ) {
+                    select(.actions, mode: .bridge)
+                }
+                ActionCard(
                     title: "Live Network Monitor",
                     detail: "Inspect RPC/REST/EVM/Faucet/Indexer health in real-time.",
                     symbol: "waveform.path.ecg.rectangle",

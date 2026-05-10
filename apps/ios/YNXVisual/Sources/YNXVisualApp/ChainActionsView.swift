@@ -4,6 +4,7 @@ enum ChainActionMode: String, CaseIterable, Identifiable {
     case transfer = "Transfer"
     case broadcast = "Broadcast"
     case faucet = "Faucet"
+    case bridge = "Bridge"
     case message = "Message"
     case session = "Session"
     case thirdParty = "Third-party"
@@ -15,6 +16,7 @@ enum ChainActionMode: String, CaseIterable, Identifiable {
         case .transfer: "arrow.left.arrow.right"
         case .broadcast: "antenna.radiowaves.left.and.right"
         case .faucet: "drop.fill"
+        case .bridge: "link.badge.plus"
         case .message: "lock.doc.fill"
         case .session: "key.radiowaves.forward"
         case .thirdParty: "bolt.shield.fill"
@@ -29,6 +31,8 @@ enum ChainActionMode: String, CaseIterable, Identifiable {
             "Submit signed tx bytes to the live REST endpoint."
         case .faucet:
             "Request test tokens for all testnet flows."
+        case .bridge:
+            "Open YNX universal bridge docs, RPC, and explorer entry points."
         case .message:
             "Create encrypted message envelopes locally."
         case .session:
@@ -126,6 +130,8 @@ struct ChainActionsView: View {
             broadcastCard
         case .faucet:
             faucetCard
+        case .bridge:
+            bridgeCard
         case .message:
             messageCard
         case .session:
@@ -288,6 +294,50 @@ struct ChainActionsView: View {
                     color: .indigo
                 ) {
                     walletStore.encryptMessage(message, recipient: messageRecipient)
+                }
+            }
+        }
+    }
+
+    private var bridgeCard: some View {
+        GlassCard(padding: 18, radius: 24) {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionHeading(title: selectedMode.rawValue, subtitle: selectedMode.subtitle)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    FactRow(label: "Mode", value: "Universal bridge gateway")
+                    FactRow(label: "Settlement", value: "Policy-bounded + auditable")
+                    FactRow(label: "Status", value: "Public testnet integration")
+                }
+                .padding(12)
+                .background(YNXTheme.paper, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(YNXTheme.hairline, lineWidth: 1)
+                )
+
+                SoftActionButton(
+                    title: "Open Bridge Method",
+                    symbol: "doc.text.fill",
+                    color: YNXTheme.klein
+                ) {
+                    openURL(URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/docs/en/UNIVERSAL_BRIDGE_METHOD.md")!)
+                }
+
+                SoftActionButton(
+                    title: "Open EVM RPC",
+                    symbol: "cable.connector",
+                    color: .teal
+                ) {
+                    openURL(URL(string: "https://evm.ynxweb4.com")!)
+                }
+
+                SoftActionButton(
+                    title: "Open Explorer",
+                    symbol: "arrow.up.right.square",
+                    color: .indigo
+                ) {
+                    openURL(URL(string: "https://explorer.ynxweb4.com")!)
                 }
             }
         }

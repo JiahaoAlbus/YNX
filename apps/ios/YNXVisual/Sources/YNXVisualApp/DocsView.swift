@@ -5,6 +5,7 @@ struct DocsView: View {
         DocLink(title: "Public Testnet Join", detail: "Join YNX v2 and configure endpoints.", symbol: "figure.walk.arrival", url: URL(string: "https://ynxweb4.com/docs/en/public-testnet-join")!),
         DocLink(title: "AI/Web4 Official Demo", detail: "Run policy, session, vault, job, and settlement.", symbol: "sparkles.rectangle.stack", url: URL(string: "https://ynxweb4.com/docs/en/ai-web4-official-demo")!),
         DocLink(title: "Validator Onboarding", detail: "External validator setup and responsibilities.", symbol: "shield.lefthalf.filled", url: URL(string: "https://ynxweb4.com/docs/en/external-validator-onboarding")!),
+        DocLink(title: "Universal Bridge Method", detail: "Cross-chain asset onboarding and gateway flow.", symbol: "link.badge.plus", url: URL(string: "https://github.com/JiahaoAlbus/YNX/blob/main/docs/en/UNIVERSAL_BRIDGE_METHOD.md")!),
         DocLink(title: "Web4 API", detail: "Policy-bounded delegation API reference.", symbol: "curlybraces", url: URL(string: "https://ynxweb4.com/docs/en/ynx-v2-web4-api")!),
         DocLink(title: "AI Settlement API", detail: "Job, commit, finalize, and reward settlement.", symbol: "cpu", url: URL(string: "https://ynxweb4.com/docs/en/ynx-v2-ai-settlement-api")!)
     ]

@@ -76,6 +76,7 @@ Last updated: 2026-04-30
 - `docs/en/V2_WEB4_STATUS_AND_NODE_ONBOARDING.md` — current v2 status, selling points, AI integration, and generic node onboarding target
 - `docs/en/WEB4_FOR_YNX.md` — Web4 definition and primitives used by YNX
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
+- `docs/en/UNIVERSAL_BRIDGE_METHOD.md` — generic multi-chain asset onboarding method (TRON-style coverage path)
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
 - `docs/en/Parameters_v0.md` — canonical v0 parameter registry (locked defaults)
 - `docs/en/Address_Format_v0.md` — canonical `0x...` and human-friendly `YN...` addresses

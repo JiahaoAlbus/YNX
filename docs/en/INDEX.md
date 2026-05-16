@@ -7,6 +7,7 @@ Last updated: 2026-04-30
 
 - `docs/en/RELEASE_YNXWEB4.md` — consolidated Web4 release notes (`ynxweb4`)
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
+- `docs/en/BUILDER_QUICKSTART.md` — builder quickstart for EVM, Web4 Hub, and AI Gateway surfaces
 - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md` — full validator node onboarding from clean server (non-consensus)
 - `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md` — full BONDED consensus onboarding flow
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements

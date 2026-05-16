@@ -60,7 +60,13 @@ Docs:
 - EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
 
-### 4) Node Operators / Validators
+### 4) Builders
+
+Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo entry points:
+
+- EN: [`docs/en/BUILDER_QUICKSTART.md`](docs/en/BUILDER_QUICKSTART.md)
+
+### 5) Node Operators / Validators
 
 Install the YNX CLI and join from a clean Linux machine:
 

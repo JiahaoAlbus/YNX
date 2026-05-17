@@ -14,8 +14,9 @@ YNX is a speed-first Web4 execution and trading layer for **humans + AI agents**
 - Cosmos Chain ID: `ynx_9102-1`
 - EVM Chain ID: `0x238e`
 - Denom: `anyxt`
-- Current official public-testnet tradable asset: `NYXT` / `anyxt`
-- Planned mainstream wrapped asset targets: `BTC`, `ETH`, `BNB`, `USDT`, `USDC`
+- Fully usable public-testnet asset: `NYXT` / `anyxt`
+- Public wrapped routes deployed: `wBTC.y`, `wETH.y`, `wBNB.y`, `wUSDT.y`, `wUSDC.y`
+- AI settlement rail: `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
 
 Public HTTPS endpoints:
 
@@ -55,6 +56,13 @@ Run the official local demo for the core AI-agent flow: bounded Web4 policy, ses
 
 ```bash
 ./scripts/ai_web4_settlement_demo.sh
+```
+
+The public testnet also has an on-chain AI settlement contract for vault-funded
+AI jobs, result commits, challenge/slash, and reward finalization:
+
+```text
+0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
 ```
 
 Docs:

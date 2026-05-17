@@ -1,7 +1,7 @@
 # YNX Builder Quickstart
 
 Status: active  
-Last updated: 2026-05-16  
+Last updated: 2026-05-17  
 Scope: public testnet `ynx_9102-1`
 
 YNX exposes three builder surfaces on the public testnet:
@@ -27,6 +27,7 @@ Testnet assets have no mainnet value. Do not use production funds or production 
 | Explorer | `https://explorer.ynxweb4.com` |
 | AI Gateway | `https://ai.ynxweb4.com` |
 | Web4 Hub | `https://web4.ynxweb4.com` |
+| AI settlement contract | `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf` |
 
 ## 1. Verify Live Network Status
 
@@ -118,6 +119,11 @@ Reference:
 
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md`
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+
+On-chain settlement rail:
+
+- `YNXAISettlement`: `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
+- Supports policy-hash-bound vaults, AI job creation, result commits, challenge/slash, and reward finalization.
 - `infra/openapi/ynx-v2-ai.yaml`
 
 ## 5. Run The Official Local AI/Web4 Demo
@@ -152,4 +158,3 @@ Use `ynx join --role validator` only after operator review and funding if you ar
 - No production funds.
 - No private keys or mnemonics in source control.
 - No mainnet, production, or investment-return claims until the mainnet readiness gates are complete.
-

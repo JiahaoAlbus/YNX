@@ -10,13 +10,13 @@ YNX is a **speed-first Web4 execution and trading layer** with **EVM-compatible 
 
 Current public-testnet wording:
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt is the fully usable public-testnet asset. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations; production-grade external deposit/withdraw and official trading liquidity are not live yet.`
 
 ## Why users choose YNX
 
 - Speed-first execution with low-latency public RPC, EVM wallet compatibility, and trading-oriented UX.
 - EVM-native onboarding with low-friction tooling (wallets, contracts, RPC compatibility).
-- AI settlement orientation: job lifecycle and challenge flow are protocol-level roadmap priorities.
+- AI settlement orientation: policy-bounded job lifecycle, result commits, challenge/slash, and vault-funded reward finalization now have both gateway and on-chain settlement rails.
 - Governance transparency: operators can inspect governance and economics metadata through API.
 - Fast operator rollout: profile-based runtime scripts for speed/stability tradeoff by topology.
 
@@ -33,6 +33,22 @@ YNX competes on:
 - scalable validator onboarding when the product needs more decentralization.
 
 YNX should not claim BTC/ETH/BNB/USDT/USDC trading, mainnet-candidate readiness, or decentralized-validator readiness until the relevant gates pass.
+
+## AI positioning
+
+YNX should not sell AI as a generic chatbot feature. The useful AI angle is:
+
+`AI agents can act under owner-defined Web4 policy and settle work on YNX through verifiable job/vault/payment rails.`
+
+Current public-testnet status:
+
+- Web4 Hub: policies, sessions, identities, agents, intents, tool authorization, and audit logs.
+- AI Gateway: vaults, jobs, result commits, challenge/finalize flow, x402-style resource payment, and stats.
+- On-chain settlement: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`.
+
+This is useful for autonomous tools, paid API calls, agent marketplaces, task bounties,
+and enterprise AI execution budgets. It is not enough to claim generalized AI
+intelligence, decentralized model hosting, or production-grade AI commerce yet.
 
 References:
 

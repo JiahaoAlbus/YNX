@@ -1,7 +1,7 @@
 # YNX AI/Web4 Official Demo
 
 Status: active  
-Last updated: 2026-05-02
+Last updated: 2026-05-17
 
 ## 1. What this demo proves
 
@@ -11,6 +11,7 @@ This demo shows that YNX AI/Web4 is not a chatbot wrapper. It is a bounded execu
 - Session keys let agents act within explicit limits.
 - AI Gateway manages jobs, result commits, finalization, and reward settlement.
 - Vaults provide machine-payment budgets.
+- The public testnet has an on-chain AI settlement rail for vault-funded jobs.
 - Audit, stats, and overview endpoints make the workflow inspectable.
 
 In one sentence:
@@ -33,7 +34,26 @@ output/ai_web4_demo/<run-id>/
 
 It does not modify public testnet state by default.
 
-## 3. Flow
+## 3. Public testnet on-chain settlement
+
+The public testnet includes `YNXAISettlement`:
+
+```text
+0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
+```
+
+This contract supports:
+
+- policy-hash-bound vaults funded with the native EVM gas asset;
+- AI job creation with reward and input hash;
+- worker result-hash commits plus attestation URI;
+- owner challenge/slash/cancel controls;
+- reward finalization from the vault to the worker.
+
+The gateway remains the user-facing API layer. The contract is the verifiable
+settlement rail for high-value agent work.
+
+## 4. Flow
 
 1. Create a Web4 policy.
 2. Issue a bounded session key.
@@ -43,7 +63,7 @@ It does not modify public testnet state by default.
 6. Finalize the job and settle reward from the vault.
 7. Persist JSON evidence for each step.
 
-## 4. Run against deployed services
+## 5. Run against deployed services
 
 ```bash
 YNX_DEMO_USE_EXISTING=1 \
@@ -53,4 +73,3 @@ AI_URL=https://ai.ynxweb4.com \
 ```
 
 This writes demo test data to the configured services. Use it only against testnet environments.
-

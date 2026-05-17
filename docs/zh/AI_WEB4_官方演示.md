@@ -1,7 +1,7 @@
 # YNX AI/Web4 官方演示
 
 状态：active  
-最后更新：2026-05-02
+最后更新：2026-05-17
 
 ## 1. 这个演示说明什么
 
@@ -11,6 +11,7 @@
 - session key 让 Agent 可以在限制范围内自动执行；
 - AI Gateway 负责 AI 任务、结果提交、挑战期和结算；
 - vault 负责机器支付和奖励支出；
+- 公开测试网已经部署链上 AI settlement 合约；
 - audit / stats / overview 让执行过程可查。
 
 一句话：
@@ -33,7 +34,25 @@ output/ai_web4_demo/<run-id>/
 
 它不会污染公开测试网。
 
-## 3. 演示流程
+## 3. 公开测试网链上结算
+
+公开测试网已经部署 `YNXAISettlement`：
+
+```text
+0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
+```
+
+它支持：
+
+- 绑定 policy hash 的 AI vault；
+- AI job 创建，包含 reward 和 input hash；
+- worker 提交 result hash 和 attestation URI；
+- owner 进行 challenge / slash / cancel；
+- finalize 后从 vault 向 worker 支付奖励。
+
+AI Gateway 仍然是面向用户/API 的入口；链上合约负责让高价值 AI 任务的结算可验证。
+
+## 4. 演示流程
 
 1. 创建 Web4 policy。
 2. owner 签发带上限的 session key。
@@ -43,7 +62,7 @@ output/ai_web4_demo/<run-id>/
 6. job finalize 后，从 vault 自动结算 reward。
 7. 输出每一步 JSON 证据文件。
 
-## 4. 用线上服务跑
+## 5. 用线上服务跑
 
 如果要指向已部署的服务，可以显式传入 URL：
 
@@ -56,7 +75,7 @@ AI_URL=https://ai.ynxweb4.com \
 
 注意：线上执行会写入线上 Web4/AI Gateway 的测试数据，只应在测试网环境使用。
 
-## 5. 对外解释口径
+## 6. 对外解释口径
 
 这个 demo 展示的是 YNX 的核心差异：
 
@@ -64,4 +83,3 @@ AI_URL=https://ai.ynxweb4.com \
 - YNX 让 AI Agent 在 owner/policy/session 限制内自动执行；
 - AI 任务有结果承诺、挑战窗口、最终结算和审计记录；
 - 机器支付不是应用私有逻辑，而是 YNX Web4/AI 协议面的一部分。
-

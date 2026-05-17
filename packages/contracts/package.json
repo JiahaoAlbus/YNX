@@ -7,6 +7,7 @@
     "devnet:node": "hardhat node --hostname 127.0.0.1 --port 8545",
     "devnet:deploy": "hardhat run scripts/deploy.ts --network localhost",
     "ynxdev:deploy": "hardhat run scripts/deploy.ts --network ynxdev",
+    "ynxpublic:ai-settlement": "hardhat run scripts/deploy_ai_settlement.ts --network ynxpublic",
     "ynxdev:bridge-deploy": "hardhat run scripts/deploy_bridge.ts --network ynxdev",
     "ynxpublic:bridge-mainstream": "hardhat run scripts/deploy_mainstream_bridge.ts --network ynxpublic",
     "bridge:tron-manifest": "hardhat run scripts/generate_tron_manifest.ts --network default",

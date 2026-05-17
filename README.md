@@ -1,8 +1,8 @@
 # YNX Web4 (v2)
 
-YNX is a public execution network for **humans + AI agents**.
+YNX is a speed-first Web4 execution and trading layer for **humans + AI agents**.
 
-- Positioning: **Sovereign Execution Layer**
+- Positioning: **Speed-first Web4 Execution Layer**
 - Active track: `v2-web4`
 - Sovereignty order: `owner > policy > session key > agent action`
 - Native asset: `NYXT` (gas / staking / governance)
@@ -14,6 +14,8 @@ YNX is a public execution network for **humans + AI agents**.
 - Cosmos Chain ID: `ynx_9102-1`
 - EVM Chain ID: `0x238e`
 - Denom: `anyxt`
+- Current official public-testnet tradable asset: `NYXT` / `anyxt`
+- Planned mainstream wrapped asset targets: `BTC`, `ETH`, `BNB`, `USDT`, `USDC`
 
 Public HTTPS endpoints:
 
@@ -60,13 +62,20 @@ Docs:
 - EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
 
-### 4) Builders
+### 4) Asset status and speed-first trading direction
+
+- EN: [`docs/en/PUBLIC_ASSET_STATUS.md`](docs/en/PUBLIC_ASSET_STATUS.md)
+- EN: [`docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md`](docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md)
+- ZH: [`docs/zh/公开资产状态.md`](docs/zh/公开资产状态.md)
+- ZH: [`docs/zh/极速优先多资产交易计划.md`](docs/zh/极速优先多资产交易计划.md)
+
+### 5) Builders
 
 Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo entry points:
 
 - EN: [`docs/en/BUILDER_QUICKSTART.md`](docs/en/BUILDER_QUICKSTART.md)
 
-### 5) Node Operators / Validators
+### 6) Node Operators / Validators
 
 Install the YNX CLI and join from a clean Linux machine:
 

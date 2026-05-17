@@ -8,6 +8,8 @@ Last updated: 2026-04-30
 - `docs/en/RELEASE_YNXWEB4.md` — consolidated Web4 release notes (`ynxweb4`)
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
 - `docs/en/BUILDER_QUICKSTART.md` — builder quickstart for EVM, Web4 Hub, and AI Gateway surfaces
+- `docs/en/PUBLIC_ASSET_STATUS.md` — current official public-testnet asset status and mainstream asset targets
+- `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md` — speed-first trading direction and wrapped BTC/ETH/BNB/stablecoin execution plan
 - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md` — full validator node onboarding from clean server (non-consensus)
 - `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md` — full BONDED consensus onboarding flow
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
@@ -49,6 +51,8 @@ Last updated: 2026-04-30
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
 - `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — industry launch gates and strict readiness command
+- `docs/en/PUBLIC_ASSET_STATUS.md` — current live asset list and not-yet-live mainstream asset targets
+- `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md` — speed-first multi-asset trading execution plan
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch paperwork and answer bank
 
 ## Core Specs
@@ -79,6 +83,8 @@ Last updated: 2026-04-30
 - `docs/en/WEB4_FOR_YNX.md` — Web4 definition and primitives used by YNX
 - `docs/en/NYXT_Tokenomics_v0.md` — NYXT supply model, inflation, fee split, allocations
 - `docs/en/UNIVERSAL_BRIDGE_METHOD.md` — generic multi-chain asset onboarding method (TRON-style coverage path)
+- `docs/en/PUBLIC_ASSET_STATUS.md` — current public asset status
+- `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md` — speed-first multi-asset trading plan
 - `docs/en/Governance_v0.md` — on-chain governance, proposal rules, treasury controls
 - `docs/en/Parameters_v0.md` — canonical v0 parameter registry (locked defaults)
 - `docs/en/Address_Format_v0.md` — canonical `0x...` and human-friendly `YN...` addresses

@@ -1,12 +1,16 @@
 # YNX Mainnet and Industry Readiness Gates
 
 Status: Active
-Last updated: 2026-05-01
+Last updated: 2026-05-17
 Canonical language: English
 
 ## Purpose
 
 This document defines the industry-grade gates that YNX must satisfy before using mainnet-candidate, production, or institution-ready language.
+
+YNX's active product direction is speed-first execution and trading UX. These
+gates therefore focus on public reliability, asset safety, and truthful trading
+claims rather than using decentralization as the first product promise.
 
 ## Gate 1 — Public Service Availability
 
@@ -77,8 +81,9 @@ References:
 Required:
 
 - public terms state that YNX does not custody user assets;
-- no exchange matching engine;
-- no stablecoin issuance or reserve management;
+- no exchange matching engine operated by the base protocol company unless a
+  licensed/legal structure explicitly approves it;
+- no stablecoin issuance or reserve management by the base protocol company;
 - no consumer KYC business operated by the base protocol company;
 - regulated services are delegated to licensed partners or delayed until counsel approves;
 - company entity, accounting, tax, security contact, and incident-response ownership are defined.
@@ -99,11 +104,29 @@ Required:
 - risk disclosures do not promise token price, guaranteed profit, or impossible security claims;
 - latest readiness report is linked from internal operator docs.
 
-## Gate 7 — Launch Decision
+## Gate 7 — Mainstream Asset Trading Readiness
+
+Required before claiming BTC, ETH, BNB, USDT, USDC, or any other external asset
+is tradable on YNX:
+
+- public deployment record for the wrapped token and bridge route;
+- bridge gateway deployed on the target YNX network;
+- deposit and withdrawal smoke tests with archived transaction evidence;
+- signer/MPC/verification path documented and monitored;
+- per-asset caps and emergency pause controls;
+- liquidity or market-maker route live;
+- explorer/indexer displays the asset correctly;
+- legal/compliance sign-off for the bridge and trading UX.
+
+Until this gate passes, correct wording is:
+
+`BTC, ETH, BNB, USDT, and USDC are target assets for YNX's speed-first trading roadmap, not live public-testnet tradable assets.`
+
+## Gate 8 — Launch Decision
 
 Mainnet launch is allowed only after:
 
-1. Gates 1–6 pass;
+1. Gates 1–7 pass;
 2. legal counsel signs off on the operating model;
 3. external audit findings are fixed or explicitly risk-accepted;
 4. validator set and P2P topology pass strict readiness;

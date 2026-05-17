@@ -1,12 +1,14 @@
 # YNX 文档索引（中文）
 
 状态：active  
-最后更新：2026-04-30
+最后更新：2026-05-17
 
 ## 对外公开文档（适合网站 Docs 展示）
 
 - `docs/zh/YNXWEB4_版本说明.md`：`ynxweb4` 整合发布说明
 - `docs/zh/V2_公开测试网加入手册.md`：对外加入公测网（体验用户/开发者/验证人）
+- `docs/zh/公开资产状态.md`：当前公开测试网官方资产状态与主流币目标
+- `docs/zh/极速优先多资产交易计划.md`：极速优先交易方向与 wrapped BTC/ETH/BNB/stablecoin 路线
 - `docs/zh/V2_验证节点加入手册.md`：从零部署“验证节点（不进共识）”完整手册
 - `docs/zh/V2_共识验证人加入手册.md`：从零到 BONDED 的“共识验证人”完整手册
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义

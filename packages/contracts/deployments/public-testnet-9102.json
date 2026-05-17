@@ -1,0 +1,67 @@
+{
+  "network": "YNX Web4 Public Testnet",
+  "cosmosChainId": "ynx_9102-1",
+  "evmChainId": 9102,
+  "evmChainIdHex": "0x238e",
+  "nativeAsset": {
+    "name": "NYXT",
+    "symbol": "NYXT",
+    "baseDenom": "anyxt",
+    "displayDenom": "nyxt",
+    "decimals": 18,
+    "status": "live_testnet_native_asset",
+    "uses": ["gas", "staking", "governance", "testnet transfers"]
+  },
+  "systemContracts": {
+    "nyxt": "0x9416A8e0E635dF4452e05Bb0384dCfc58ff53E5B",
+    "timelock": "0x4719580c01e139c6Bc9db2d9125Fdc14A711503b",
+    "treasury": "0x0fa2243E3040adeA1D17F4Fb02289cdB2FbA4bE6",
+    "governor": "0xd206f78b6574B46e2E9fB8EB177E107a19CF5782",
+    "teamVesting": "0xe768616e1eAe9E5640d81D4B032ac648357833E9",
+    "orgRegistry": "0xDC9885fD1Fc094EA259612B5096822ADE814B60e",
+    "subjectRegistry": "0x4d07bE89E3964536dd04B6466619dda6363E9B99",
+    "arbitration": "0x5247D0a57b3f86b748087560bE4c1B627394227e",
+    "domainInbox": "0x8122103eE59F582f4EA734cb72185539C7452C31"
+  },
+  "officialTradableAssets": [
+    {
+      "symbol": "NYXT",
+      "kind": "native",
+      "baseDenom": "anyxt",
+      "erc20": "0x9416A8e0E635dF4452e05Bb0384dCfc58ff53E5B",
+      "status": "live_testnet"
+    }
+  ],
+  "mainstreamAssetTargets": [
+    {
+      "symbol": "BTC",
+      "targetWrappedSymbol": "wBTC.y",
+      "status": "planned_not_live_public_testnet"
+    },
+    {
+      "symbol": "ETH",
+      "targetWrappedSymbol": "wETH.y",
+      "status": "planned_not_live_public_testnet"
+    },
+    {
+      "symbol": "BNB",
+      "targetWrappedSymbol": "wBNB.y",
+      "status": "planned_not_live_public_testnet"
+    },
+    {
+      "symbol": "USDT",
+      "targetWrappedSymbol": "wUSDT.y",
+      "status": "planned_not_live_public_testnet"
+    },
+    {
+      "symbol": "USDC",
+      "targetWrappedSymbol": "wUSDC.y",
+      "status": "planned_not_live_public_testnet"
+    }
+  ],
+  "notes": [
+    "Testnet assets have no mainnet value.",
+    "Devnet bridge deployment records under chain id 31337 are not public-testnet listings.",
+    "Real BTC/ETH/BNB trading requires bridge/custody or trust-minimized verification, liquidity, risk limits, monitoring, and legal/compliance review."
+  ]
+}

@@ -1,16 +1,16 @@
 # YNX Non-Technical Launch Packet
 
 Status: Active
-Last updated: 2026-05-01
+Last updated: 2026-05-17
 Canonical language: English
 
 ## 1. Public Introduction
 
-YNX is an AI-native Web4 public execution network with EVM-compatible developer access, machine-payment workflows, and owner-policy-session controls for human and agent execution.
+YNX is a speed-first Web4 execution and trading layer with EVM-compatible developer access, machine-payment workflows, and owner-policy-session controls for human and agent execution.
 
 Current external wording:
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The network is still completing public P2P and validator redundancy before mainnet-candidate status.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
 
 ## 2. What YNX Is Not
 
@@ -43,6 +43,7 @@ Not allowed:
 - “guaranteed profit”;
 - “mainnet-ready” before readiness gates pass;
 - “decentralized validator network” while validator count is `1`.
+- “BTC/ETH/BNB are tradable on YNX” before bridge routes, liquidity, and risk controls are live.
 
 ## 4. Required Public Pages
 
@@ -60,6 +61,7 @@ Before mainnet-candidate messaging, the public website should include:
 - terms of use;
 - privacy policy;
 - security contact / vulnerability disclosure.
+- public asset status and risk disclosures.
 
 ## 5. Company and Operations Checklist
 
@@ -113,7 +115,16 @@ Does YNX run custody?
 
 Does YNX run an exchange?
 
-- No. YNX should not operate a matching engine or exchange business.
+- Not as the base protocol company unless counsel approves a licensed/legal
+  structure. The product direction can support fast trading UX, wrapped assets,
+  and partner/DEX liquidity without pretending the base protocol is already a
+  regulated exchange.
+
+Can YNX trade BTC, ETH, and BNB today?
+
+- Not yet as official real external assets. Today the live public-testnet asset
+  is NYXT/anyxt. BTC, ETH, BNB, USDT, and USDC are priority wrapped-asset targets
+  for the speed-first trading roadmap.
 
 Does YNX issue a stablecoin?
 

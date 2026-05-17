@@ -33,6 +33,17 @@ Outputs:
 - `output/public_uptime_slo/samples.jsonl`
 - `output/public_uptime_slo/LATEST_REPORT.md`
 
+Install it on a systemd host:
+
+```bash
+scripts/install_public_uptime_slo_systemd.sh
+```
+
+The generated report includes total latency, connect latency, TLS latency, and
+the resolved remote IP. If server-local probes are healthy but external probes
+time out, treat it as an ingress/route/CDN/security-group problem rather than a
+node-runtime problem.
+
 Mainnet-candidate target:
 
 - 7-day public endpoint availability >= `99.5%`;

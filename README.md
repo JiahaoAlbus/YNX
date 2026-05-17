@@ -185,6 +185,12 @@ ALERT_WEBHOOK_URL="https://your-alert-webhook" \
 scripts/public_uptime_slo_probe.sh
 ```
 
+Install as a systemd service on an operator host:
+
+```bash
+scripts/install_public_uptime_slo_systemd.sh
+```
+
 Hardening roadmap:
 
 - [`docs/en/PRODUCTION_HARDENING_ROADMAP.md`](docs/en/PRODUCTION_HARDENING_ROADMAP.md)

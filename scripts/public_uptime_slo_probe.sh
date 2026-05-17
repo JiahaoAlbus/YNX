@@ -80,10 +80,14 @@ probe_get() {
   local expect="$3"
   local tmp
   tmp="$(mktemp)"
-  local meta code time_total latency_ms status error body ok
-  meta="$(curl -sS -L --max-time "${FETCH_TIMEOUT_SEC}" -o "$tmp" -w "%{http_code} %{time_total}" "$url" 2>/dev/null || echo "000 0")"
-  code="${meta%% *}"
-  time_total="${meta#* }"
+  local meta code time_total time_connect time_appconnect remote_ip latency_ms status error body ok
+  meta="$(curl -sS -L --max-time "${FETCH_TIMEOUT_SEC}" -o "$tmp" -w "%{http_code} %{time_total} %{time_connect} %{time_appconnect} %{remote_ip}" "$url" 2>/dev/null || true)"
+  read -r code time_total time_connect time_appconnect remote_ip <<<"$meta"
+  code="${code:-000}"
+  time_total="${time_total:-0}"
+  time_connect="${time_connect:-0}"
+  time_appconnect="${time_appconnect:-0}"
+  remote_ip="${remote_ip:--}"
   latency_ms="$(awk -v t="$time_total" 'BEGIN { printf "%d", (t * 1000) }')"
   body="$(cat "$tmp" 2>/dev/null || true)"
   rm -f "$tmp"
@@ -134,19 +138,26 @@ probe_get() {
     --arg status "$status" \
     --arg error "$error" \
     --argjson code "${code:-0}" \
+    --arg remote_ip "$remote_ip" \
     --argjson latency_ms "$latency_ms" \
-    '{key:$key,url:$url,status:$status,http_code:$code,latency_ms:$latency_ms,error:$error}'
+    --argjson connect_ms "$(awk -v t="$time_connect" 'BEGIN { printf "%d", (t * 1000) }')" \
+    --argjson tls_ms "$(awk -v t="$time_appconnect" 'BEGIN { printf "%d", (t * 1000) }')" \
+    '{key:$key,url:$url,status:$status,http_code:$code,latency_ms:$latency_ms,connect_ms:$connect_ms,tls_ms:$tls_ms,remote_ip:$remote_ip,error:$error}'
 }
 
 probe_evm() {
-  local tmp meta code time_total latency_ms body status error
+  local tmp meta code time_total time_connect time_appconnect remote_ip latency_ms body status error
   tmp="$(mktemp)"
-  meta="$(curl -sS --max-time "${FETCH_TIMEOUT_SEC}" -o "$tmp" -w "%{http_code} %{time_total}" \
+  meta="$(curl -sS --max-time "${FETCH_TIMEOUT_SEC}" -o "$tmp" -w "%{http_code} %{time_total} %{time_connect} %{time_appconnect} %{remote_ip}" \
     -H "content-type: application/json" \
     --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' \
-    "${YNX_EVM_RPC_URL:-https://evm.ynxweb4.com}" 2>/dev/null || echo "000 0")"
-  code="${meta%% *}"
-  time_total="${meta#* }"
+    "${YNX_EVM_RPC_URL:-https://evm.ynxweb4.com}" 2>/dev/null || true)"
+  read -r code time_total time_connect time_appconnect remote_ip <<<"$meta"
+  code="${code:-000}"
+  time_total="${time_total:-0}"
+  time_connect="${time_connect:-0}"
+  time_appconnect="${time_appconnect:-0}"
+  remote_ip="${remote_ip:--}"
   latency_ms="$(awk -v t="$time_total" 'BEGIN { printf "%d", (t * 1000) }')"
   body="$(cat "$tmp" 2>/dev/null || true)"
   rm -f "$tmp"
@@ -171,8 +182,11 @@ probe_evm() {
     --arg status "$status" \
     --arg error "$error" \
     --argjson code "${code:-0}" \
+    --arg remote_ip "$remote_ip" \
     --argjson latency_ms "$latency_ms" \
-    '{key:$key,url:$url,status:$status,http_code:$code,latency_ms:$latency_ms,error:$error}'
+    --argjson connect_ms "$(awk -v t="$time_connect" 'BEGIN { printf "%d", (t * 1000) }')" \
+    --argjson tls_ms "$(awk -v t="$time_appconnect" 'BEGIN { printf "%d", (t * 1000) }')" \
+    '{key:$key,url:$url,status:$status,http_code:$code,latency_ms:$latency_ms,connect_ms:$connect_ms,tls_ms:$tls_ms,remote_ip:$remote_ip,error:$error}'
 }
 
 post_alert() {
@@ -233,9 +247,9 @@ run_once() {
     echo "- Degraded: \`$degraded\`"
     echo "- Offline: \`$offline\`"
     echo
-    echo "| Service | Status | HTTP | Error | URL |"
-    echo "|---|---:|---:|---|---|"
-    jq -r '.[] | "| `\(.key)` | `\(.status)` | `\(.http_code)` | `\(.error // "")` | \(.url) |"' <<<"$results"
+    echo "| Service | Status | HTTP | Latency | Connect | TLS | Remote IP | Error | URL |"
+    echo "|---|---:|---:|---:|---:|---:|---|---|---|"
+    jq -r '.[] | "| `\(.key)` | `\(.status)` | `\(.http_code)` | `\(.latency_ms)ms` | `\(.connect_ms)ms` | `\(.tls_ms)ms` | `\(.remote_ip)` | `\(.error // "")` | \(.url) |"' <<<"$results"
   } > "$REPORT_MD"
   if [[ "$state" == "online" ]]; then
     post_alert "$state" "Public uptime probe passed: online=${online} degraded=${degraded} offline=${offline}"

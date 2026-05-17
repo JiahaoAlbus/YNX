@@ -159,6 +159,18 @@ fi
 
 TMP_CADDY="$(mktemp)"
 cat >"$TMP_CADDY" <<EOF
+(ynx_site_common) {
+  encode zstd gzip
+  log {
+    output file /var/log/caddy/ynx-v2-access.log {
+      roll_size 50MiB
+      roll_keep 10
+      roll_keep_for 720h
+    }
+    format json
+  }
+}
+
 (ynx_api_headers) {
   @preflight method OPTIONS
   header {
@@ -167,6 +179,21 @@ cat >"$TMP_CADDY" <<EOF
     Access-Control-Allow-Headers "Content-Type,Authorization,X-Requested-With,x-ynx-payment"
   }
 	respond @preflight 204
+}
+
+(ynx_proxy_headers) {
+  header_down -Access-Control-Allow-Origin
+  header_down -Access-Control-Allow-Methods
+  header_down -Access-Control-Allow-Headers
+}
+
+(ynx_proxy_timeouts) {
+  transport http {
+    dial_timeout 2s
+    response_header_timeout 15s
+    read_timeout 60s
+    write_timeout 60s
+  }
 }
 EOF
 
@@ -178,11 +205,11 @@ if has_host "rpc"; then
   append_site <<EOF
 
 rpc.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${RPC_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -192,6 +219,7 @@ if has_host "evm"; then
   append_site <<EOF
 
 evm.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   @evm_probe {
     method GET HEAD
@@ -201,9 +229,8 @@ evm.${BASE_DOMAIN} {
     body "{\"ok\":true,\"service\":\"evm-rpc\"}"
   }
   reverse_proxy 127.0.0.1:${EVM_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -213,11 +240,11 @@ if has_host "evm-ws"; then
   append_site <<EOF
 
 evm-ws.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${EVM_WS_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -227,11 +254,11 @@ if has_host "rest"; then
   append_site <<EOF
 
 rest.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${REST_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -241,11 +268,10 @@ if has_host "grpc"; then
   append_site <<EOF
 
 grpc.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy h2c://127.0.0.1:${GRPC_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
 	}
 }
 EOF
@@ -255,11 +281,11 @@ if has_host "faucet"; then
   append_site <<EOF
 
 faucet.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${FAUCET_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -269,11 +295,11 @@ if has_host "indexer"; then
   append_site <<EOF
 
 indexer.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${INDEXER_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -283,11 +309,11 @@ if has_host "explorer"; then
   append_site <<EOF
 
 explorer.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${EXPLORER_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -297,11 +323,11 @@ if has_host "ai"; then
   append_site <<EOF
 
 ai.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${AI_GATEWAY_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF
@@ -311,11 +337,11 @@ if has_host "web4"; then
   append_site <<EOF
 
 web4.${BASE_DOMAIN} {
+  import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${WEB4_PORT} {
-    header_down -Access-Control-Allow-Origin
-    header_down -Access-Control-Allow-Methods
-    header_down -Access-Control-Allow-Headers
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
 	}
 }
 EOF

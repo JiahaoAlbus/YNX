@@ -95,9 +95,7 @@ run_once() {
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   out="${OUTPUT_BASE_DIR}/${stamp}"
   status=0
-  if ! "$READINESS_SCRIPT" --output-dir "$out" > "${out}.log" 2>&1; then
-    status=$?
-  fi
+  "$READINESS_SCRIPT" --output-dir "$out" > "${out}.log" 2>&1 || status=$?
   report="${out}/EXTREME_READINESS.md"
   summary="$(tail -n 1 "${out}.log" 2>/dev/null || true)"
   pass="$(echo "$summary" | sed -nE 's/.*PASS=([0-9]+).*/\1/p')"

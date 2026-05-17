@@ -23,6 +23,7 @@ Repository support:
 
 ```bash
 scripts/public_uptime_slo_probe.sh --once
+scripts/install_public_uptime_slo_systemd.sh
 scripts/testnet_launch_grade_monitor.sh --once
 ./scripts/verify_submission_readiness.sh
 ```
@@ -141,4 +142,3 @@ Every week until mainnet-candidate:
 4. Review AI/Web4 persistence and backup evidence.
 5. Review security/audit issue status.
 6. Confirm public website wording still matches the current gate state.
-

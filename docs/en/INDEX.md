@@ -22,6 +22,7 @@ Last updated: 2026-04-30
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md` — launch-grade public testnet operating gate and runbook
 - `docs/en/EXTERNAL_VALIDATOR_ONBOARDING_PACKET.md` — external validator invitation, requirements, and coordinator preflight
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
+- `docs/en/PRODUCTION_HARDENING_ROADMAP.md` — executable hardening roadmap for reliability, validators, persistence, audit, and legal gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
 - `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface

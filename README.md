@@ -171,6 +171,24 @@ This script validates:
 - docs readiness (`13 checks`)
 - public runtime evidence across RPC/EVM/Faucet/Indexer/Explorer/AI/Web4
 
+## Public Uptime / SLO Probe
+
+```bash
+scripts/public_uptime_slo_probe.sh --once
+```
+
+Continuous alerting:
+
+```bash
+CHECK_INTERVAL_SEC=60 \
+ALERT_WEBHOOK_URL="https://your-alert-webhook" \
+scripts/public_uptime_slo_probe.sh
+```
+
+Hardening roadmap:
+
+- [`docs/en/PRODUCTION_HARDENING_ROADMAP.md`](docs/en/PRODUCTION_HARDENING_ROADMAP.md)
+
 ## Terminal-only submission flow
 
 ```bash

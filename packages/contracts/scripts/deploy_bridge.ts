@@ -40,11 +40,12 @@ async function main() {
 
   const wrappedName = process.env.BRIDGE_WRAP_NAME ?? "Wrapped USDT on YNX";
   const wrappedSymbol = process.env.BRIDGE_WRAP_SYMBOL ?? "wUSDT.y";
+  const wrappedDecimals = parseNumberEnv("BRIDGE_WRAP_DECIMALS", 6);
 
   const remoteChainId = parseBigIntEnv("BRIDGE_REMOTE_CHAIN_ID", 728126428n);
   const remoteAssetCanonical =
     process.env.BRIDGE_REMOTE_ASSET_CANONICAL ??
-    "tron:usdt:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    "tron:trc20:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
   const remoteAssetId = ethers.keccak256(ethers.toUtf8Bytes(remoteAssetCanonical));
 
   const Gateway = await ethers.getContractFactory("YNXBridgeGateway", deployer);
@@ -60,6 +61,7 @@ async function main() {
   const wrapped = await Wrapped.deploy(
     wrappedName,
     wrappedSymbol,
+    wrappedDecimals,
     deployer.address,
     await gateway.getAddress(),
   );
@@ -89,6 +91,7 @@ async function main() {
       remoteChainId: remoteChainId.toString(),
       remoteAssetCanonical,
       remoteAssetId,
+      wrappedDecimals,
     },
   };
 

@@ -1,0 +1,43 @@
+{
+  "source": "ynx-curated-mainstream-v1",
+  "generatedAt": "2026-05-17T00:00:00.000Z",
+  "assets": [
+    {
+      "sourceChainId": "8332",
+      "sourceAssetCanonical": "bitcoin:btc",
+      "name": "Bitcoin",
+      "symbol": "BTC",
+      "decimals": 8
+    },
+    {
+      "sourceChainId": "1",
+      "sourceAssetCanonical": "eip155:1:native:ETH",
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "decimals": 18
+    },
+    {
+      "sourceChainId": "56",
+      "sourceAssetCanonical": "eip155:56:native:BNB",
+      "name": "BNB",
+      "symbol": "BNB",
+      "decimals": 18
+    },
+    {
+      "sourceChainId": "1",
+      "sourceAssetCanonical": "eip155:1:erc20:0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "sourceAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "name": "Tether USD",
+      "symbol": "USDT",
+      "decimals": 6
+    },
+    {
+      "sourceChainId": "1",
+      "sourceAssetCanonical": "eip155:1:erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "sourceAddress": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "decimals": 6
+    }
+  ]
+}

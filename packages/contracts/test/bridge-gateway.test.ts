@@ -29,6 +29,7 @@ describe("YNXBridgeGateway", () => {
     const wrapped = await Wrapped.deploy(
       "Wrapped BTC on YNX",
       "wBTC.y",
+      8,
       owner.address,
       await gateway.getAddress(),
     );
@@ -36,7 +37,7 @@ describe("YNXBridgeGateway", () => {
     await gateway.setSupportedWrappedToken(await wrapped.getAddress(), true);
 
     const depositId = ethers.keccak256(ethers.toUtf8Bytes("btc:tx:1:0"));
-    const amount = ethers.parseUnits("0.5", 18);
+    const amount = ethers.parseUnits("0.5", 8);
     const sourceChainId = 1;
 
     const payload = await gateway.mintAttestationPayload(
@@ -62,6 +63,7 @@ describe("YNXBridgeGateway", () => {
       );
 
     expect(await wrapped.balanceOf(user.address)).to.equal(amount);
+    expect(await wrapped.decimals()).to.equal(8n);
     expect(await gateway.processedDeposits(depositId)).to.equal(true);
 
     await expectRevert(
@@ -91,6 +93,7 @@ describe("YNXBridgeGateway", () => {
     const wrapped = await Wrapped.deploy(
       "Wrapped BNB on YNX",
       "wBNB.y",
+      18,
       owner.address,
       await gateway.getAddress(),
     );
@@ -150,6 +153,7 @@ describe("YNXBridgeGateway", () => {
     const wrappedUsdt = await Wrapped.deploy(
       "Wrapped USDT on YNX",
       "wUSDT.y",
+      6,
       owner.address,
       await gateway.getAddress(),
     );
@@ -157,11 +161,11 @@ describe("YNXBridgeGateway", () => {
     await gateway.setSupportedWrappedToken(await wrappedUsdt.getAddress(), true);
 
     const tronChainId = 728126428;
-    const tronUsdtAsset = ethers.keccak256(ethers.toUtf8Bytes("tron:usdt:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"));
+    const tronUsdtAsset = ethers.keccak256(ethers.toUtf8Bytes("tron:trc20:TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"));
     await gateway.setBridgeRoute(tronChainId, tronUsdtAsset, await wrappedUsdt.getAddress());
 
     const depositId = ethers.keccak256(ethers.toUtf8Bytes("tron:block-1:tx-7:log-0"));
-    const amount = ethers.parseUnits("1250", 18);
+    const amount = ethers.parseUnits("1250", 6);
 
     const payload = await gateway.mintAttestationPayloadWithAsset(
       depositId,
@@ -186,6 +190,7 @@ describe("YNXBridgeGateway", () => {
       );
 
     expect(await wrappedUsdt.balanceOf(user.address)).to.equal(amount);
+    expect(await wrappedUsdt.decimals()).to.equal(6n);
 
     await wrappedUsdt.connect(user).approve(await gateway.getAddress(), amount);
 
@@ -210,6 +215,7 @@ describe("YNXBridgeGateway", () => {
     const wrapped = await Wrapped.deploy(
       "Wrapped BTC on YNX",
       "wBTC.y",
+      18,
       owner.address,
       await gateway.getAddress(),
     );

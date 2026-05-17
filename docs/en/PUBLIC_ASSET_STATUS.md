@@ -6,7 +6,7 @@ Scope: public testnet `ynx_9102-1`
 
 ## Current Answer
 
-Today, the public YNX testnet officially supports one live asset:
+Today, the public YNX testnet has one fully usable live asset:
 
 | Asset | Type | Unit / Contract | Status |
 |---|---|---|---|
@@ -18,15 +18,27 @@ staking, governance, faucet flows, and EVM-compatible test workflows.
 
 Testnet assets have no mainnet value.
 
+## Public Wrapped Asset Routes
+
+The public testnet now has deployed wrapped-token contracts and bridge gateway
+routes for the first mainstream asset set. These are public-testnet wrapped
+representations, not claims that real external assets are already custodied,
+redeemable, or liquid.
+
+Gateway: `0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe`
+
+| Source asset | YNX wrapped token | Contract | Decimals | Public-testnet status |
+|---|---|---|---:|---|
+| `BTC` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | token + route deployed |
+| `ETH` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | token + route deployed |
+| `BNB` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | token + route deployed |
+| `USDT` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | token + route deployed |
+| `USDC` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | token + route deployed |
+
 ## Not Live Yet
 
-The public testnet does **not** yet have official real BTC, ETH, BNB, USDT, or
-USDC trading liquidity.
-
-The repository includes a generic bridge framework and devnet onboarding records
-for wrapped assets such as `wBTC.y`, `wETH.y`, and `wUSDT.y`, but those records
-are local/devnet `31337` deployments. They must not be described as public
-testnet or mainnet tradable assets.
+The public testnet does **not** yet have production-grade real BTC, ETH, BNB,
+USDT, or USDC deposit/withdraw operations or official trading liquidity.
 
 ## Target Mainstream Asset List
 
@@ -40,12 +52,12 @@ The speed-first trading direction should prioritize:
 | 4 | `USDT` | `wUSDT.y` | TRON first, then Ethereum/BSC |
 | 5 | `USDC` | `wUSDC.y` | Ethereum/Base/Solana route depending partner support |
 
-## What Must Exist Before Public Trading Claims
+## What Must Exist Before Full Public Trading Claims
 
 For each real external asset, YNX needs:
 
-- a deployed public-testnet or mainnet wrapped token contract;
-- a bridge gateway route for the source chain and remote asset ID;
+- a deployed public-testnet or mainnet wrapped token contract; `done on 9102 testnet`
+- a bridge gateway route for the source chain and remote asset ID; `done on 9102 testnet`
 - an observer/signer or verification path for deposits and withdrawals;
 - issuer/canonical-token checks for stablecoins;
 - liquidity or market-making plan;
@@ -57,4 +69,4 @@ For each real external asset, YNX needs:
 Public testnet asset metadata lives in:
 
 - `packages/contracts/deployments/public-testnet-9102.json`
-
+- `packages/contracts/deployments/public-mainstream-bridge-9102.json`

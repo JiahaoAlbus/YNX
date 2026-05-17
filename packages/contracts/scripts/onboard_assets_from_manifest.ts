@@ -185,6 +185,7 @@ async function main() {
     const wrapped = await Wrapped.deploy(
       name,
       symbol,
+      entry.decimals,
       deployer.address,
       gatewayAddress,
     );

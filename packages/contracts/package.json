@@ -8,6 +8,7 @@
     "devnet:deploy": "hardhat run scripts/deploy.ts --network localhost",
     "ynxdev:deploy": "hardhat run scripts/deploy.ts --network ynxdev",
     "ynxdev:bridge-deploy": "hardhat run scripts/deploy_bridge.ts --network ynxdev",
+    "ynxpublic:bridge-mainstream": "hardhat run scripts/deploy_mainstream_bridge.ts --network ynxpublic",
     "bridge:tron-manifest": "hardhat run scripts/generate_tron_manifest.ts --network default",
     "ynxdev:bridge-onboard": "hardhat run scripts/onboard_assets_from_manifest.ts --network ynxdev",
     "ynxdev:governance-e2e": "hardhat run scripts/ynxdev/governance_e2e.ts --network ynxdev",

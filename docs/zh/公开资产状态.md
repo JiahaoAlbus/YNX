@@ -6,7 +6,7 @@
 
 ## 当前答案
 
-现在 YNX 公开测试网官方已上线的可用资产只有：
+现在 YNX 公开测试网已完整可用的资产是：
 
 | 资产 | 类型 | 单位 / 合约 | 状态 |
 |---|---|---|---|
@@ -17,11 +17,25 @@
 
 测试网资产没有主网价值。
 
-## 还没正式上线的资产
+## 公开 wrapped asset route
 
-公开测试网现在还没有官方真实 BTC、ETH、BNB、USDT、USDC 交易流动性。
+公开测试网现在已经部署了第一批主流资产的 wrapped token 合约和 bridge
+gateway route。它们是公开测试网 wrapped 表示，不等于真实外部资产已经完成托管、
+可赎回或已有交易流动性。
 
-仓库里已有通用桥框架，也有 `wBTC.y`、`wETH.y`、`wUSDT.y` 等 wrapped asset 的本地/devnet 记录，但这些是 `31337` 本地开发网部署记录，不能对外说成公开测试网或主网已可交易资产。
+Gateway：`0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe`
+
+| 来源资产 | YNX wrapped token | 合约 | 小数位 | 公开测试网状态 |
+|---|---|---|---:|---|
+| `BTC` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | token + route 已部署 |
+| `ETH` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | token + route 已部署 |
+| `BNB` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | token + route 已部署 |
+| `USDT` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | token + route 已部署 |
+| `USDC` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | token + route 已部署 |
+
+## 还没正式上线的能力
+
+公开测试网现在还没有生产级真实 BTC、ETH、BNB、USDT、USDC 充值提现能力，也还没有官方交易流动性。
 
 ## 目标主流币清单
 
@@ -35,12 +49,12 @@
 | 4 | `USDT` | `wUSDT.y` | 先 TRON，再 Ethereum/BSC |
 | 5 | `USDC` | `wUSDC.y` | Ethereum/Base/Solana 视合作方支持决定 |
 
-## 对外说“可交易”前必须具备
+## 对外说“完整可交易”前必须具备
 
 每个真实外部资产都需要：
 
-- 公开测试网或主网上已部署 wrapped token 合约；
-- bridge gateway source chain + remote asset route；
+- 公开测试网或主网上已部署 wrapped token 合约；`9102 测试网已完成`
+- bridge gateway source chain + remote asset route；`9102 测试网已完成`
 - deposit/withdraw 的观察者、签名者或验证路径；
 - 稳定币 issuer/canonical token 校验；
 - 流动性或做市计划；
@@ -52,4 +66,4 @@
 公开测试网资产元数据在：
 
 - `packages/contracts/deployments/public-testnet-9102.json`
-
+- `packages/contracts/deployments/public-mainstream-bridge-9102.json`

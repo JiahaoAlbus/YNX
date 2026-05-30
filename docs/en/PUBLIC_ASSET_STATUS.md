@@ -26,7 +26,7 @@ asset set. These are public-testnet wrapped representations, not claims that
 real mainnet external assets are already custodied, redeemable, or liquid.
 
 Gateway: `0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe`
-Bridge service: `https://bridge.ynxweb4.com`
+Bridge service: `https://rpc.ynxweb4.com/bridge/*`
 
 | Source testnet asset | Route | YNX wrapped token | Contract | Decimals | Public-testnet status |
 |---|---|---|---|---:|---|

@@ -62,7 +62,8 @@ All public subdomains terminate TLS on the Tencent host via Caddy and reverse-pr
 - `faucet.ynxweb4.com` -> `43.153.202.237`
 - `indexer.ynxweb4.com` -> `43.153.202.237`
 - `explorer.ynxweb4.com` -> `43.153.202.237`
-- `bridge.ynxweb4.com` -> `43.153.202.237`
+- `rpc.ynxweb4.com/bridge/*` -> `43.153.202.237:38083`
+- `bridge.ynxweb4.com` -> reserved for the bridge service after DNS points to Tencent
 - `ai.ynxweb4.com` -> `43.153.202.237`
 - `web4.ynxweb4.com` -> `43.153.202.237`
 

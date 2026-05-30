@@ -209,6 +209,12 @@ if has_host "rpc"; then
 rpc.${BASE_DOMAIN} {
   import ynx_site_common
   import ynx_api_headers
+  handle /bridge/* {
+    reverse_proxy 127.0.0.1:${BRIDGE_PORT} {
+      import ynx_proxy_headers
+      import ynx_proxy_timeouts
+	}
+  }
   reverse_proxy 127.0.0.1:${RPC_PORT} {
     import ynx_proxy_headers
     import ynx_proxy_timeouts

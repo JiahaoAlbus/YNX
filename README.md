@@ -27,7 +27,7 @@ Public HTTPS endpoints:
 - Faucet: `https://faucet.ynxweb4.com`
 - Indexer: `https://indexer.ynxweb4.com`
 - Explorer: `https://explorer.ynxweb4.com`
-- Bridge Service: `https://bridge.ynxweb4.com`
+- Bridge Service: `https://rpc.ynxweb4.com/bridge/*`
 - AI Gateway: `https://ai.ynxweb4.com`
 - Web4 Hub: `https://web4.ynxweb4.com`
 
@@ -41,7 +41,7 @@ Public HTTPS endpoints:
 curl -s https://rpc.ynxweb4.com/status | jq -r '.result.node_info.network, .result.sync_info.latest_block_height, .result.sync_info.catching_up'
 curl -s https://indexer.ynxweb4.com/ynx/overview | jq
 curl -s https://faucet.ynxweb4.com/health | jq
-curl -s https://bridge.ynxweb4.com/bridge/route-checks | jq
+curl -s https://rpc.ynxweb4.com/bridge/route-checks | jq
 ```
 
 ### 2) Builders (local full stack)

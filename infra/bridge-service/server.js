@@ -158,6 +158,12 @@ const BRIDGE_BODY_LIMIT_BYTES = parseInt(process.env.BRIDGE_BODY_LIMIT_BYTES || 
 const BRIDGE_YNX_RPC_URL = process.env.BRIDGE_YNX_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com";
 const BRIDGE_GATEWAY_ADDRESS = process.env.BRIDGE_GATEWAY_ADDRESS || "";
 const BRIDGE_RELAYER_PRIVATE_KEY = process.env.BRIDGE_RELAYER_PRIVATE_KEY || process.env.YNX_EVM_PRIVATE_KEY || "";
+const BRIDGE_RELAYER_MODE = (process.env.BRIDGE_RELAYER_MODE || (BRIDGE_RELAYER_PRIVATE_KEY ? "private-key" : "remote")).trim();
+const BRIDGE_REMOTE_SIGNER_ADDRESS = process.env.BRIDGE_REMOTE_SIGNER_ADDRESS || "";
+const BRIDGE_ATTESTER_PRIVATE_KEY =
+  process.env.BRIDGE_ATTESTER_PRIVATE_KEY ||
+  process.env.AI_ONCHAIN_PRIVATE_KEY ||
+  (BRIDGE_RELAYER_MODE === "private-key" ? BRIDGE_RELAYER_PRIVATE_KEY : "");
 const BRIDGE_ONCHAIN_ENABLED = process.env.BRIDGE_ONCHAIN_ENABLED === "1";
 const BRIDGE_CONFIRMATIONS = Math.max(0, parseInt(process.env.BRIDGE_CONFIRMATIONS || "1", 10) || 0);
 const BRIDGE_REQUIRE_OPERATOR_TOKEN = process.env.BRIDGE_REQUIRE_OPERATOR_TOKEN === "1";
@@ -186,6 +192,9 @@ if (!Array.isArray(state.audit_logs)) state.audit_logs = [];
 const runtime = {
   provider: null,
   wallet: null,
+  signer: null,
+  signerAddress: "",
+  attesterWallet: null,
   gateway: null,
   last_error: "",
   last_tx_hash: "",
@@ -223,20 +232,51 @@ function gatewayAddress() {
 }
 
 function onchainReady() {
-  return Boolean(BRIDGE_ONCHAIN_ENABLED && BRIDGE_YNX_RPC_URL && BRIDGE_RELAYER_PRIVATE_KEY && gatewayAddress());
+  return Boolean(
+    BRIDGE_ONCHAIN_ENABLED &&
+      BRIDGE_YNX_RPC_URL &&
+      gatewayAddress() &&
+      BRIDGE_ATTESTER_PRIVATE_KEY &&
+      (BRIDGE_RELAYER_MODE === "remote" || BRIDGE_RELAYER_PRIVATE_KEY),
+  );
 }
 
-function getGateway() {
+async function getGateway() {
   if (!BRIDGE_ONCHAIN_ENABLED) throw new Error("bridge_onchain_disabled");
   if (!BRIDGE_YNX_RPC_URL) throw new Error("bridge_ynx_rpc_required");
-  if (!BRIDGE_RELAYER_PRIVATE_KEY) throw new Error("bridge_relayer_private_key_required");
   if (!gatewayAddress()) throw new Error("bridge_gateway_required");
   if (!runtime.gateway) {
     runtime.provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
-    runtime.wallet = new ethers.Wallet(BRIDGE_RELAYER_PRIVATE_KEY, runtime.provider);
-    runtime.gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, runtime.wallet);
+    if (BRIDGE_RELAYER_MODE === "remote") {
+      const remoteAddress = BRIDGE_REMOTE_SIGNER_ADDRESS || (await runtime.provider.send("eth_accounts", [])).at(0);
+      if (!remoteAddress) throw new Error("bridge_remote_signer_required");
+      runtime.signer = await runtime.provider.getSigner(remoteAddress);
+      runtime.signerAddress = await runtime.signer.getAddress();
+    } else {
+      if (!BRIDGE_RELAYER_PRIVATE_KEY) throw new Error("bridge_relayer_private_key_required");
+      runtime.wallet = new ethers.Wallet(BRIDGE_RELAYER_PRIVATE_KEY, runtime.provider);
+      runtime.signer = runtime.wallet;
+      runtime.signerAddress = runtime.wallet.address;
+    }
+    if (!BRIDGE_ATTESTER_PRIVATE_KEY) throw new Error("bridge_attester_private_key_required");
+    runtime.attesterWallet = new ethers.Wallet(BRIDGE_ATTESTER_PRIVATE_KEY);
+    runtime.gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, runtime.signer);
   }
   return runtime.gateway;
+}
+
+async function signAttestationPayload(payload) {
+  if (runtime.attesterWallet) return runtime.attesterWallet.signMessage(ethers.getBytes(payload));
+  if (!runtime.provider || !runtime.signerAddress) throw new Error("bridge_signer_not_ready");
+  try {
+    return await runtime.provider.send("personal_sign", [payload, runtime.signerAddress]);
+  } catch (personalSignError) {
+    try {
+      return await runtime.provider.send("eth_sign", [runtime.signerAddress, payload]);
+    } catch {
+      throw personalSignError;
+    }
+  }
 }
 
 async function waitTx(tx) {
@@ -265,7 +305,7 @@ function assertOperator(req) {
 }
 
 async function mintOnYnx(deposit, route) {
-  const gateway = getGateway();
+  const gateway = await getGateway();
   const alreadyProcessed = await gateway.processedDeposits(deposit.deposit_id);
   if (alreadyProcessed) {
     return { already_processed: true, deposit_id: deposit.deposit_id, contract: gatewayAddress() };
@@ -278,7 +318,7 @@ async function mintOnYnx(deposit, route) {
     deposit.recipient,
     BigInt(deposit.amount_base_units),
   );
-  const signature = await runtime.wallet.signMessage(ethers.getBytes(payload));
+  const signature = await signAttestationPayload(payload);
   const tx = await gateway.mintWithMappedAttestation(
     deposit.deposit_id,
     BigInt(route.sourceChainId),
@@ -361,6 +401,11 @@ const server = http.createServer(async (req, res) => {
         ready: onchainReady(),
         rpc_configured: Boolean(BRIDGE_YNX_RPC_URL),
         relayer_configured: Boolean(BRIDGE_RELAYER_PRIVATE_KEY),
+        relayer_mode: BRIDGE_RELAYER_MODE,
+        remote_signer_configured: Boolean(BRIDGE_REMOTE_SIGNER_ADDRESS),
+        signer_address: runtime.signerAddress,
+        attester_configured: Boolean(BRIDGE_ATTESTER_PRIVATE_KEY),
+        attester_address: runtime.attesterWallet ? runtime.attesterWallet.address : "",
         confirmations: BRIDGE_CONFIRMATIONS,
         last_tx_hash: runtime.last_tx_hash,
         last_tx_at: runtime.last_tx_at,
@@ -502,7 +547,7 @@ const server = http.createServer(async (req, res) => {
     for (const deposit of state.deposits) {
       if (!deposit.deposit_id || !deposit.source_chain_id || !deposit.source_asset_id) continue;
       try {
-        const gateway = getGateway();
+        const gateway = await getGateway();
         const processed = await gateway.processedDeposits(deposit.deposit_id);
         if (processed && deposit.status !== "minted") {
           deposit.status = "minted";

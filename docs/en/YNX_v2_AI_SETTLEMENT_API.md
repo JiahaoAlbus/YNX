@@ -1,7 +1,7 @@
 # YNX v2 AI Settlement API (Draft)
 
-Status: Draft  
-Last updated: 2026-02-25
+Status: Active public-testnet API  
+Last updated: 2026-05-30
 
 ## 1. Purpose
 
@@ -13,6 +13,11 @@ The API is designed for:
 - AI worker operators
 - verifiers/challengers
 - indexers and explorers
+
+The public testnet has two settlement layers:
+
+- API layer: `https://ai.ynxweb4.com`
+- On-chain rail: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
 
 ## 2. Job Lifecycle
 
@@ -52,7 +57,77 @@ The API is designed for:
 - `POST /ai/payments/charge` — execute charge from vault
 - `GET /x402/resource` — x402-style paywalled resource
 
-## 5. Security Requirements
+## 5. Optional On-chain Mirroring
+
+The AI Gateway can mirror high-value settlement actions into `YNXAISettlement`.
+This is disabled by default for backward compatibility and can be enabled with:
+
+```text
+AI_ONCHAIN_ENABLED=1
+AI_ONCHAIN_RPC_URL=https://evm.ynxweb4.com
+AI_SETTLEMENT_CONTRACT=0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
+AI_ONCHAIN_PRIVATE_KEY=<runtime-only signer key>
+AI_ONCHAIN_CONFIRMATIONS=1
+```
+
+Never commit `AI_ONCHAIN_PRIVATE_KEY`. The gateway signer becomes the on-chain
+vault owner for mirrored vaults.
+
+### 5.1 Create an on-chain-backed vault
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/vaults \
+  -H 'content-type: application/json' \
+  -H "x-ynx-session: $SESSION" \
+  -d '{
+    "owner": "demo-owner",
+    "policy_id": "policy_demo",
+    "balance": 0,
+    "max_per_payment": 50,
+    "onchain": true,
+    "onchain_value_wei": "100000000000000000",
+    "onchain_max_per_payment_wei": "50000000000000000"
+  }' | jq
+```
+
+When enabled, the response includes:
+
+```json
+{
+  "vault": {
+    "onchain": {
+      "contract": "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf",
+      "vault_id": "0x...",
+      "policy_hash": "0x...",
+      "tx_hash": "0x..."
+    }
+  }
+}
+```
+
+### 5.2 Create an on-chain-backed AI job
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/jobs \
+  -H 'content-type: application/json' \
+  -H "x-ynx-session: $SESSION" \
+  -d '{
+    "creator": "demo-owner",
+    "policy_id": "policy_demo",
+    "vault_id": "vault_demo",
+    "reward": "42",
+    "reward_wei": "42000000000000000",
+    "input_uri": "ipfs://task",
+    "challenge_window_blocks": 0,
+    "onchain": true
+  }' | jq
+```
+
+If the vault is on-chain-backed, later `commit`, `challenge`, and `finalize`
+actions are mirrored to the contract and their transaction hashes are written
+back under `job.onchain`.
+
+## 6. Security Requirements
 
 - Every state transition MUST be authorized by signer address.
 - Challenge windows MUST be explicit and time-bounded.
@@ -61,8 +136,11 @@ The API is designed for:
 - Vault spend MUST be bounded by per-payment and per-day limits.
 - x402-style endpoints MUST return deterministic payment requirements when unpaid.
 - Settlement actions MUST be audit-recorded.
+- On-chain mode MUST run with a dedicated limited signer, not a human treasury key.
 
-## 6. Rollout Policy
+## 7. Rollout Policy
 
 - v2 public testnet uses this API as integration contract.
 - Breaking changes MUST increment version and include migration notes.
+- Gateway-only settlement remains supported for low-risk demos.
+- On-chain mirroring should be used for high-value or externally inspectable agent work.

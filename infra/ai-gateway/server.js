@@ -3,6 +3,7 @@ const http = require("http");
 const https = require("https");
 const path = require("path");
 const crypto = require("crypto");
+const { ethers } = require("ethers");
 
 function json(res, status, payload, extraHeaders = {}) {
   const body = JSON.stringify(payload);
@@ -156,6 +157,23 @@ const AI_MAX_JOBS = parseInt(process.env.AI_MAX_JOBS || "200000", 10);
 const AI_MAX_VAULTS = parseInt(process.env.AI_MAX_VAULTS || "50000", 10);
 const AI_MAX_PAYMENTS = parseInt(process.env.AI_MAX_PAYMENTS || "200000", 10);
 const AI_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.AI_PERSIST_DEBOUNCE_MS || "200", 10));
+const AI_ONCHAIN_ENABLED = process.env.AI_ONCHAIN_ENABLED === "1";
+const AI_ONCHAIN_RPC_URL = process.env.AI_ONCHAIN_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "";
+const AI_ONCHAIN_PRIVATE_KEY = process.env.AI_ONCHAIN_PRIVATE_KEY || process.env.YNX_EVM_PRIVATE_KEY || "";
+const AI_SETTLEMENT_CONTRACT = process.env.AI_SETTLEMENT_CONTRACT || process.env.YNX_AI_SETTLEMENT_CONTRACT || "";
+const AI_ONCHAIN_CONFIRMATIONS = Math.max(0, parseInt(process.env.AI_ONCHAIN_CONFIRMATIONS || "1", 10) || 0);
+
+const AI_SETTLEMENT_ABI = [
+  "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
+  "function deposit(bytes32 vaultId) payable",
+  "function createJob(bytes32 jobId, bytes32 vaultId, uint256 reward, uint256 stake, bytes32 inputHash, bytes32 policyHash, uint64 challengeBlocks)",
+  "function commitResult(bytes32 jobId, bytes32 resultHash, string attestationURI)",
+  "function challenge(bytes32 jobId)",
+  "function finalize(bytes32 jobId)",
+  "function slash(bytes32 jobId)",
+  "function vaults(bytes32 vaultId) view returns (address owner,uint256 balance,uint256 maxPerPayment,bool active,bytes32 policyHash)",
+  "function jobs(bytes32 jobId) view returns (bytes32 vaultId,address creator,address worker,uint256 reward,uint256 stake,uint64 challengeDeadline,bytes32 inputHash,bytes32 resultHash,string attestationURI,uint8 status,bytes32 policyHash)",
+];
 
 if (!fs.existsSync(AI_DATA_DIR)) fs.mkdirSync(AI_DATA_DIR, { recursive: true });
 
@@ -173,6 +191,170 @@ if (fs.existsSync(AI_DATA_FILE)) {
   } catch {
     state = normalizeState({});
   }
+}
+
+let onchainRuntime = {
+  provider: null,
+  signer: null,
+  contract: null,
+  last_error: "",
+  last_tx_hash: "",
+  last_tx_at: "",
+};
+
+function isHex32(value) {
+  return typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
+function bytes32From(value, fallback) {
+  if (isHex32(value)) return value;
+  return ethers.id(String(value || fallback || ""));
+}
+
+function weiFrom(value, fallback = "0") {
+  const raw = value === undefined || value === null || value === "" ? fallback : value;
+  if (typeof raw === "bigint") return raw;
+  if (typeof raw === "number") {
+    if (!Number.isFinite(raw) || raw < 0) throw new Error("invalid_wei_amount");
+    return BigInt(Math.trunc(raw));
+  }
+  const str = String(raw).trim();
+  if (!/^[0-9]+$/.test(str)) throw new Error("invalid_wei_amount");
+  return BigInt(str);
+}
+
+function onchainConfigReady() {
+  return Boolean(AI_ONCHAIN_ENABLED && AI_ONCHAIN_RPC_URL && AI_ONCHAIN_PRIVATE_KEY && AI_SETTLEMENT_CONTRACT);
+}
+
+function getSettlementContract() {
+  if (!AI_ONCHAIN_ENABLED) throw new Error("onchain_disabled");
+  if (!AI_ONCHAIN_RPC_URL) throw new Error("onchain_rpc_required");
+  if (!AI_ONCHAIN_PRIVATE_KEY) throw new Error("onchain_private_key_required");
+  if (!AI_SETTLEMENT_CONTRACT) throw new Error("settlement_contract_required");
+  if (!onchainRuntime.contract) {
+    onchainRuntime.provider = new ethers.JsonRpcProvider(AI_ONCHAIN_RPC_URL);
+    onchainRuntime.signer = new ethers.Wallet(AI_ONCHAIN_PRIVATE_KEY, onchainRuntime.provider);
+    onchainRuntime.contract = new ethers.Contract(AI_SETTLEMENT_CONTRACT, AI_SETTLEMENT_ABI, onchainRuntime.signer);
+  }
+  return onchainRuntime.contract;
+}
+
+async function waitTx(tx) {
+  const receipt = await tx.wait(AI_ONCHAIN_CONFIRMATIONS);
+  onchainRuntime.last_tx_hash = tx.hash;
+  onchainRuntime.last_tx_at = nowIso();
+  onchainRuntime.last_error = "";
+  return {
+    tx_hash: tx.hash,
+    block_number: receipt?.blockNumber || null,
+    confirmations: AI_ONCHAIN_CONFIRMATIONS,
+  };
+}
+
+async function callOnchain(action, fn) {
+  try {
+    const result = await fn(getSettlementContract());
+    addAudit(`onchain.${action}`, result);
+    return { ok: true, result };
+  } catch (error) {
+    const message = error && error.shortMessage ? error.shortMessage : error && error.message ? error.message : String(error);
+    onchainRuntime.last_error = message;
+    addAudit(`onchain.${action}.failed`, { error: message });
+    return { ok: false, error: message };
+  }
+}
+
+async function createVaultOnchain(vault, body) {
+  const vaultId = bytes32From(body.onchain_vault_id, `vault:${vault.vault_id}`);
+  const policyHash = bytes32From(body.policy_hash, `policy:${vault.policy_id || vault.owner || vault.vault_id}`);
+  const maxPerPayment = weiFrom(body.onchain_max_per_payment_wei, "0");
+  const value = weiFrom(body.onchain_value_wei, "0");
+  const response = await callOnchain("vault.created", async (contract) => {
+    const tx = await contract.createVault(vaultId, policyHash, maxPerPayment, { value });
+    return {
+      ...(await waitTx(tx)),
+      vault_id: vaultId,
+      policy_hash: policyHash,
+      value_wei: value.toString(),
+      max_per_payment_wei: maxPerPayment.toString(),
+      contract: AI_SETTLEMENT_CONTRACT,
+    };
+  });
+  if (!response.ok) return response;
+  return { ok: true, onchain: response.result };
+}
+
+async function depositVaultOnchain(vault, body) {
+  if (!vault.onchain?.vault_id) return { ok: false, error: "vault_not_onchain" };
+  const value = weiFrom(body.onchain_value_wei ?? body.amount_wei, "0");
+  if (value <= 0n) return { ok: false, error: "invalid_onchain_value" };
+  const response = await callOnchain("vault.deposited", async (contract) => {
+    const tx = await contract.deposit(vault.onchain.vault_id, { value });
+    return {
+      ...(await waitTx(tx)),
+      vault_id: vault.onchain.vault_id,
+      value_wei: value.toString(),
+      contract: AI_SETTLEMENT_CONTRACT,
+    };
+  });
+  if (!response.ok) return response;
+  return { ok: true, onchain: response.result };
+}
+
+async function createJobOnchain(job, vault, body) {
+  if (!vault?.onchain?.vault_id) return { ok: false, error: "vault_not_onchain" };
+  const jobId = bytes32From(body.onchain_job_id, `job:${job.job_id}`);
+  const reward = weiFrom(body.reward_wei ?? body.onchain_reward_wei, "");
+  const stake = weiFrom(body.stake_wei ?? body.onchain_stake_wei, "0");
+  const inputHash = bytes32From(body.input_hash, body.input_uri || `input:${job.job_id}`);
+  const policyHash = vault.onchain.policy_hash || bytes32From(body.policy_hash, `policy:${job.policy_id || vault.policy_id}`);
+  const challengeBlocks = Math.max(0, parseInt(body.challenge_window_blocks || AI_DEFAULT_CHALLENGE_BLOCKS, 10) || 0);
+  const response = await callOnchain("job.created", async (contract) => {
+    const tx = await contract.createJob(jobId, vault.onchain.vault_id, reward, stake, inputHash, policyHash, challengeBlocks);
+    return {
+      ...(await waitTx(tx)),
+      job_id: jobId,
+      vault_id: vault.onchain.vault_id,
+      reward_wei: reward.toString(),
+      stake_wei: stake.toString(),
+      input_hash: inputHash,
+      policy_hash: policyHash,
+      contract: AI_SETTLEMENT_CONTRACT,
+    };
+  });
+  if (!response.ok) return response;
+  return { ok: true, onchain: response.result };
+}
+
+async function commitJobOnchain(job, body) {
+  if (!job.onchain?.job_id) return { ok: false, error: "job_not_onchain" };
+  const resultHash = bytes32From(body.result_hash, `result:${job.job_id}:${body.attestation_uri || ""}`);
+  const response = await callOnchain("job.committed", async (contract) => {
+    const tx = await contract.commitResult(job.onchain.job_id, resultHash, body.attestation_uri || "");
+    return {
+      ...(await waitTx(tx)),
+      job_id: job.onchain.job_id,
+      result_hash: resultHash,
+      contract: AI_SETTLEMENT_CONTRACT,
+    };
+  });
+  if (!response.ok) return response;
+  return { ok: true, onchain: response.result };
+}
+
+async function transitionJobOnchain(job, action) {
+  if (!job.onchain?.job_id) return { ok: false, error: "job_not_onchain" };
+  const response = await callOnchain(`job.${action}`, async (contract) => {
+    const tx = await contract[action](job.onchain.job_id);
+    return {
+      ...(await waitTx(tx)),
+      job_id: job.onchain.job_id,
+      contract: AI_SETTLEMENT_CONTRACT,
+    };
+  });
+  if (!response.ok) return response;
+  return { ok: true, onchain: response.result };
 }
 
 const persistRuntime = {
@@ -449,6 +631,17 @@ const server = http.createServer(async (req, res) => {
       service: "ynx-ai-gateway",
       enforce_policy: AI_ENFORCE_POLICY,
       has_web4_authorizer: Boolean(AI_WEB4_HUB_URL),
+      onchain: {
+        enabled: AI_ONCHAIN_ENABLED,
+        ready: onchainConfigReady(),
+        rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
+        signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
+        settlement_contract: AI_SETTLEMENT_CONTRACT || "",
+        confirmations: AI_ONCHAIN_CONFIRMATIONS,
+        last_tx_hash: onchainRuntime.last_tx_hash,
+        last_tx_at: onchainRuntime.last_tx_at,
+        last_error: onchainRuntime.last_error,
+      },
       persistence: {
         debounce_ms: AI_PERSIST_DEBOUNCE_MS,
         pending: persistRuntime.pending,
@@ -465,13 +658,22 @@ const server = http.createServer(async (req, res) => {
     const checks = {
       persistence: fs.existsSync(AI_DATA_DIR),
       policy_authorizer: !AI_ENFORCE_POLICY || Boolean(AI_WEB4_HUB_URL),
+      onchain: !AI_ONCHAIN_ENABLED || onchainConfigReady(),
     };
-    return json(res, checks.persistence && checks.policy_authorizer ? 200 : 503, {
-      ok: checks.persistence && checks.policy_authorizer,
+    return json(res, checks.persistence && checks.policy_authorizer && checks.onchain ? 200 : 503, {
+      ok: checks.persistence && checks.policy_authorizer && checks.onchain,
       checks,
       data_file: AI_DATA_FILE,
       chain_id: AI_CHAIN_ID,
       enforce_policy: AI_ENFORCE_POLICY,
+      onchain: {
+        enabled: AI_ONCHAIN_ENABLED,
+        settlement_contract: AI_SETTLEMENT_CONTRACT || "",
+        confirmations: AI_ONCHAIN_CONFIRMATIONS,
+        last_tx_hash: onchainRuntime.last_tx_hash,
+        last_tx_at: onchainRuntime.last_tx_at,
+        last_error: onchainRuntime.last_error,
+      },
       persistence: {
         debounce_ms: AI_PERSIST_DEBOUNCE_MS,
         pending: persistRuntime.pending,
@@ -518,6 +720,11 @@ const server = http.createServer(async (req, res) => {
     });
     if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
     const job = createJob({ ...body, policy_id: policyId }, vault);
+    if (body.onchain === true || body.onchain === "1") {
+      const onchain = await createJobOnchain(job, vault, body);
+      if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_job_create_failed", detail: onchain.error });
+      job.onchain = onchain.onchain;
+    }
     state.jobs.unshift(job);
     addAudit("job.created", { job_id: job.job_id, vault_id: job.vault_id, reward: job.reward, policy_id: policyId });
     persist();
@@ -549,6 +756,11 @@ const server = http.createServer(async (req, res) => {
         reason: "ai-job-commit",
       });
       if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
+      if (job.onchain?.job_id) {
+        const onchain = await commitJobOnchain(job, body);
+        if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_job_commit_failed", detail: onchain.error, job });
+        job.onchain = { ...job.onchain, ...onchain.onchain };
+      }
       job.worker = body.worker || job.worker;
       job.result_hash = body.result_hash || job.result_hash;
       job.attestation_uri = body.attestation_uri || job.attestation_uri;
@@ -574,6 +786,11 @@ const server = http.createServer(async (req, res) => {
         reason: "ai-job-challenge",
       });
       if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
+      if (job.onchain?.job_id) {
+        const onchain = await transitionJobOnchain(job, "challenge");
+        if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_job_challenge_failed", detail: onchain.error, job });
+        job.onchain = { ...job.onchain, challenged_tx_hash: onchain.onchain.tx_hash };
+      }
       job.status = "challenged";
       job.updated_at = nowIso();
       addAudit("job.challenged", { job_id: job.job_id });
@@ -598,6 +815,23 @@ const server = http.createServer(async (req, res) => {
         reason: "ai-job-finalize",
       });
       if (!finalizeAuth.ok) return json(res, finalizeAuth.status, { ok: false, error: finalizeAuth.error });
+
+      if (job.onchain?.job_id) {
+        const onchainAction = nextStatus === "slashed" ? "slash" : "finalize";
+        const onchain = await transitionJobOnchain(job, onchainAction);
+        if (!onchain.ok) {
+          return json(res, 502, {
+            ok: false,
+            error: `onchain_job_${onchainAction}_failed`,
+            detail: onchain.error,
+            job,
+          });
+        }
+        job.onchain = {
+          ...job.onchain,
+          [`${onchainAction}_tx_hash`]: onchain.onchain.tx_hash,
+        };
+      }
 
       job.status = nextStatus;
       job.finalized_at = nowIso();
@@ -670,6 +904,11 @@ const server = http.createServer(async (req, res) => {
     });
     if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
     const vault = createVault(body);
+    if (body.onchain === true || body.onchain === "1") {
+      const onchain = await createVaultOnchain(vault, body);
+      if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_vault_create_failed", detail: onchain.error });
+      vault.onchain = onchain.onchain;
+    }
     state.vaults.unshift(vault);
     addAudit("vault.created", { vault_id: vault.vault_id, owner: vault.owner, balance: vault.balance, policy_id: vault.policy_id });
     persist();
@@ -698,6 +937,11 @@ const server = http.createServer(async (req, res) => {
         reason: "ai-vault-deposit",
       });
       if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
+      if (vault.onchain?.vault_id && (body.onchain === true || body.onchain === "1" || body.onchain_value_wei || body.amount_wei)) {
+        const onchain = await depositVaultOnchain(vault, body);
+        if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_vault_deposit_failed", detail: onchain.error, vault });
+        vault.onchain = { ...vault.onchain, last_deposit_tx_hash: onchain.onchain.tx_hash };
+      }
       vault.balance += amount;
       vault.updated_at = nowIso();
       addAudit("vault.deposited", { vault_id: vault.vault_id, amount });

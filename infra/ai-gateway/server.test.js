@@ -254,3 +254,44 @@ test("rejects x402 delivery when settled payment resource does not match request
   assert.equal(delivery.status, 402);
   assert.equal(delivery.body.error, "invalid_payment_resource");
 });
+
+test("reports on-chain readiness and fails requested on-chain writes when signer config is missing", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-onchain-missing-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(port),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_ONCHAIN_ENABLED: "1",
+      AI_ONCHAIN_RPC_URL: "http://127.0.0.1:18545",
+      AI_SETTLEMENT_CONTRACT: "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf",
+    },
+    `http://127.0.0.1:${port}/health`
+  );
+  t.after(async () => server.stop());
+
+  const ready = await requestJson(`http://127.0.0.1:${port}/ready`);
+  assert.equal(ready.status, 503);
+  assert.equal(ready.body.checks.onchain, false);
+
+  const health = assertJson(await requestJson(`http://127.0.0.1:${port}/health`), 200);
+  assert.equal(health.onchain.enabled, true);
+  assert.equal(health.onchain.ready, false);
+  assert.equal(health.onchain.signer_configured, false);
+
+  const created = await requestJson(`http://127.0.0.1:${port}/ai/vaults`, {
+    method: "POST",
+    body: {
+      owner: "owner-onchain",
+      balance: 0,
+      onchain: true,
+      onchain_value_wei: "0",
+    },
+  });
+  assert.equal(created.status, 502);
+  assert.equal(created.body.error, "onchain_vault_create_failed");
+  assert.match(created.body.detail, /private_key|required/i);
+});

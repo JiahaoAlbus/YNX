@@ -87,6 +87,30 @@ services:
       - ynx-v2-indexer
     restart: unless-stopped
 
+  ynx-v2-bridge-service:
+    image: node:20-alpine
+    container_name: ynx-v2-bridge-service
+    working_dir: /workspace/infra/bridge-service
+    command: ["node", "/workspace/infra/bridge-service/server.js"]
+    environment:
+      BRIDGE_PORT: ${BRIDGE_PORT:-38083}
+      BRIDGE_DATA_DIR: /workspace/chain/.testnet-v2/bridge-service-data
+      BRIDGE_ROUTES_FILE: /workspace/infra/bridge-service/config/testnet-routes.json
+      BRIDGE_YNX_RPC_URL: http://ynx-v2-node:38545
+      BRIDGE_GATEWAY_ADDRESS: ${BRIDGE_GATEWAY_ADDRESS:-0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe}
+      BRIDGE_ONCHAIN_ENABLED: ${BRIDGE_ONCHAIN_ENABLED:-0}
+      BRIDGE_CONFIRMATIONS: ${BRIDGE_CONFIRMATIONS:-1}
+      BRIDGE_REQUIRE_OPERATOR_TOKEN: ${BRIDGE_REQUIRE_OPERATOR_TOKEN:-0}
+      BRIDGE_OPERATOR_TOKEN: ${BRIDGE_OPERATOR_TOKEN:-}
+      BRIDGE_RELAYER_PRIVATE_KEY: ${BRIDGE_RELAYER_PRIVATE_KEY:-}
+    ports:
+      - "${BRIDGE_PORT:-38083}:38083"
+    volumes:
+      - ..:/workspace
+    depends_on:
+      - ynx-v2-node
+    restart: unless-stopped
+
   ynx-v2-ai-gateway:
     image: node:20-alpine
     container_name: ynx-v2-ai-gateway

@@ -1,7 +1,7 @@
 # YNX v2 Tencent Cloud Current Deployment Profile
 
 Status: active  
-Last updated: 2026-05-01
+Last updated: 2026-05-30
 
 ## Purpose
 
@@ -33,6 +33,7 @@ Installed services (systemd):
 - `ynx-v2-faucet.service`
 - `ynx-v2-indexer.service`
 - `ynx-v2-explorer.service`
+- `ynx-v2-bridge-service.service`
 - `ynx-v2-ai-gateway.service`
 - `ynx-v2-web4-hub.service`
 - `caddy.service` (HTTPS gateway)
@@ -61,6 +62,7 @@ All public subdomains terminate TLS on the Tencent host via Caddy and reverse-pr
 - `faucet.ynxweb4.com` -> `43.153.202.237`
 - `indexer.ynxweb4.com` -> `43.153.202.237`
 - `explorer.ynxweb4.com` -> `43.153.202.237`
+- `bridge.ynxweb4.com` -> `43.153.202.237`
 - `ai.ynxweb4.com` -> `43.153.202.237`
 - `web4.ynxweb4.com` -> `43.153.202.237`
 
@@ -88,7 +90,7 @@ Cloud firewall (Lighthouse firewall rules) must allow at minimum:
 Local listening ports (expected on the host):
 
 - Node: `36656` (P2P), `36657` (RPC), `31317` (REST), `39090` (gRPC), `38545` (EVM JSON-RPC), `38546` (EVM WS)
-- App services: `38080` (faucet), `38081` (indexer), `38082` (explorer), `38090` (AI gateway), `38091` (Web4 hub)
+- App services: `38080` (faucet), `38081` (indexer), `38082` (explorer), `38083` (bridge service), `38090` (AI gateway), `38091` (Web4 hub)
 
 ## Deployment Entry Points (repo)
 

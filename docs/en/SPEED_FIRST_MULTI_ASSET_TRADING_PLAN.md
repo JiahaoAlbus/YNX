@@ -64,8 +64,9 @@ not a generic validator-decentralization story.
 - Public testnet live.
 - Official tradable asset: `NYXT` / `anyxt`.
 - EVM-compatible surface live.
-- Bridge framework exists in code.
-- Devnet bridge records exist, but public-testnet mainstream assets are not live.
+- Bridge gateway, wrapped tokens, and testnet source routes are live on 9102.
+- Bridge observer/relayer service is implemented for BTC testnet, Sepolia,
+  BSC testnet, TRON Shasta, and Circle Sepolia USDC.
 
 ### Phase 1 — Public-Testnet Wrapped Asset Pilot
 
@@ -77,12 +78,13 @@ Target assets:
 
 Required:
 
-- deploy gateway to public testnet `9102`;
-- deploy wrapped tokens;
-- publish route manifest;
+- deploy gateway to public testnet `9102`; `done`
+- deploy wrapped tokens; `done`
+- publish route manifest; `done`
+- deploy bridge observer/relayer API; `done for testnet route service`
 - add explorer/indexer asset display;
 - add faucet-style test mints only if clearly labeled synthetic test assets;
-- run bridge smoke tests and publish evidence.
+- run bridge smoke tests and publish evidence; `route and source probes ready`
 
 ### Phase 2 — Trading UX
 
@@ -108,12 +110,11 @@ Required before real BTC/ETH/BNB/USDT/USDC claims:
 
 Correct today:
 
-`YNX is a speed-first Web4 public testnet with EVM-compatible execution. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
+`YNX is a speed-first Web4 public testnet with EVM-compatible execution. NYXT/anyxt is the native public-testnet asset. YNX also has 9102 wrapped-token routes and a bridge observer/relayer API for BTC testnet, Sepolia ETH, BSC testnet BNB, TRON Shasta USDT, and Circle Sepolia USDC. Real mainnet BTC/ETH/BNB/USDT/USDC custody, redemption, and official liquidity are not live yet.`
 
 Incorrect today:
 
-- `BTC/ETH/BNB are already tradable on YNX.`
+- `Mainnet BTC/ETH/BNB are already trustlessly native on YNX.`
 - `YNX is a decentralized exchange.`
 - `YNX custody is risk-free.`
 - `Mainnet assets can be deposited today.`
-

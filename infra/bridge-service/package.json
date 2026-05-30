@@ -1,0 +1,14 @@
+{
+  "name": "ynx-bridge-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YNX public-testnet multi-asset bridge observer and relayer service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "ethers": "^6.15.0"
+  }
+}

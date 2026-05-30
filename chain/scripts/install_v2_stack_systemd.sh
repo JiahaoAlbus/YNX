@@ -12,6 +12,7 @@ Install YNX v2 public-testnet stack as systemd services:
   - ynx-v2-faucet
   - ynx-v2-indexer
   - ynx-v2-explorer
+  - ynx-v2-bridge-service
   - ynx-v2-ai-gateway
   - ynx-v2-web4-hub
 
@@ -37,6 +38,13 @@ Environment:
   INDEXER_PORT         default: 38081
   EXPLORER_INDEXER     default: http://127.0.0.1:INDEXER_PORT
   EXPLORER_PORT        default: 38082
+  BRIDGE_PORT          default: 38083
+  BRIDGE_GATEWAY_ADDRESS default: public 9102 gateway
+  BRIDGE_ONCHAIN_ENABLED default: 0
+  BRIDGE_CONFIRMATIONS default: 1
+  BRIDGE_REQUIRE_OPERATOR_TOKEN default: 1
+  BRIDGE_OPERATOR_TOKEN default: empty
+  BRIDGE_RELAYER_PRIVATE_KEY default: empty
   AI_GATEWAY_PORT      default: 38090
   WEB4_PORT            default: 38091
   AI_ENFORCE_POLICY    default: 1
@@ -55,6 +63,7 @@ Environment:
   YNX_PUBLIC_FAUCET    default: http://127.0.0.1:FAUCET_PORT
   YNX_PUBLIC_INDEXER   default: http://127.0.0.1:INDEXER_PORT
   YNX_PUBLIC_EXPLORER  default: http://127.0.0.1:EXPLORER_PORT
+  YNX_PUBLIC_BRIDGE    default: http://127.0.0.1:BRIDGE_PORT
   YNX_PUBLIC_AI_GATEWAY default: http://127.0.0.1:AI_GATEWAY_PORT
   YNX_PUBLIC_WEB4_HUB  default: http://127.0.0.1:WEB4_PORT
   YNX_SEEDS            default: empty (local node config)
@@ -121,6 +130,13 @@ FAUCET_GAS="${FAUCET_GAS:-250000}"
 INDEXER_PORT="${INDEXER_PORT:-38081}"
 EXPLORER_INDEXER="${EXPLORER_INDEXER:-http://127.0.0.1:${INDEXER_PORT}}"
 EXPLORER_PORT="${EXPLORER_PORT:-38082}"
+BRIDGE_PORT="${BRIDGE_PORT:-38083}"
+BRIDGE_GATEWAY_ADDRESS="${BRIDGE_GATEWAY_ADDRESS:-0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe}"
+BRIDGE_ONCHAIN_ENABLED="${BRIDGE_ONCHAIN_ENABLED:-0}"
+BRIDGE_CONFIRMATIONS="${BRIDGE_CONFIRMATIONS:-1}"
+BRIDGE_REQUIRE_OPERATOR_TOKEN="${BRIDGE_REQUIRE_OPERATOR_TOKEN:-1}"
+BRIDGE_OPERATOR_TOKEN="${BRIDGE_OPERATOR_TOKEN:-}"
+BRIDGE_RELAYER_PRIVATE_KEY="${BRIDGE_RELAYER_PRIVATE_KEY:-}"
 AI_GATEWAY_PORT="${AI_GATEWAY_PORT:-38090}"
 WEB4_PORT="${WEB4_PORT:-38091}"
 AI_ENFORCE_POLICY="${AI_ENFORCE_POLICY:-1}"
@@ -142,6 +158,7 @@ YNX_PUBLIC_GRPC="${YNX_PUBLIC_GRPC:-http://127.0.0.1:${YNX_GRPC_PORT}}"
 YNX_PUBLIC_FAUCET="${YNX_PUBLIC_FAUCET:-http://127.0.0.1:${FAUCET_PORT}}"
 YNX_PUBLIC_INDEXER="${YNX_PUBLIC_INDEXER:-http://127.0.0.1:${INDEXER_PORT}}"
 YNX_PUBLIC_EXPLORER="${YNX_PUBLIC_EXPLORER:-http://127.0.0.1:${EXPLORER_PORT}}"
+YNX_PUBLIC_BRIDGE="${YNX_PUBLIC_BRIDGE:-http://127.0.0.1:${BRIDGE_PORT}}"
 YNX_PUBLIC_AI_GATEWAY="${YNX_PUBLIC_AI_GATEWAY:-http://127.0.0.1:${AI_GATEWAY_PORT}}"
 YNX_PUBLIC_WEB4_HUB="${YNX_PUBLIC_WEB4_HUB:-http://127.0.0.1:${WEB4_PORT}}"
 YNX_SEEDS="${YNX_SEEDS:-}"
@@ -264,6 +281,13 @@ FAUCET_PORT=$FAUCET_PORT
 FAUCET_KEYRING_DIR=$FAUCET_KEYRING_DIR
 INDEXER_PORT=$INDEXER_PORT
 EXPLORER_PORT=$EXPLORER_PORT
+BRIDGE_PORT=$BRIDGE_PORT
+BRIDGE_GATEWAY_ADDRESS=$BRIDGE_GATEWAY_ADDRESS
+BRIDGE_ONCHAIN_ENABLED=$BRIDGE_ONCHAIN_ENABLED
+BRIDGE_CONFIRMATIONS=$BRIDGE_CONFIRMATIONS
+BRIDGE_REQUIRE_OPERATOR_TOKEN=$BRIDGE_REQUIRE_OPERATOR_TOKEN
+BRIDGE_OPERATOR_TOKEN=$BRIDGE_OPERATOR_TOKEN
+BRIDGE_RELAYER_PRIVATE_KEY=$BRIDGE_RELAYER_PRIVATE_KEY
 AI_GATEWAY_PORT=$AI_GATEWAY_PORT
 WEB4_PORT=$WEB4_PORT
 AI_ENFORCE_POLICY=$AI_ENFORCE_POLICY
@@ -285,6 +309,7 @@ YNX_PUBLIC_GRPC=$YNX_PUBLIC_GRPC
 YNX_PUBLIC_FAUCET=$YNX_PUBLIC_FAUCET
 YNX_PUBLIC_INDEXER=$YNX_PUBLIC_INDEXER
 YNX_PUBLIC_EXPLORER=$YNX_PUBLIC_EXPLORER
+YNX_PUBLIC_BRIDGE=$YNX_PUBLIC_BRIDGE
 YNX_PUBLIC_AI_GATEWAY=$YNX_PUBLIC_AI_GATEWAY
 YNX_PUBLIC_WEB4_HUB=$YNX_PUBLIC_WEB4_HUB
 YNX_SEEDS=$YNX_DESCRIPTOR_SEEDS
@@ -299,7 +324,7 @@ run_root tee /etc/systemd/system/ynx-v2-node.service >/dev/null <<EOF
 Description=YNX v2 Node
 After=network-online.target
 Wants=network-online.target
-Wants=ynx-v2-faucet.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-ai-gateway.service ynx-v2-web4-hub.service
+Wants=ynx-v2-faucet.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-bridge-service.service ynx-v2-ai-gateway.service ynx-v2-web4-hub.service
 
 [Service]
 Type=simple
@@ -401,6 +426,36 @@ EOF
 
 run_root tee /etc/systemd/system/ynx-v2-ai-gateway.service >/dev/null <<EOF
 [Unit]
+Description=YNX v2 Bridge Service
+After=ynx-v2-node.service
+Requires=ynx-v2-node.service
+PartOf=ynx-v2-node.service
+
+[Service]
+Type=simple
+User=$USER_NAME
+WorkingDirectory=$INFRA_DIR/bridge-service
+EnvironmentFile=/etc/ynx-v2/env
+Environment=BRIDGE_PORT=$BRIDGE_PORT
+Environment=BRIDGE_DATA_DIR=$YNX_HOME/bridge-service-data
+Environment=BRIDGE_ROUTES_FILE=$INFRA_DIR/bridge-service/config/testnet-routes.json
+Environment=BRIDGE_YNX_RPC_URL=http://127.0.0.1:$YNX_EVM_PORT
+Environment=BRIDGE_GATEWAY_ADDRESS=$BRIDGE_GATEWAY_ADDRESS
+Environment=BRIDGE_ONCHAIN_ENABLED=$BRIDGE_ONCHAIN_ENABLED
+Environment=BRIDGE_CONFIRMATIONS=$BRIDGE_CONFIRMATIONS
+Environment=BRIDGE_REQUIRE_OPERATOR_TOKEN=$BRIDGE_REQUIRE_OPERATOR_TOKEN
+ExecStart=/usr/bin/env node $INFRA_DIR/bridge-service/server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+run_root tee /etc/systemd/system/ynx-v2-ai-gateway.service >/dev/null <<EOF
+[Unit]
 Description=YNX v2 AI Gateway
 After=ynx-v2-node.service
 Requires=ynx-v2-node.service
@@ -460,6 +515,7 @@ run_root systemctl enable --now \
   ynx-v2-faucet.service \
   ynx-v2-indexer.service \
   ynx-v2-explorer.service \
+  ynx-v2-bridge-service.service \
   ynx-v2-ai-gateway.service \
   ynx-v2-web4-hub.service
 
@@ -468,6 +524,7 @@ for unit in \
   ynx-v2-faucet \
   ynx-v2-indexer \
   ynx-v2-explorer \
+  ynx-v2-bridge-service \
   ynx-v2-ai-gateway \
   ynx-v2-web4-hub; do
   echo

@@ -19,6 +19,7 @@ Purpose:
     faucet.<base_domain>    -> 127.0.0.1:38080
     indexer.<base_domain>   -> 127.0.0.1:38081
     explorer.<base_domain>  -> 127.0.0.1:38082
+    bridge.<base_domain>    -> 127.0.0.1:38083
     ai.<base_domain>        -> 127.0.0.1:38090
     web4.<base_domain>      -> 127.0.0.1:38091
 
@@ -100,6 +101,7 @@ GRPC_PORT="${YNX_GRPC_PORT:-39090}"
 FAUCET_PORT="${FAUCET_PORT:-38080}"
 INDEXER_PORT="${INDEXER_PORT:-38081}"
 EXPLORER_PORT="${EXPLORER_PORT:-38082}"
+BRIDGE_PORT="${BRIDGE_PORT:-38083}"
 AI_GATEWAY_PORT="${AI_GATEWAY_PORT:-38090}"
 WEB4_PORT="${WEB4_PORT:-38091}"
 
@@ -312,6 +314,20 @@ explorer.${BASE_DOMAIN} {
   import ynx_site_common
   import ynx_api_headers
   reverse_proxy 127.0.0.1:${EXPLORER_PORT} {
+    import ynx_proxy_headers
+    import ynx_proxy_timeouts
+	}
+}
+EOF
+fi
+
+if has_host "bridge"; then
+  append_site <<EOF
+
+bridge.${BASE_DOMAIN} {
+  import ynx_site_common
+  import ynx_api_headers
+  reverse_proxy 127.0.0.1:${BRIDGE_PORT} {
     import ynx_proxy_headers
     import ynx_proxy_timeouts
 	}

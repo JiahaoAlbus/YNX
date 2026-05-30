@@ -309,7 +309,11 @@ async function createJobOnchain(job, vault, body) {
   const stake = weiFrom(body.stake_wei ?? body.onchain_stake_wei, "0");
   const inputHash = bytes32From(body.input_hash, body.input_uri || `input:${job.job_id}`);
   const policyHash = vault.onchain.policy_hash || bytes32From(body.policy_hash, `policy:${job.policy_id || vault.policy_id}`);
-  const challengeBlocks = Math.max(0, parseInt(body.challenge_window_blocks || AI_DEFAULT_CHALLENGE_BLOCKS, 10) || 0);
+  const challengeRaw =
+    body.challenge_window_blocks === undefined || body.challenge_window_blocks === null
+      ? AI_DEFAULT_CHALLENGE_BLOCKS
+      : body.challenge_window_blocks;
+  const challengeBlocks = Math.max(0, parseInt(challengeRaw, 10) || 0);
   const response = await callOnchain("job.created", async (contract) => {
     const tx = await contract.createJob(jobId, vault.onchain.vault_id, reward, stake, inputHash, policyHash, challengeBlocks);
     return {

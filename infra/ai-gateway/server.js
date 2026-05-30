@@ -793,7 +793,7 @@ const server = http.createServer(async (req, res) => {
       if (job.onchain?.job_id) {
         const onchain = await transitionJobOnchain(job, "challenge");
         if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_job_challenge_failed", detail: onchain.error, job });
-        job.onchain = { ...job.onchain, challenged_tx_hash: onchain.onchain.tx_hash };
+        job.onchain = { ...job.onchain, ...onchain.onchain, challenged_tx_hash: onchain.onchain.tx_hash };
       }
       job.status = "challenged";
       job.updated_at = nowIso();
@@ -833,6 +833,7 @@ const server = http.createServer(async (req, res) => {
         }
         job.onchain = {
           ...job.onchain,
+          ...onchain.onchain,
           [`${onchainAction}_tx_hash`]: onchain.onchain.tx_hash,
         };
       }

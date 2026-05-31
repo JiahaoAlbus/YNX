@@ -67,9 +67,10 @@ not a generic validator-decentralization story.
 - Bridge gateway, wrapped tokens, and testnet source routes are live on 9102.
 - Bridge observer/relayer service is implemented for BTC testnet, Sepolia,
   BSC testnet, TRON Shasta, and Circle Sepolia USDC.
-- EVM source-chain lockbox contract and watcher are implemented for Sepolia
-  ETH, Circle Sepolia USDC, and BSC testnet BNB. Source-testnet deployment
-  is gated only by testnet gas for
+- EVM source-chain lockbox contract and watcher are live for Sepolia ETH
+  and Circle Sepolia USDC. A Sepolia ETH deposit has been minted on YNX as
+  `wETH.y`.
+- BSC testnet BNB lockbox deployment is gated by BSC funding for
   `0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5`.
 
 ### Phase 1 — Public-Testnet Wrapped Asset Pilot
@@ -86,10 +87,10 @@ Required:
 - deploy wrapped tokens; `done`
 - publish route manifest; `done`
 - deploy bridge observer/relayer API; `done for testnet route service`
-- deploy EVM source-chain lockbox and watcher; `implemented, source deployment waiting for testnet gas`
+- deploy EVM source-chain lockbox and watcher; `Sepolia live and tested, BSC awaiting BNB/tBNB funding`
 - add explorer/indexer asset display;
 - add faucet-style test mints only if clearly labeled synthetic test assets;
-- run bridge smoke tests and publish evidence; `route and source probes ready`
+- run bridge smoke tests and publish evidence; `Sepolia ETH deposit and YNX mint tested`
 
 ### Phase 2 — Trading UX
 

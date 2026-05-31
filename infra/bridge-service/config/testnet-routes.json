@@ -34,8 +34,8 @@
       "decimals": 18,
       "minConfirmations": 1,
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
-      "lockboxAddress": "",
-      "lockboxStartBlock": 0,
+      "lockboxAddress": "0x9b9913Ee3F99147856A19D7359A9fe5B7c8318C6",
+      "lockboxStartBlock": 10958995,
       "depositAddress": ""
     },
     {
@@ -87,8 +87,8 @@
       "decimals": 6,
       "minConfirmations": 1,
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
-      "lockboxAddress": "",
-      "lockboxStartBlock": 0,
+      "lockboxAddress": "0x9b9913Ee3F99147856A19D7359A9fe5B7c8318C6",
+      "lockboxStartBlock": 10958996,
       "depositAddress": ""
     }
   ]

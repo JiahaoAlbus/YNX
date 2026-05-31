@@ -486,7 +486,8 @@ async function scanEvmLockboxRoute(route) {
   const safeLatest = Math.max(0, latest - minConfirmations);
   const cursor = watcherState(route.routeId);
   const defaultStart = route.lockboxStartBlock ? Number(route.lockboxStartBlock) : safeLatest;
-  const fromBlock = Math.max(0, Number(cursor.last_scanned_block || 0) + 1 || defaultStart);
+  const lastScannedBlock = Number(cursor.last_scanned_block || 0);
+  const fromBlock = Math.max(defaultStart, lastScannedBlock > 0 ? lastScannedBlock + 1 : defaultStart);
   const toBlock = Math.min(safeLatest, fromBlock + BRIDGE_WATCHER_MAX_BLOCKS - 1);
   if (toBlock < fromBlock) {
     return { routeId: route.routeId, ok: true, scanned: false, latest, safeLatest, last_scanned_block: cursor.last_scanned_block };

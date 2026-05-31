@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const {
@@ -147,12 +148,19 @@ test("queues outbound withdrawal requests", async (t) => {
 test("reports watcher state and scans configured routes without lockboxes", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-bridge-watchers-");
+  const routes = JSON.parse(fs.readFileSync(routesFile, "utf8"));
+  for (const route of routes.routes) {
+    delete route.lockboxAddress;
+    delete route.lockboxStartBlock;
+  }
+  const fixtureRoutesFile = path.join(dataDir, "routes-without-lockboxes.json");
+  fs.writeFileSync(fixtureRoutesFile, JSON.stringify(routes, null, 2));
   const server = await startNodeServer(
     serverPath,
     {
       BRIDGE_PORT: String(port),
       BRIDGE_DATA_DIR: dataDir,
-      BRIDGE_ROUTES_FILE: routesFile,
+      BRIDGE_ROUTES_FILE: fixtureRoutesFile,
       BRIDGE_ONCHAIN_ENABLED: "0",
     },
     `http://127.0.0.1:${port}/ready`,

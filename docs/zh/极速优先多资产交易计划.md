@@ -72,10 +72,10 @@ YNX 应定位为 **speed-first Web4 execution and trading layer**：
 - wrapped tokens 部署；`已完成`
 - route manifest 发布；`已完成`
 - bridge observer/relayer API；`测试网 route service 已完成`
-- EVM 源链 lockbox 和 watcher；`已实现，等待源链测试网 gas 部署`
+- EVM 源链 lockbox 和 watcher；`Sepolia 已上线并实测，BSC 等待 BNB/tBNB 资金`
 - explorer/indexer 显示资产；
 - 如使用测试 mint，必须明确标注 synthetic test assets；
-- 跑通 bridge smoke tests 并发布证据。
+- 跑通 bridge smoke tests 并发布证据；`Sepolia ETH 充值和 YNX 铸币已实测`。
 
 ### Phase 2 — 交易 UX
 

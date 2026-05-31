@@ -34,7 +34,7 @@ Bridge service: `https://rpc.ynxweb4.com/bridge/*`
 | Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | source lockbox + watcher live; deposit tested |
 | BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | token + route + observer deployed |
 | TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | token + route + observer deployed |
-| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | source lockbox + watcher live; needs test USDC for deposit test |
+| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | source lockbox + watcher live; deposit tested |
 
 The bridge service exposes:
 
@@ -55,11 +55,13 @@ The Sepolia lockbox is live at:
 0x9b9913Ee3F99147856A19D7359A9fe5B7c8318C6
 ```
 
-A live Sepolia ETH deposit has been minted on YNX as `wETH.y`:
+Live Sepolia ETH and USDC deposits have been minted on YNX as `wETH.y` and
+`wUSDC.y`:
 
 ```text
-Sepolia deposit tx: 0xdbbf4ecdcdf059d745f8b88de12aa3141daa4502b5253a9bcbd21998b2e59bbc
-YNX mint tx:        0xf25af19868a90ff113987037c435f6c8cff2ef3ddd0c81272cde1af1714ff544
+Sepolia ETH deposit tx:  0xdbbf4ecdcdf059d745f8b88de12aa3141daa4502b5253a9bcbd21998b2e59bbc
+YNX wETH.y mint tx:      0xf25af19868a90ff113987037c435f6c8cff2ef3ddd0c81272cde1af1714ff544
+Sepolia USDC deposit tx: 0xd5cb82a03f7c12053e60783f03be2e16a32102154ba1f644e0284aaff2563c2c
 ```
 
 BSC testnet BNB deployment still requires testnet gas on the bridge operator

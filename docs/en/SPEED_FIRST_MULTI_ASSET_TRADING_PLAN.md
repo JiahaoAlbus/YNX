@@ -68,8 +68,8 @@ not a generic validator-decentralization story.
 - Bridge observer/relayer service is implemented for BTC testnet, Sepolia,
   BSC testnet, TRON Shasta, and Circle Sepolia USDC.
 - EVM source-chain lockbox contract and watcher are live for Sepolia ETH
-  and Circle Sepolia USDC. A Sepolia ETH deposit has been minted on YNX as
-  `wETH.y`.
+  and Circle Sepolia USDC. Sepolia ETH and USDC deposits have been minted
+  on YNX as `wETH.y` and `wUSDC.y`.
 - BSC testnet BNB lockbox deployment is gated by BSC funding for
   `0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5`.
 
@@ -90,7 +90,7 @@ Required:
 - deploy EVM source-chain lockbox and watcher; `Sepolia live and tested, BSC awaiting BNB/tBNB funding`
 - add explorer/indexer asset display;
 - add faucet-style test mints only if clearly labeled synthetic test assets;
-- run bridge smoke tests and publish evidence; `Sepolia ETH deposit and YNX mint tested`
+- run bridge smoke tests and publish evidence; `Sepolia ETH/USDC deposits and YNX mints tested`
 
 ### Phase 2 — Trading UX
 

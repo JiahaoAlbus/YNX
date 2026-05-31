@@ -73,6 +73,8 @@ YNX 应定位为 **speed-first Web4 execution and trading layer**：
 - route manifest 发布；`已完成`
 - bridge observer/relayer API；`测试网 route service 已完成`
 - EVM 源链 lockbox 和 watcher；`Sepolia 已上线并实测，BSC 等待 BNB/tBNB 资金`
+- `YUSD.test` 合成测试资产；`已在 9102 上线`
+- 测试 AMM 交易池；`wUSDC.y/YUSD.test 和 wETH.y/YUSD.test 已上线`
 - explorer/indexer 显示资产；
 - 如使用测试 mint，必须明确标注 synthetic test assets；
 - 跑通 bridge smoke tests 并发布证据；`Sepolia ETH/USDC 充值和 YNX 铸币已实测`。
@@ -82,6 +84,7 @@ YNX 应定位为 **speed-first Web4 execution and trading layer**：
 必须完成：
 
 - swap/quote 页面或 partner DEX route；
+- 链上 AMM smoke swap；`YUSD.test -> wUSDC.y 已实测`
 - public asset registry endpoint；
 - explorer 支持余额和转账展示；
 - asset status page 显示 live/degraded/paused；

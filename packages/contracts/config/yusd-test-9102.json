@@ -1,0 +1,16 @@
+{
+  "network": "YNX Web4 Public Testnet",
+  "chainId": 9102,
+  "token": "0xAC4Bb6f5F98aA9175B939CD867508270B0d56172",
+  "name": "YUSD Test Dollar",
+  "symbol": "YUSD.test",
+  "decimals": 6,
+  "type": "synthetic-test-stable-asset",
+  "redeemable": false,
+  "mainnetValue": false,
+  "initialSupply": "1000000000000",
+  "initialSupplyDisplay": "1000000.0",
+  "deployer": "0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5",
+  "initialRecipient": "0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5",
+  "deployedAt": "2026-05-31T05:31:00.000Z"
+}

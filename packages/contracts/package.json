@@ -10,6 +10,8 @@
     "ynxpublic:ai-settlement": "hardhat run scripts/deploy_ai_settlement.ts --network ynxpublic",
     "ynxdev:bridge-deploy": "hardhat run scripts/deploy_bridge.ts --network ynxdev",
     "ynxpublic:bridge-mainstream": "hardhat run scripts/deploy_mainstream_bridge.ts --network ynxpublic",
+    "ynxpublic:yusd-test": "hardhat run scripts/deploy_yusd_test.ts --network ynxpublic",
+    "ynxpublic:testnet-amm": "hardhat run scripts/deploy_testnet_amm.ts --network ynxpublic",
     "ynxpublic:bridge-testnet-routes": "hardhat run scripts/set_testnet_bridge_routes.ts --network ynxpublic",
     "source:lockbox": "hardhat run scripts/deploy_source_lockbox.ts",
     "bridge:tron-manifest": "hardhat run scripts/generate_tron_manifest.ts --network default",

@@ -1,0 +1,61 @@
+{
+  "network": "YNX Web4 Public Testnet",
+  "chainId": 9102,
+  "generatedAt": "2026-05-31T06:16:32.437Z",
+  "assets": [
+    {
+      "symbol": "NYXT",
+      "name": "NYXT",
+      "kind": "native",
+      "decimals": 18,
+      "denom": "anyxt",
+      "evmContract": "0x9416A8e0E635dF4452e05Bb0384dCfc58ff53E5B",
+      "status": "live"
+    },
+    {
+      "symbol": "YUSD.test",
+      "name": "YUSD Test Dollar",
+      "kind": "synthetic-test-stable-asset",
+      "decimals": 6,
+      "contract": "0xAC4Bb6f5F98aA9175B939CD867508270B0d56172",
+      "redeemable": false,
+      "mainnetValue": false,
+      "status": "live"
+    },
+    {
+      "symbol": "wUSDC.y",
+      "name": "Wrapped Sepolia USDC on YNX",
+      "kind": "wrapped-testnet-asset",
+      "decimals": 6,
+      "contract": "0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c",
+      "routeId": "eth-sepolia-usdc",
+      "status": "live"
+    },
+    {
+      "symbol": "wETH.y",
+      "name": "Wrapped Sepolia ETH on YNX",
+      "kind": "wrapped-testnet-asset",
+      "decimals": 18,
+      "contract": "0x5715Bb5a7B050234A225fC88FF74885eF55E9339",
+      "routeId": "eth-sepolia-eth",
+      "status": "live"
+    }
+  ],
+  "pairs": [
+    {
+      "label": "wUSDC.y/YUSD.test",
+      "pair": "0x0DC3bF2f9AA273E16d4BEc38C967C0392a75286E",
+      "type": "constant-product-amm",
+      "feeBps": 30,
+      "status": "live"
+    },
+    {
+      "label": "wETH.y/YUSD.test",
+      "pair": "0x84868c7554efB510964a7b54E4afcAE11275475c",
+      "type": "constant-product-amm",
+      "feeBps": 30,
+      "status": "live"
+    }
+  ],
+  "riskNotice": "Public-testnet assets and AMM pairs are for testing only. YUSD.test is not redeemable and has no mainnet value."
+}

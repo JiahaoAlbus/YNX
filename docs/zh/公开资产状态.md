@@ -12,10 +12,12 @@
 |---|---|---|---|
 | `NYXT` | 原生 gas / staking / governance 资产 | base denom `anyxt`，18 位小数 | 已上线公开测试网 |
 | `NYXT` | EVM ERC-20 系统合约 | `0x9416A8e0E635dF4452e05Bb0384dCfc58ff53E5B` | 已上线公开测试网 |
+| `YUSD.test` | 合成测试稳定资产 | `0xAC4Bb6f5F98aA9175B939CD867508270B0d56172`，6 decimals | 已上线公开测试网；不可赎回 |
 
 用户现在可以在公开测试网上转 `anyxt` / `NYXT`，并用于 gas、质押、治理、faucet 和 EVM 测试流程。
 
-测试网资产没有主网价值。
+测试网资产没有主网价值。`YUSD.test` 不是 USDC、USDT、USD、电子货币、
+银行存款或可赎回稳定币。它只是用于交易、跨链、AI 支付和 UX 测试的公开测试网合成单位。
 
 ## 公开 wrapped asset route
 
@@ -70,6 +72,21 @@ BNB 官方测试网水龙头还要求该地址在 BSC 主网持有至少 `0.002 
 ## 还没正式上线的能力
 
 公开测试网现在还没有生产级真实主网 BTC、ETH、BNB、USDT、USDC 托管、赎回能力，也还没有官方交易流动性。
+
+## 公开测试网交易 pilot
+
+公开测试网已有最小 AMM pilot，可用于测试 swap：
+
+| 交易池 | 合约 | 状态 |
+|---|---|---|
+| `wUSDC.y / YUSD.test` | `0x0DC3bF2f9AA273E16d4BEc38C967C0392a75286E` | 已上线；smoke swap 已实测 |
+| `wETH.y / YUSD.test` | `0x84868c7554efB510964a7b54E4afcAE11275475c` | 已上线；已注入初始流动性 |
+
+实测 swap tx：
+
+```text
+0x97662fd10fac494102180a5dbc2f26214a95aa003bf1be490d8edb0506243001
+```
 
 ## 目标主流币清单
 

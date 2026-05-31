@@ -13,6 +13,9 @@ Default boundaries:
 - YNX does not custody user assets.
 - YNX does not run an exchange or matching engine.
 - YNX does not issue a stablecoin or manage stablecoin reserves.
+- Public-testnet-only synthetic units such as `YUSD.test` are allowed for
+  testing, but must be labeled as non-redeemable test assets with no mainnet
+  value.
 - YNX does not run KYC as its core business.
 - YNX does not promise NYXT price appreciation.
 

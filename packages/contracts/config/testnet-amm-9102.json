@@ -1,0 +1,29 @@
+{
+  "network": "YNX Web4 Public Testnet",
+  "chainId": 9102,
+  "deployer": "0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5",
+  "generatedAt": "2026-05-31T06:16:32.437Z",
+  "pairs": [
+    {
+      "label": "wUSDC-YUSD",
+      "pair": "0x0DC3bF2f9AA273E16d4BEc38C967C0392a75286E",
+      "token0": "0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c",
+      "token1": "0xAC4Bb6f5F98aA9175B939CD867508270B0d56172",
+      "token0Symbol": "wUSDC.y",
+      "token1Symbol": "YUSD.test",
+      "initialReserve0": "500000",
+      "initialReserve1": "500000",
+      "smokeSwapTx": "0x97662fd10fac494102180a5dbc2f26214a95aa003bf1be490d8edb0506243001"
+    },
+    {
+      "label": "wETH-YUSD",
+      "pair": "0x84868c7554efB510964a7b54E4afcAE11275475c",
+      "token0": "0x5715Bb5a7B050234A225fC88FF74885eF55E9339",
+      "token1": "0xAC4Bb6f5F98aA9175B939CD867508270B0d56172",
+      "token0Symbol": "wETH.y",
+      "token1Symbol": "YUSD.test",
+      "initialReserve0": "500000000000000",
+      "initialReserve1": "2000000"
+    }
+  ]
+}

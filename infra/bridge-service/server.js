@@ -154,6 +154,7 @@ const BRIDGE_PORT = parseInt(process.env.BRIDGE_PORT || "38083", 10);
 const BRIDGE_DATA_DIR = process.env.BRIDGE_DATA_DIR || path.resolve(__dirname, "data");
 const BRIDGE_DATA_FILE = path.join(BRIDGE_DATA_DIR, "state.json");
 const BRIDGE_ROUTES_FILE = process.env.BRIDGE_ROUTES_FILE || path.resolve(__dirname, "config/testnet-routes.json");
+const BRIDGE_ASSETS_FILE = process.env.BRIDGE_ASSETS_FILE || path.resolve(__dirname, "config/public-assets-9102.json");
 const BRIDGE_BODY_LIMIT_BYTES = parseInt(process.env.BRIDGE_BODY_LIMIT_BYTES || "1048576", 10);
 const BRIDGE_YNX_RPC_URL = process.env.BRIDGE_YNX_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com";
 const BRIDGE_GATEWAY_ADDRESS = process.env.BRIDGE_GATEWAY_ADDRESS || "";
@@ -186,6 +187,7 @@ const SOURCE_LOCKBOX_ABI = [
 if (!fs.existsSync(BRIDGE_DATA_DIR)) fs.mkdirSync(BRIDGE_DATA_DIR, { recursive: true });
 
 let routesConfig = readJson(BRIDGE_ROUTES_FILE, { routes: [] });
+let assetsConfig = readJson(BRIDGE_ASSETS_FILE, { assets: [], pairs: [] });
 let state = readJson(BRIDGE_DATA_FILE, {
   deposits: [],
   withdrawals: [],
@@ -613,6 +615,10 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/bridge/routes") {
     return json(res, 200, { ok: true, items: routesConfig.routes || [] });
+  }
+
+  if (req.method === "GET" && url.pathname === "/bridge/assets") {
+    return json(res, 200, { ok: true, ...assetsConfig });
   }
 
   if (req.method === "GET" && url.pathname === "/bridge/source-status") {

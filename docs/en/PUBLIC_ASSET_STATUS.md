@@ -1,7 +1,7 @@
 # YNX Public Asset Status
 
 Status: active  
-Last updated: 2026-05-30
+Last updated: 2026-05-31
 Scope: public testnet `ynx_9102-1`
 
 ## Current Answer
@@ -12,11 +12,14 @@ Today, the public YNX testnet has one fully usable live asset:
 |---|---|---|---|
 | `NYXT` | native gas / staking / governance asset | base denom `anyxt`, 18 decimals | live public testnet |
 | `NYXT` | EVM ERC-20 system contract | `0x9416A8e0E635dF4452e05Bb0384dCfc58ff53E5B` | live public testnet |
+| `YUSD.test` | synthetic test stable asset | `0xAC4Bb6f5F98aA9175B939CD867508270B0d56172`, 6 decimals | live public testnet; not redeemable |
 
 Users can transfer `anyxt`/`NYXT` on the public testnet and use it for gas,
 staking, governance, faucet flows, and EVM-compatible test workflows.
 
-Testnet assets have no mainnet value.
+Testnet assets have no mainnet value. `YUSD.test` is not USDC, USDT, USD,
+e-money, a bank deposit, or a redeemable stablecoin. It is a synthetic
+public-testnet unit for trading, bridge, AI-payment, and UX testing.
 
 ## Public Wrapped Asset Routes
 
@@ -76,6 +79,21 @@ at least `0.002 BNB` on BSC mainnet:
 
 The public testnet does **not** yet have production-grade real mainnet BTC,
 ETH, BNB, USDT, or USDC custody, redemption, or official trading liquidity.
+
+## Public Testnet Trading Pilot
+
+The public testnet has a minimal AMM pilot for test swaps:
+
+| Pair | Contract | Status |
+|---|---|---|
+| `wUSDC.y / YUSD.test` | `0x0DC3bF2f9AA273E16d4BEc38C967C0392a75286E` | live; smoke swap tested |
+| `wETH.y / YUSD.test` | `0x84868c7554efB510964a7b54E4afcAE11275475c` | live; initial liquidity seeded |
+
+Smoke swap tx:
+
+```text
+0x97662fd10fac494102180a5dbc2f26214a95aa003bf1be490d8edb0506243001
+```
 
 ## Target Mainstream Asset List
 

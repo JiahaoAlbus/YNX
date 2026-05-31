@@ -36,6 +36,11 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.equal(routes.items.length, 5);
   assert.equal(routes.items.some((item) => item.routeId === "eth-sepolia-eth"), true);
   assert.equal(routes.items.some((item) => item.routeId === "btc-testnet-btc"), true);
+
+  const assets = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/assets`), 200);
+  assert.equal(assets.ok, true);
+  assert.equal(assets.assets.some((item) => item.symbol === "YUSD.test"), true);
+  assert.equal(assets.pairs.some((item) => item.label === "wUSDC.y/YUSD.test"), true);
 });
 
 test("accepts a deposit proof once and preserves idempotency", async (t) => {

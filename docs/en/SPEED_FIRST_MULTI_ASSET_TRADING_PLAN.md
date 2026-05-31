@@ -88,6 +88,8 @@ Required:
 - publish route manifest; `done`
 - deploy bridge observer/relayer API; `done for testnet route service`
 - deploy EVM source-chain lockbox and watcher; `Sepolia live and tested, BSC awaiting BNB/tBNB funding`
+- deploy `YUSD.test` synthetic test asset; `done on 9102`
+- deploy test AMM pairs; `wUSDC.y/YUSD.test and wETH.y/YUSD.test live`
 - add explorer/indexer asset display;
 - add faucet-style test mints only if clearly labeled synthetic test assets;
 - run bridge smoke tests and publish evidence; `Sepolia ETH/USDC deposits and YNX mints tested`
@@ -97,6 +99,7 @@ Required:
 Required:
 
 - swap/quote interface or partner DEX route;
+- on-chain AMM smoke swap; `YUSD.test -> wUSDC.y tested`
 - public asset registry endpoint;
 - balances and transfers in explorer;
 - asset status page showing live/degraded/paused;

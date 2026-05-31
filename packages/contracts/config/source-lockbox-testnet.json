@@ -1,0 +1,32 @@
+{
+  "source": "ynx-source-lockbox-testnet-v1",
+  "routes": [
+    {
+      "network": "sepolia",
+      "sourceChainId": "11155111",
+      "routeId": "eth-sepolia-eth",
+      "sourceAssetId": "0x53c8e7d5d089739d7b49c1653e11be768809fa93673300c1b3deede98494cf19",
+      "nativeAsset": true,
+      "token": "0x0000000000000000000000000000000000000000",
+      "minAmount": "1"
+    },
+    {
+      "network": "sepolia",
+      "sourceChainId": "11155111",
+      "routeId": "eth-sepolia-usdc",
+      "sourceAssetId": "0xb249a4e36bcc4f1da29c2ec6633ec9a8cfbaeb57e5688b4012053852dbd14907",
+      "nativeAsset": false,
+      "token": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+      "minAmount": "1"
+    },
+    {
+      "network": "bsctestnet",
+      "sourceChainId": "97",
+      "routeId": "bnb-testnet-bnb",
+      "sourceAssetId": "0x5ce8c71e443cc9ef6f0ec11d8055a85abead6b6be48631889670b86dbeb64868",
+      "nativeAsset": true,
+      "token": "0x0000000000000000000000000000000000000000",
+      "minAmount": "1"
+    }
+  ]
+}

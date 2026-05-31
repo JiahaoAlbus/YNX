@@ -34,6 +34,8 @@
       "decimals": 18,
       "minConfirmations": 1,
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+      "lockboxAddress": "",
+      "lockboxStartBlock": 0,
       "depositAddress": ""
     },
     {
@@ -50,6 +52,8 @@
       "decimals": 18,
       "minConfirmations": 1,
       "rpc": "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+      "lockboxAddress": "",
+      "lockboxStartBlock": 0,
       "depositAddress": ""
     },
     {
@@ -83,6 +87,8 @@
       "decimals": 6,
       "minConfirmations": 1,
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+      "lockboxAddress": "",
+      "lockboxStartBlock": 0,
       "depositAddress": ""
     }
   ]

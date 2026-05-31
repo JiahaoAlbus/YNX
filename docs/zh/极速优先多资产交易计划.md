@@ -68,9 +68,11 @@ YNX 应定位为 **speed-first Web4 execution and trading layer**：
 
 必须完成：
 
-- gateway 部署到公开测试网 `9102`；
-- wrapped tokens 部署；
-- route manifest 发布；
+- gateway 部署到公开测试网 `9102`；`已完成`
+- wrapped tokens 部署；`已完成`
+- route manifest 发布；`已完成`
+- bridge observer/relayer API；`测试网 route service 已完成`
+- EVM 源链 lockbox 和 watcher；`已实现，等待源链测试网 gas 部署`
 - explorer/indexer 显示资产；
 - 如使用测试 mint，必须明确标注 synthetic test assets；
 - 跑通 bridge smoke tests 并发布证据。
@@ -97,5 +99,4 @@ YNX 应定位为 **speed-first Web4 execution and trading layer**：
 
 ## 当前可用对外表述
 
-`YNX is a speed-first Web4 public testnet with EVM-compatible execution. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
-
+`YNX is a speed-first Web4 public testnet with EVM-compatible execution. NYXT/anyxt is the native public-testnet asset. YNX also has 9102 wrapped-token routes and a bridge observer/relayer API for BTC testnet, Sepolia ETH, BSC testnet BNB, TRON Shasta USDT, and Circle Sepolia USDC. Real mainnet BTC/ETH/BNB/USDT/USDC custody, redemption, and official liquidity are not live yet.`

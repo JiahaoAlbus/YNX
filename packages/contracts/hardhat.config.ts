@@ -97,6 +97,24 @@ export default defineConfig({
       accounts: privateKeyAccounts(),
       gas: "auto",
       gasPrice: "auto",
+    },
+    sepolia: {
+      type: "http",
+      chainType: "l1",
+      chainId: 11155111,
+      url: process.env.SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com",
+      accounts: privateKeyAccounts(),
+      gas: "auto",
+      gasPrice: "auto",
+    },
+    bsctestnet: {
+      type: "http",
+      chainType: "l1",
+      chainId: 97,
+      url: process.env.BSC_TESTNET_RPC_URL ?? "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+      accounts: privateKeyAccounts(),
+      gas: "auto",
+      gasPrice: "auto",
     }
   },
 });

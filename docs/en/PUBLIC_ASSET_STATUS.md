@@ -43,8 +43,19 @@ The bridge service exposes:
 - `GET /bridge/routes`
 - `GET /bridge/source-status`
 - `GET /bridge/route-checks`
+- `GET /bridge/watchers`
 - `POST /bridge/deposits/prove`
+- `POST /bridge/watchers/scan`
 - `POST /bridge/withdrawals/request`
+
+The EVM source-chain lockbox contract is implemented as `YNXSourceLockbox`.
+It is ready for Sepolia ETH, Circle Sepolia USDC, and BSC testnet BNB routes.
+Deployment to those source testnets requires testnet gas on the bridge
+operator address:
+
+```text
+0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5
+```
 
 ## Not Live Yet
 
@@ -70,6 +81,7 @@ For each real external asset, YNX needs:
 - a deployed public-testnet or mainnet wrapped token contract; `done on 9102 testnet`
 - a bridge gateway route for the source chain and remote asset ID; `done on 9102 testnet`
 - an observer/signer or verification path for deposits and withdrawals; `testnet bridge service ready`
+- EVM source-chain lockbox and watcher; `implemented, awaiting source testnet gas for deployment`
 - issuer/canonical-token checks for stablecoins;
 - liquidity or market-making plan;
 - per-asset risk limits, pause controls, monitoring, and incident response;
@@ -81,5 +93,6 @@ Public testnet asset metadata lives in:
 
 - `packages/contracts/deployments/public-testnet-9102.json`
 - `packages/contracts/config/public-testnet-bridge-routes-9102.json`
+- `packages/contracts/config/source-lockbox-testnet.json`
 - `packages/contracts/deployments/public-mainstream-bridge-9102.json`
 - `infra/bridge-service/config/testnet-routes.json`

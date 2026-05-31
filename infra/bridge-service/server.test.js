@@ -143,3 +143,33 @@ test("queues outbound withdrawal requests", async (t) => {
   assert.equal(created.withdrawal.status, "queued");
   assert.equal(created.withdrawal.amount_base_units, "1500000000000000000");
 });
+
+test("reports watcher state and scans configured routes without lockboxes", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-bridge-watchers-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      BRIDGE_PORT: String(port),
+      BRIDGE_DATA_DIR: dataDir,
+      BRIDGE_ROUTES_FILE: routesFile,
+      BRIDGE_ONCHAIN_ENABLED: "0",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const watchers = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/watchers`), 200);
+  assert.equal(watchers.ok, true);
+  assert.deepEqual(watchers.items, {});
+
+  const scan = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/bridge/watchers/scan`, {
+      method: "POST",
+      body: { route_id: "eth-sepolia-eth" },
+    }),
+    200,
+  );
+  assert.equal(scan.items[0].skipped, true);
+  assert.equal(scan.items[0].reason, "lockbox_unconfigured");
+});

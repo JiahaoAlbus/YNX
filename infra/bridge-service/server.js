@@ -168,6 +168,8 @@ const BRIDGE_ONCHAIN_ENABLED = process.env.BRIDGE_ONCHAIN_ENABLED === "1";
 const BRIDGE_CONFIRMATIONS = Math.max(0, parseInt(process.env.BRIDGE_CONFIRMATIONS || "1", 10) || 0);
 const BRIDGE_REQUIRE_OPERATOR_TOKEN = process.env.BRIDGE_REQUIRE_OPERATOR_TOKEN === "1";
 const BRIDGE_OPERATOR_TOKEN = process.env.BRIDGE_OPERATOR_TOKEN || "";
+const BRIDGE_WATCHER_MAX_BLOCKS = Math.max(1, parseInt(process.env.BRIDGE_WATCHER_MAX_BLOCKS || "2000", 10) || 2000);
+const BRIDGE_WATCHER_POLL_MS = Math.max(0, parseInt(process.env.BRIDGE_WATCHER_POLL_MS || "0", 10) || 0);
 
 const GATEWAY_ABI = [
   "function mintAttestationPayloadWithAsset(bytes32 depositId,uint64 sourceChainId,bytes32 sourceAssetId,address token,address recipient,uint256 amount) view returns (bytes32)",
@@ -177,6 +179,10 @@ const GATEWAY_ABI = [
   "function outboundNonce() view returns (uint256)",
 ];
 
+const SOURCE_LOCKBOX_ABI = [
+  "event DepositLocked(bytes32 indexed depositId,address indexed depositor,address indexed recipient,bytes32 sourceAssetId,address asset,uint256 amount,uint64 sourceChainId,uint256 nonce)",
+];
+
 if (!fs.existsSync(BRIDGE_DATA_DIR)) fs.mkdirSync(BRIDGE_DATA_DIR, { recursive: true });
 
 let routesConfig = readJson(BRIDGE_ROUTES_FILE, { routes: [] });
@@ -184,10 +190,12 @@ let state = readJson(BRIDGE_DATA_FILE, {
   deposits: [],
   withdrawals: [],
   audit_logs: [],
+  watchers: {},
 });
 if (!Array.isArray(state.deposits)) state.deposits = [];
 if (!Array.isArray(state.withdrawals)) state.withdrawals = [];
 if (!Array.isArray(state.audit_logs)) state.audit_logs = [];
+if (!state.watchers || typeof state.watchers !== "object" || Array.isArray(state.watchers)) state.watchers = {};
 
 const runtime = {
   provider: null,
@@ -304,6 +312,99 @@ function assertOperator(req) {
   return Boolean(BRIDGE_OPERATOR_TOKEN && token === BRIDGE_OPERATOR_TOKEN);
 }
 
+function watcherState(routeId) {
+  if (!state.watchers[routeId]) {
+    state.watchers[routeId] = { last_scanned_block: 0, last_scan_at: "", last_error: "", events_seen: 0, deposits_minted: 0 };
+  }
+  return state.watchers[routeId];
+}
+
+function buildDepositFromProof(route, body) {
+  const recipient = normalizeAddress(body.recipient);
+  if (!recipient) {
+    const err = new Error("invalid_recipient");
+    err.statusCode = 400;
+    throw err;
+  }
+  const confirmations = Number(body.confirmations || 0);
+  if (confirmations < Number(route.minConfirmations || 0)) {
+    const err = new Error("insufficient_confirmations");
+    err.statusCode = 400;
+    err.details = { required: route.minConfirmations, confirmations };
+    throw err;
+  }
+
+  let amountBaseUnits;
+  try {
+    amountBaseUnits = body.amount_base_units !== undefined
+      ? BigInt(String(body.amount_base_units))
+      : parseAmountUnits(body.amount, route.decimals);
+  } catch (error) {
+    const err = new Error(error.message || "invalid_amount");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (amountBaseUnits <= 0n) {
+    const err = new Error("invalid_amount");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let depositId;
+  try {
+    depositId = buildDepositId(route, body);
+  } catch (error) {
+    const err = new Error(error.message || "invalid_deposit_id");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return {
+    deposit_id: depositId,
+    route_id: route.routeId,
+    source_kind: route.sourceKind,
+    source_network: route.sourceNetwork,
+    source_chain_id: route.sourceChainId,
+    source_asset_id: route.sourceAssetId,
+    wrapped_token: route.wrappedToken,
+    wrapped_symbol: route.wrappedSymbol,
+    recipient,
+    amount_base_units: amountBaseUnits.toString(),
+    amount: ethers.formatUnits(amountBaseUnits, route.decimals),
+    source_tx_hash: String(body.source_tx_hash || body.tx_hash || ""),
+    source_index: String(body.log_index ?? body.output_index ?? body.vout ?? "0"),
+    confirmations,
+    proof: body.proof || {},
+    status: BRIDGE_ONCHAIN_ENABLED ? "accepted" : "accepted_dry_run",
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    onchain: null,
+  };
+}
+
+async function acceptDepositProof(route, body) {
+  const deposit = buildDepositFromProof(route, body);
+  const existing = depositById(deposit.deposit_id);
+  if (existing) return { deposit: existing, duplicate: true, statusCode: 200 };
+
+  if (BRIDGE_ONCHAIN_ENABLED) {
+    try {
+      const onchain = await mintOnYnx(deposit, route);
+      deposit.onchain = onchain;
+      deposit.status = onchain.already_processed ? "already_minted" : "minted";
+    } catch (error) {
+      runtime.last_error = error.message || String(error);
+      deposit.status = "mint_failed";
+      deposit.error = runtime.last_error;
+    }
+  }
+
+  state.deposits.unshift(deposit);
+  addAudit("deposit.proved", { deposit_id: deposit.deposit_id, route_id: route.routeId, status: deposit.status });
+  saveState();
+  return { deposit, duplicate: false, statusCode: deposit.status === "mint_failed" ? 502 : 201 };
+}
+
 async function mintOnYnx(deposit, route) {
   const gateway = await getGateway();
   const alreadyProcessed = await gateway.processedDeposits(deposit.deposit_id);
@@ -376,6 +477,81 @@ async function verifyGatewayRoute(route) {
   };
 }
 
+async function scanEvmLockboxRoute(route) {
+  if (route.sourceKind !== "evm") return { routeId: route.routeId, ok: false, skipped: true, reason: "non_evm_route" };
+  if (!route.lockboxAddress) return { routeId: route.routeId, ok: false, skipped: true, reason: "lockbox_unconfigured" };
+  const provider = new ethers.JsonRpcProvider(route.rpc);
+  const latest = await provider.getBlockNumber();
+  const minConfirmations = Number(route.minConfirmations || 0);
+  const safeLatest = Math.max(0, latest - minConfirmations);
+  const cursor = watcherState(route.routeId);
+  const defaultStart = route.lockboxStartBlock ? Number(route.lockboxStartBlock) : safeLatest;
+  const fromBlock = Math.max(0, Number(cursor.last_scanned_block || 0) + 1 || defaultStart);
+  const toBlock = Math.min(safeLatest, fromBlock + BRIDGE_WATCHER_MAX_BLOCKS - 1);
+  if (toBlock < fromBlock) {
+    return { routeId: route.routeId, ok: true, scanned: false, latest, safeLatest, last_scanned_block: cursor.last_scanned_block };
+  }
+
+  const lockbox = new ethers.Contract(route.lockboxAddress, SOURCE_LOCKBOX_ABI, provider);
+  const filter = lockbox.filters.DepositLocked(null, null, null);
+  const events = await lockbox.queryFilter(filter, fromBlock, toBlock);
+  const results = [];
+  for (const event of events) {
+    if (!event.args) continue;
+    const sourceAssetId = String(event.args.sourceAssetId);
+    if (sourceAssetId.toLowerCase() !== String(route.sourceAssetId).toLowerCase()) continue;
+    cursor.events_seen += 1;
+    const proof = {
+      mode: "evm-lockbox-event",
+      lockbox: route.lockboxAddress,
+      block_number: event.blockNumber,
+      event_deposit_id: String(event.args.depositId),
+      depositor: String(event.args.depositor),
+      asset: String(event.args.asset),
+      nonce: event.args.nonce.toString(),
+    };
+    const body = {
+      route_id: route.routeId,
+      deposit_id: String(event.args.depositId),
+      source_tx_hash: event.transactionHash,
+      log_index: event.index,
+      recipient: String(event.args.recipient),
+      amount_base_units: event.args.amount.toString(),
+      confirmations: latest - event.blockNumber + 1,
+      proof,
+    };
+    try {
+      const accepted = await acceptDepositProof(route, body);
+      if (accepted.deposit.status === "minted" || accepted.deposit.status === "already_minted") cursor.deposits_minted += accepted.duplicate ? 0 : 1;
+      results.push({ ok: true, deposit_id: accepted.deposit.deposit_id, status: accepted.deposit.status, duplicate: accepted.duplicate });
+    } catch (error) {
+      results.push({ ok: false, error: error.message || String(error), source_tx_hash: event.transactionHash, log_index: event.index });
+    }
+  }
+  cursor.last_scanned_block = toBlock;
+  cursor.last_scan_at = nowIso();
+  cursor.last_error = "";
+  saveState();
+  return { routeId: route.routeId, ok: true, fromBlock, toBlock, latest, matched: results.length, items: results };
+}
+
+async function scanConfiguredWatchers() {
+  const results = [];
+  for (const route of routesConfig.routes || []) {
+    if (route.sourceKind !== "evm" || !route.lockboxAddress) continue;
+    try {
+      results.push(await scanEvmLockboxRoute(route));
+    } catch (error) {
+      const cursor = watcherState(route.routeId);
+      cursor.last_error = error.message || String(error);
+      cursor.last_scan_at = nowIso();
+      results.push({ routeId: route.routeId, ok: false, error: cursor.last_error });
+    }
+  }
+  if (results.length) saveState();
+  return results;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -407,6 +583,8 @@ const server = http.createServer(async (req, res) => {
         attester_configured: Boolean(BRIDGE_ATTESTER_PRIVATE_KEY),
         attester_address: runtime.attesterWallet ? runtime.attesterWallet.address : "",
         confirmations: BRIDGE_CONFIRMATIONS,
+        watcher_max_blocks: BRIDGE_WATCHER_MAX_BLOCKS,
+        watcher_poll_ms: BRIDGE_WATCHER_POLL_MS,
         last_tx_hash: runtime.last_tx_hash,
         last_tx_at: runtime.last_tx_at,
         last_error: runtime.last_error,
@@ -417,6 +595,7 @@ const server = http.createServer(async (req, res) => {
         withdrawals: state.withdrawals.length,
         minted_deposits: state.deposits.filter((item) => item.status === "minted").length,
         queued_withdrawals: state.withdrawals.filter((item) => item.status === "queued").length,
+        watcher_routes: Object.keys(state.watchers).length,
       },
     });
   }
@@ -459,6 +638,34 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, items: results });
   }
 
+  if (req.method === "GET" && url.pathname === "/bridge/watchers") {
+    return json(res, 200, { ok: true, items: state.watchers });
+  }
+
+  if (req.method === "POST" && url.pathname === "/bridge/watchers/scan") {
+    if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
+    const body = await parseBody(req, BRIDGE_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const requestedRoute = body.route_id || body.routeId || "";
+    const routes = requestedRoute ? [routeById(requestedRoute)].filter(Boolean) : (routesConfig.routes || []);
+    if (requestedRoute && routes.length === 0) return json(res, 400, { ok: false, error: "route_not_found" });
+    const results = [];
+    if (!requestedRoute) {
+      results.push(...(await scanConfiguredWatchers()));
+    } else for (const route of routes) {
+      try {
+        results.push(await scanEvmLockboxRoute(route));
+      } catch (error) {
+        const cursor = watcherState(route.routeId);
+        cursor.last_error = error.message || String(error);
+        cursor.last_scan_at = nowIso();
+        results.push({ routeId: route.routeId, ok: false, error: cursor.last_error });
+      }
+    }
+    saveState();
+    return json(res, 200, { ok: results.every((item) => item.ok || item.skipped), items: results });
+  }
+
   if (req.method === "GET" && url.pathname === "/bridge/deposits") {
     return json(res, 200, { ok: true, items: state.deposits });
   }
@@ -469,70 +676,16 @@ const server = http.createServer(async (req, res) => {
     if (!requireValidBody(res, body)) return;
     const route = routeById(body.route_id || body.routeId);
     if (!route) return json(res, 400, { ok: false, error: "route_not_found" });
-    const recipient = normalizeAddress(body.recipient);
-    if (!recipient) return json(res, 400, { ok: false, error: "invalid_recipient" });
-    const confirmations = Number(body.confirmations || 0);
-    if (confirmations < Number(route.minConfirmations || 0)) {
-      return json(res, 400, { ok: false, error: "insufficient_confirmations", required: route.minConfirmations, confirmations });
-    }
-
-    let amountBaseUnits;
     try {
-      amountBaseUnits = body.amount_base_units !== undefined
-        ? BigInt(String(body.amount_base_units))
-        : parseAmountUnits(body.amount, route.decimals);
+      const accepted = await acceptDepositProof(route, body);
+      return json(res, accepted.statusCode, {
+        ok: accepted.deposit.status !== "mint_failed",
+        deposit: accepted.deposit,
+        duplicate: accepted.duplicate,
+      });
     } catch (error) {
-      return json(res, 400, { ok: false, error: error.message || "invalid_amount" });
+      return json(res, error.statusCode || 400, { ok: false, error: error.message || "invalid_deposit", ...(error.details || {}) });
     }
-    if (amountBaseUnits <= 0n) return json(res, 400, { ok: false, error: "invalid_amount" });
-
-    let depositId;
-    try {
-      depositId = buildDepositId(route, body);
-    } catch (error) {
-      return json(res, 400, { ok: false, error: error.message || "invalid_deposit_id" });
-    }
-    const existing = depositById(depositId);
-    if (existing) return json(res, 200, { ok: true, deposit: existing, duplicate: true });
-
-    const deposit = {
-      deposit_id: depositId,
-      route_id: route.routeId,
-      source_kind: route.sourceKind,
-      source_network: route.sourceNetwork,
-      source_chain_id: route.sourceChainId,
-      source_asset_id: route.sourceAssetId,
-      wrapped_token: route.wrappedToken,
-      wrapped_symbol: route.wrappedSymbol,
-      recipient,
-      amount_base_units: amountBaseUnits.toString(),
-      amount: ethers.formatUnits(amountBaseUnits, route.decimals),
-      source_tx_hash: String(body.source_tx_hash || body.tx_hash || ""),
-      source_index: String(body.log_index ?? body.output_index ?? body.vout ?? "0"),
-      confirmations,
-      proof: body.proof || {},
-      status: BRIDGE_ONCHAIN_ENABLED ? "accepted" : "accepted_dry_run",
-      created_at: nowIso(),
-      updated_at: nowIso(),
-      onchain: null,
-    };
-
-    if (BRIDGE_ONCHAIN_ENABLED) {
-      try {
-        const onchain = await mintOnYnx(deposit, route);
-        deposit.onchain = onchain;
-        deposit.status = onchain.already_processed ? "already_minted" : "minted";
-      } catch (error) {
-        runtime.last_error = error.message || String(error);
-        deposit.status = "mint_failed";
-        deposit.error = runtime.last_error;
-      }
-    }
-
-    state.deposits.unshift(deposit);
-    addAudit("deposit.proved", { deposit_id: deposit.deposit_id, route_id: route.routeId, status: deposit.status });
-    saveState();
-    return json(res, deposit.status === "mint_failed" ? 502 : 201, { ok: deposit.status !== "mint_failed", deposit });
   }
 
   if (segments[0] === "bridge" && segments[1] === "deposits" && segments[2] && req.method === "GET") {
@@ -619,6 +772,15 @@ const server = http.createServer(async (req, res) => {
 server.listen(BRIDGE_PORT, () => {
   console.log(`YNX bridge service listening on :${BRIDGE_PORT}`);
 });
+
+if (BRIDGE_WATCHER_POLL_MS > 0) {
+  setInterval(() => {
+    scanConfiguredWatchers().catch((error) => {
+      runtime.last_error = error.message || String(error);
+      console.error("[bridge-service] watcher scan failed:", runtime.last_error);
+    });
+  }, BRIDGE_WATCHER_POLL_MS).unref();
+}
 
 async function shutdown(signal) {
   console.log(`[bridge-service] received ${signal}, saving state...`);

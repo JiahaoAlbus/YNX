@@ -1,7 +1,7 @@
 # YNX 公开资产状态
 
 状态：active  
-最后更新：2026-05-31
+最后更新：2026-06-01
 范围：公开测试网 `ynx_9102-1`
 
 ## 当前答案
@@ -31,10 +31,10 @@ Bridge service：`https://rpc.ynxweb4.com/bridge/*`
 | 来源测试网资产 | Route | YNX wrapped token | 合约 | 小数位 | 公开测试网状态 |
 |---|---|---|---|---:|---|
 | BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | token + route + observer 已部署 |
-| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | 源链 lockbox + watcher 已上线；充值已实测 |
+| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | 源链 lockbox + 充值 watcher + 提现 watcher 已上线 |
 | BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | token + route + observer 已部署 |
 | TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | token + route + observer 已部署 |
-| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | 源链 lockbox + watcher 已上线；充值已实测 |
+| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | 源链 lockbox + 充值 watcher + 提现 watcher 已上线 |
 
 Bridge service 暴露：
 
@@ -44,9 +44,13 @@ Bridge service 暴露：
 - `GET /bridge/source-status`
 - `GET /bridge/route-checks`
 - `GET /bridge/watchers`
+- `GET /bridge/withdrawal-watchers`
+- `GET /bridge/withdrawals`
 - `POST /bridge/deposits/prove`
 - `POST /bridge/watchers/scan`
+- `POST /bridge/withdrawal-watchers/scan`
 - `POST /bridge/withdrawals/request`
+- `POST /bridge/withdrawals/reconcile`
 
 EVM 源链 lockbox 合约 `YNXSourceLockbox` 已实现。Sepolia lockbox 已上线：
 
@@ -60,6 +64,15 @@ Sepolia ETH 和 USDC 已完成真实充值，并在 YNX 上铸出 `wETH.y` / `wU
 Sepolia ETH deposit tx:  0xdbbf4ecdcdf059d745f8b88de12aa3141daa4502b5253a9bcbd21998b2e59bbc
 YNX wETH.y mint tx:      0xf25af19868a90ff113987037c435f6c8cff2ef3ddd0c81272cde1af1714ff544
 Sepolia USDC deposit tx: 0xd5cb82a03f7c12053e60783f03be2e16a32102154ba1f644e0284aaff2563c2c
+```
+
+提现 smoke test：
+
+```text
+YNX wUSDC.y approve tx:   0xe6836c7de8c2579356be5d9959de5ba37c4f28301005352172cdae3ae4016776
+YNX wUSDC.y burn tx:      0x03113a31aeb2c2dc17c218e308168ce370d3ba82c26db69878987c5b2f97cb22
+Sepolia USDC release tx:  0xccfde97839036479ca55265a07a2d3770982797bead02864cb72f06591105893
+金额：                    0.01 wUSDC.y -> 0.01 Sepolia USDC
 ```
 
 BSC testnet BNB 部署还需要给 bridge operator 地址补测试网 gas。
@@ -106,8 +119,8 @@ BNB 官方测试网水龙头还要求该地址在 BSC 主网持有至少 `0.002 
 
 - 公开测试网或主网上已部署 wrapped token 合约；`9102 测试网已完成`
 - bridge gateway source chain + remote asset route；`9102 测试网已完成`
-- deposit/withdraw 的观察者、签名者或验证路径；`测试网 bridge service 已就绪`
-- EVM 源链 lockbox 和 watcher；`Sepolia 已上线并实测，BSC testnet 等待 BNB/tBNB 资金`
+- deposit/withdraw 的观察者、签名者或验证路径；`Sepolia 测试网 bridge service 已就绪`
+- EVM 源链 lockbox 和 watcher；`Sepolia 充值 + 提现已上线并实测，BSC testnet 等待 BNB/tBNB 资金`
 - 稳定币 issuer/canonical token 校验；
 - 流动性或做市计划；
 - 单资产限额、暂停开关、监控和事故响应；

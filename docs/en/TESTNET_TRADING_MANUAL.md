@@ -1,7 +1,7 @@
 # YNX Testnet Trading Manual
 
 Status: public-testnet trading pilot  
-Last updated: 2026-05-31  
+Last updated: 2026-06-01  
 Scope: YNX public testnet `ynx_9102-1`
 
 ## Summary
@@ -78,3 +78,26 @@ NODE
 - The AMM is a pilot contract for testing only.
 - Mainnet trading needs separate audits, risk limits, monitoring, legal review,
   user disclosures, and liquidity governance.
+
+## Live Website Flows
+
+- Test assets: `https://www.ynxweb4.com/test-assets`
+- Deposit bridge: `https://www.ynxweb4.com/bridge`
+- Withdraw bridge: `https://www.ynxweb4.com/withdraw`
+- Swap: `https://www.ynxweb4.com/trading`
+- Readiness gates: `https://www.ynxweb4.com/readiness`
+
+The public testnet now has a complete Sepolia rehearsal loop:
+
+```text
+Sepolia ETH/USDC deposit -> YNX wETH.y/wUSDC.y mint
+YNX wrapped asset swap -> YNX wrapped asset burn
+YNX burn watcher -> Sepolia lockbox release
+```
+
+Smoke withdrawal evidence:
+
+```text
+YNX wUSDC.y burn tx:      0x03113a31aeb2c2dc17c218e308168ce370d3ba82c26db69878987c5b2f97cb22
+Sepolia USDC release tx:  0xccfde97839036479ca55265a07a2d3770982797bead02864cb72f06591105893
+```

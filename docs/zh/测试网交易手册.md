@@ -1,7 +1,7 @@
 # YNX 测试网交易手册
 
 状态：公开测试网交易 pilot  
-最后更新：2026-05-31  
+最后更新：2026-06-01  
 范围：YNX 公开测试网 `ynx_9102-1`
 
 ## 摘要
@@ -76,3 +76,26 @@ NODE
 - `YUSD.test` 不可赎回；
 - AMM 是测试用 pilot 合约；
 - 主网交易需要单独完成审计、风险限额、监控、法律审查、用户披露和流动性治理。
+
+## 官网流程
+
+- 测试资产：`https://www.ynxweb4.com/test-assets`
+- 跨链充值：`https://www.ynxweb4.com/bridge`
+- 提现回 Sepolia：`https://www.ynxweb4.com/withdraw`
+- Swap：`https://www.ynxweb4.com/trading`
+- 主网级测试网门禁：`https://www.ynxweb4.com/readiness`
+
+公开测试网现在具备完整 Sepolia 演练闭环：
+
+```text
+Sepolia ETH/USDC 充值 -> YNX wETH.y/wUSDC.y 铸造
+YNX wrapped asset swap -> YNX wrapped asset burn
+YNX burn watcher -> Sepolia lockbox release
+```
+
+提现 smoke test 证据：
+
+```text
+YNX wUSDC.y burn tx:      0x03113a31aeb2c2dc17c218e308168ce370d3ba82c26db69878987c5b2f97cb22
+Sepolia USDC release tx:  0xccfde97839036479ca55265a07a2d3770982797bead02864cb72f06591105893
+```

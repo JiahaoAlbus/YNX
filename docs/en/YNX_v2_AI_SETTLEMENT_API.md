@@ -1,7 +1,7 @@
 # YNX v2 AI Settlement API (Draft)
 
 Status: Active public-testnet API  
-Last updated: 2026-05-30
+Last updated: 2026-06-01
 
 ## 1. Purpose
 
@@ -18,6 +18,17 @@ The public testnet has two settlement layers:
 
 - API layer: `https://ai.ynxweb4.com`
 - On-chain rail: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
+
+Current public-testnet health:
+
+```text
+AI Gateway: https://ai.ynxweb4.com/health
+Ready:      https://ai.ynxweb4.com/ready
+On-chain:   enabled and ready
+Jobs:       6 total, 4 finalized
+Vaults:     5 total
+Payments:   6 total
+```
 
 ## 2. Job Lifecycle
 

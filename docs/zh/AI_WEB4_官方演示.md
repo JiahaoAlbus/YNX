@@ -1,7 +1,7 @@
 # YNX AI/Web4 官方演示
 
 状态：active  
-最后更新：2026-05-17
+最后更新：2026-06-01
 
 ## 1. 这个演示说明什么
 
@@ -75,7 +75,30 @@ AI_URL=https://ai.ynxweb4.com \
 
 注意：线上执行会写入线上 Web4/AI Gateway 的测试数据，只应在测试网环境使用。
 
-## 6. 对外解释口径
+## 6. 公开测试网实测证据
+
+最新一次线上服务 demo：
+
+```text
+Run id: public_20260601T092925Z
+Policy: policy_public_20260601T092925Z
+Session: session_public_20260601T092925Z
+Vault: vault_public_20260601T092925Z
+Job: job_public_20260601T092925Z
+Reward payment: pay_b4944350c053cb11
+Result hash: 58a24ec7ed9d9f7b3d67dde6d711d408f88c30cbe8e8c8a9a2a4602e59fdfa47
+```
+
+线上 AI Gateway 当前统计：
+
+```text
+total_jobs: 6
+total_vaults: 5
+total_payments: 6
+finalized_jobs: 4
+```
+
+## 7. 对外解释口径
 
 这个 demo 展示的是 YNX 的核心差异：
 
@@ -83,3 +106,11 @@ AI_URL=https://ai.ynxweb4.com \
 - YNX 让 AI Agent 在 owner/policy/session 限制内自动执行；
 - AI 任务有结果承诺、挑战窗口、最终结算和审计记录；
 - 机器支付不是应用私有逻辑，而是 YNX Web4/AI 协议面的一部分。
+
+最准确的产品定位是：
+
+```text
+AI 的有限授权 + 机器支付预算 + 可审计任务结算
+```
+
+它不是模型托管，也不是通用聊天机器人，更不是只做娱乐口号的 AI。

@@ -1,7 +1,7 @@
 # YNX AI/Web4 Official Demo
 
 Status: active  
-Last updated: 2026-05-17
+Last updated: 2026-06-01
 
 ## 1. What this demo proves
 
@@ -73,3 +73,36 @@ AI_URL=https://ai.ynxweb4.com \
 ```
 
 This writes demo test data to the configured services. Use it only against testnet environments.
+
+## 6. Public Testnet Evidence
+
+Latest public-service demo run:
+
+```text
+Run id: public_20260601T092925Z
+Policy: policy_public_20260601T092925Z
+Session: session_public_20260601T092925Z
+Vault: vault_public_20260601T092925Z
+Job: job_public_20260601T092925Z
+Reward payment: pay_b4944350c053cb11
+Result hash: 58a24ec7ed9d9f7b3d67dde6d711d408f88c30cbe8e8c8a9a2a4602e59fdfa47
+```
+
+Live public-testnet AI stats after the run:
+
+```text
+total_jobs: 6
+total_vaults: 5
+total_payments: 6
+finalized_jobs: 4
+```
+
+The useful product position is not "AI chat on a chain." It is:
+
+```text
+bounded AI authority + machine-payment vaults + auditable job settlement
+```
+
+That means YNX AI is useful when an agent needs permission limits, budget
+limits, result commitments, and reward settlement. It is not a replacement
+for model hosting, general chat, or entertainment-only AI experiences.

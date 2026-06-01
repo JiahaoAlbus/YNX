@@ -171,6 +171,16 @@ const BRIDGE_REQUIRE_OPERATOR_TOKEN = process.env.BRIDGE_REQUIRE_OPERATOR_TOKEN 
 const BRIDGE_OPERATOR_TOKEN = process.env.BRIDGE_OPERATOR_TOKEN || "";
 const BRIDGE_WATCHER_MAX_BLOCKS = Math.max(1, parseInt(process.env.BRIDGE_WATCHER_MAX_BLOCKS || "2000", 10) || 2000);
 const BRIDGE_WATCHER_POLL_MS = Math.max(0, parseInt(process.env.BRIDGE_WATCHER_POLL_MS || "0", 10) || 0);
+const BRIDGE_WITHDRAWAL_WATCHER_POLL_MS = Math.max(
+  0,
+  parseInt(process.env.BRIDGE_WITHDRAWAL_WATCHER_POLL_MS || String(BRIDGE_WATCHER_POLL_MS), 10) || 0,
+);
+const BRIDGE_WITHDRAWAL_RELEASE_ENABLED = process.env.BRIDGE_WITHDRAWAL_RELEASE_ENABLED === "1";
+const BRIDGE_SOURCE_EVM_PRIVATE_KEY =
+  process.env.BRIDGE_SOURCE_EVM_PRIVATE_KEY ||
+  process.env.SEPOLIA_RELAYER_PRIVATE_KEY ||
+  process.env.AI_ONCHAIN_PRIVATE_KEY ||
+  "";
 
 const GATEWAY_ABI = [
   "function mintAttestationPayloadWithAsset(bytes32 depositId,uint64 sourceChainId,bytes32 sourceAssetId,address token,address recipient,uint256 amount) view returns (bytes32)",
@@ -178,10 +188,14 @@ const GATEWAY_ABI = [
   "function processedDeposits(bytes32 depositId) view returns (bool)",
   "function wrappedTokenByRemoteAsset(uint64 sourceChainId,bytes32 sourceAssetId) view returns (address)",
   "function outboundNonce() view returns (uint256)",
+  "event BurnRequestedMapped(uint256 indexed nonce,address indexed token,address indexed from,uint256 amount,uint64 destinationChainId,bytes32 destinationAssetId,bytes32 destinationRecipient)",
 ];
 
 const SOURCE_LOCKBOX_ABI = [
   "event DepositLocked(bytes32 indexed depositId,address indexed depositor,address indexed recipient,bytes32 sourceAssetId,address asset,uint256 amount,uint64 sourceChainId,uint256 nonce)",
+  "function releaseNative(bytes32 releaseId,address recipient,uint256 amount)",
+  "function releaseERC20(bytes32 releaseId,bytes32 sourceAssetId,address recipient,uint256 amount)",
+  "function processedReleases(bytes32 releaseId) view returns (bool)",
 ];
 
 if (!fs.existsSync(BRIDGE_DATA_DIR)) fs.mkdirSync(BRIDGE_DATA_DIR, { recursive: true });
@@ -193,11 +207,13 @@ let state = readJson(BRIDGE_DATA_FILE, {
   withdrawals: [],
   audit_logs: [],
   watchers: {},
+  withdrawal_watchers: {},
 });
 if (!Array.isArray(state.deposits)) state.deposits = [];
 if (!Array.isArray(state.withdrawals)) state.withdrawals = [];
 if (!Array.isArray(state.audit_logs)) state.audit_logs = [];
 if (!state.watchers || typeof state.watchers !== "object" || Array.isArray(state.watchers)) state.watchers = {};
+if (!state.withdrawal_watchers || typeof state.withdrawal_watchers !== "object" || Array.isArray(state.withdrawal_watchers)) state.withdrawal_watchers = {};
 
 const runtime = {
   provider: null,
@@ -235,6 +251,10 @@ function depositById(depositId) {
 
 function withdrawalById(withdrawalId) {
   return state.withdrawals.find((item) => item.withdrawal_id === withdrawalId);
+}
+
+function withdrawalByBurn(txHash, logIndex) {
+  return state.withdrawals.find((item) => item.burn_tx_hash === txHash && String(item.burn_log_index) === String(logIndex));
 }
 
 function gatewayAddress() {
@@ -319,6 +339,35 @@ function watcherState(routeId) {
     state.watchers[routeId] = { last_scanned_block: 0, last_scan_at: "", last_error: "", events_seen: 0, deposits_minted: 0 };
   }
   return state.watchers[routeId];
+}
+
+function withdrawalWatcherState(routeId) {
+  if (!state.withdrawal_watchers[routeId]) {
+    state.withdrawal_watchers[routeId] = {
+      last_scanned_block: 0,
+      last_scan_at: "",
+      last_error: "",
+      events_seen: 0,
+      withdrawals_queued: 0,
+      releases_executed: 0,
+    };
+  }
+  return state.withdrawal_watchers[routeId];
+}
+
+function routeByWrappedAndDestination(token, destinationChainId, destinationAssetId) {
+  return (routesConfig.routes || []).find(
+    (route) =>
+      String(route.wrappedToken || "").toLowerCase() === String(token || "").toLowerCase() &&
+      String(route.sourceChainId) === String(destinationChainId) &&
+      String(route.sourceAssetId || "").toLowerCase() === String(destinationAssetId || "").toLowerCase(),
+  );
+}
+
+function bytes32ToEvmAddress(value) {
+  const hex = String(value || "").toLowerCase();
+  if (!/^0x[0-9a-f]{64}$/.test(hex)) return "";
+  return normalizeAddress(`0x${hex.slice(-40)}`);
 }
 
 function buildDepositFromProof(route, body) {
@@ -555,6 +604,161 @@ async function scanConfiguredWatchers() {
   return results;
 }
 
+async function releaseWithdrawalOnSource(withdrawal, route) {
+  if (!BRIDGE_WITHDRAWAL_RELEASE_ENABLED) {
+    return { released: false, reason: "release_disabled" };
+  }
+  if (route.sourceKind !== "evm") {
+    return { released: false, reason: "source_release_unsupported" };
+  }
+  if (!route.lockboxAddress) {
+    return { released: false, reason: "lockbox_unconfigured" };
+  }
+  if (!BRIDGE_SOURCE_EVM_PRIVATE_KEY) {
+    return { released: false, reason: "source_relayer_private_key_required" };
+  }
+
+  const provider = new ethers.JsonRpcProvider(route.rpc);
+  const wallet = new ethers.Wallet(BRIDGE_SOURCE_EVM_PRIVATE_KEY, provider);
+  const lockbox = new ethers.Contract(route.lockboxAddress, SOURCE_LOCKBOX_ABI, wallet);
+  const releaseId = withdrawal.withdrawal_id;
+  const alreadyProcessed = await lockbox.processedReleases(releaseId);
+  if (alreadyProcessed) {
+    return { released: true, already_processed: true, release_id: releaseId, lockbox: route.lockboxAddress };
+  }
+
+  const amount = BigInt(withdrawal.amount_base_units);
+  const tx = route.sourceContract
+    ? await lockbox.releaseERC20(releaseId, route.sourceAssetId, withdrawal.destination_recipient, amount)
+    : await lockbox.releaseNative(releaseId, withdrawal.destination_recipient, amount);
+  const receipt = await tx.wait(BRIDGE_CONFIRMATIONS);
+  return {
+    released: true,
+    release_id: releaseId,
+    lockbox: route.lockboxAddress,
+    tx_hash: tx.hash,
+    block_number: receipt?.blockNumber || null,
+    confirmations: BRIDGE_CONFIRMATIONS,
+  };
+}
+
+async function queueWithdrawalFromBurn(route, event, latest) {
+  const existing = withdrawalByBurn(event.transactionHash, event.index);
+  if (existing) return { withdrawal: existing, duplicate: true };
+  const destinationRecipient = bytes32ToEvmAddress(event.args.destinationRecipient);
+  if (!destinationRecipient) {
+    throw new Error("invalid_destination_recipient");
+  }
+  const withdrawalId = normalizeHex32("", `${route.routeId}:${event.transactionHash}:${event.index}`);
+  const amountBaseUnits = BigInt(event.args.amount);
+  const withdrawal = {
+    withdrawal_id: withdrawalId,
+    route_id: route.routeId,
+    source_chain_id: route.sourceChainId,
+    source_asset_id: route.sourceAssetId,
+    wrapped_token: route.wrappedToken,
+    wrapped_symbol: route.wrappedSymbol,
+    amount_base_units: amountBaseUnits.toString(),
+    amount: ethers.formatUnits(amountBaseUnits, route.decimals),
+    source_kind: route.sourceKind,
+    source_network: route.sourceNetwork,
+    destination_recipient: destinationRecipient,
+    burn_tx_hash: event.transactionHash,
+    burn_log_index: event.index,
+    burn_block_number: event.blockNumber,
+    burn_nonce: event.args.nonce.toString(),
+    burn_from: String(event.args.from),
+    status: "queued",
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    confirmations: latest - event.blockNumber + 1,
+    release: null,
+    proof: {
+      mode: "ynx-gateway-burn-event",
+      gateway: gatewayAddress(),
+      destination_chain_id: event.args.destinationChainId.toString(),
+      destination_asset_id: String(event.args.destinationAssetId),
+    },
+  };
+
+  try {
+    const release = await releaseWithdrawalOnSource(withdrawal, route);
+    withdrawal.release = release;
+    if (release.released) {
+      withdrawal.status = release.already_processed ? "already_released" : "released";
+    } else {
+      withdrawal.status = release.reason === "release_disabled" ? "release_pending_operator" : "release_pending_config";
+      withdrawal.release_reason = release.reason;
+    }
+  } catch (error) {
+    withdrawal.status = "release_failed";
+    withdrawal.error = error.message || String(error);
+  }
+  withdrawal.updated_at = nowIso();
+  state.withdrawals.unshift(withdrawal);
+  addAudit("withdrawal.detected", { withdrawal_id: withdrawal.withdrawal_id, route_id: route.routeId, status: withdrawal.status });
+  saveState();
+  return { withdrawal, duplicate: false };
+}
+
+async function scanYnxBurnWithdrawals() {
+  const results = [];
+  if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) {
+    return [{ ok: false, skipped: true, reason: "ynx_gateway_unconfigured" }];
+  }
+  const provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
+  const latest = await provider.getBlockNumber();
+  const safeLatest = Math.max(0, latest - BRIDGE_CONFIRMATIONS);
+  const gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, provider);
+
+  for (const route of routesConfig.routes || []) {
+    const cursor = withdrawalWatcherState(route.routeId);
+    const defaultStart = Math.max(0, Number(routesConfig.withdrawalStartBlock || route.ynxWithdrawalStartBlock || 0));
+    const lastScannedBlock = Number(cursor.last_scanned_block || 0);
+    const fromBlock = Math.max(defaultStart, lastScannedBlock > 0 ? lastScannedBlock + 1 : defaultStart || safeLatest);
+    const toBlock = Math.min(safeLatest, fromBlock + BRIDGE_WATCHER_MAX_BLOCKS - 1);
+    if (toBlock < fromBlock) {
+      results.push({ routeId: route.routeId, ok: true, scanned: false, latest, safeLatest, last_scanned_block: cursor.last_scanned_block });
+      continue;
+    }
+
+    try {
+      const filter = gateway.filters.BurnRequestedMapped(null, route.wrappedToken, null);
+      const events = await gateway.queryFilter(filter, fromBlock, toBlock);
+      const items = [];
+      for (const event of events) {
+        if (!event.args) continue;
+        const destinationChainId = event.args.destinationChainId.toString();
+        const destinationAssetId = String(event.args.destinationAssetId);
+        const matchedRoute = routeByWrappedAndDestination(event.args.token, destinationChainId, destinationAssetId);
+        if (!matchedRoute || matchedRoute.routeId !== route.routeId) continue;
+        cursor.events_seen += 1;
+        const queued = await queueWithdrawalFromBurn(route, event, latest);
+        if (!queued.duplicate) {
+          cursor.withdrawals_queued += 1;
+          if (queued.withdrawal.status === "released" || queued.withdrawal.status === "already_released") cursor.releases_executed += 1;
+        }
+        items.push({
+          ok: true,
+          withdrawal_id: queued.withdrawal.withdrawal_id,
+          status: queued.withdrawal.status,
+          duplicate: queued.duplicate,
+        });
+      }
+      cursor.last_scanned_block = toBlock;
+      cursor.last_scan_at = nowIso();
+      cursor.last_error = "";
+      results.push({ routeId: route.routeId, ok: true, fromBlock, toBlock, latest, matched: items.length, items });
+    } catch (error) {
+      cursor.last_error = error.message || String(error);
+      cursor.last_scan_at = nowIso();
+      results.push({ routeId: route.routeId, ok: false, error: cursor.last_error });
+    }
+  }
+  if (results.length) saveState();
+  return results;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -588,6 +792,9 @@ const server = http.createServer(async (req, res) => {
         confirmations: BRIDGE_CONFIRMATIONS,
         watcher_max_blocks: BRIDGE_WATCHER_MAX_BLOCKS,
         watcher_poll_ms: BRIDGE_WATCHER_POLL_MS,
+        withdrawal_watcher_poll_ms: BRIDGE_WITHDRAWAL_WATCHER_POLL_MS,
+        withdrawal_release_enabled: BRIDGE_WITHDRAWAL_RELEASE_ENABLED,
+        source_relayer_configured: Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY),
         last_tx_hash: runtime.last_tx_hash,
         last_tx_at: runtime.last_tx_at,
         last_error: runtime.last_error,
@@ -598,7 +805,9 @@ const server = http.createServer(async (req, res) => {
         withdrawals: state.withdrawals.length,
         minted_deposits: state.deposits.filter((item) => item.status === "minted").length,
         queued_withdrawals: state.withdrawals.filter((item) => item.status === "queued").length,
+        released_withdrawals: state.withdrawals.filter((item) => item.status === "released" || item.status === "already_released").length,
         watcher_routes: Object.keys(state.watchers).length,
+        withdrawal_watcher_routes: Object.keys(state.withdrawal_watchers).length,
       },
     });
   }
@@ -649,6 +858,10 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, items: state.watchers });
   }
 
+  if (req.method === "GET" && url.pathname === "/bridge/withdrawal-watchers") {
+    return json(res, 200, { ok: true, items: state.withdrawal_watchers });
+  }
+
   if (req.method === "POST" && url.pathname === "/bridge/watchers/scan") {
     if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
     const body = await parseBody(req, BRIDGE_BODY_LIMIT_BYTES);
@@ -670,6 +883,12 @@ const server = http.createServer(async (req, res) => {
       }
     }
     saveState();
+    return json(res, 200, { ok: results.every((item) => item.ok || item.skipped), items: results });
+  }
+
+  if (req.method === "POST" && url.pathname === "/bridge/withdrawal-watchers/scan") {
+    if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
+    const results = await scanYnxBurnWithdrawals();
     return json(res, 200, { ok: results.every((item) => item.ok || item.skipped), items: results });
   }
 
@@ -787,6 +1006,15 @@ if (BRIDGE_WATCHER_POLL_MS > 0) {
       console.error("[bridge-service] watcher scan failed:", runtime.last_error);
     });
   }, BRIDGE_WATCHER_POLL_MS).unref();
+}
+
+if (BRIDGE_WITHDRAWAL_WATCHER_POLL_MS > 0) {
+  setInterval(() => {
+    scanYnxBurnWithdrawals().catch((error) => {
+      runtime.last_error = error.message || String(error);
+      console.error("[bridge-service] withdrawal watcher scan failed:", runtime.last_error);
+    });
+  }, BRIDGE_WITHDRAWAL_WATCHER_POLL_MS).unref();
 }
 
 async function shutdown(signal) {

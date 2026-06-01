@@ -2,6 +2,7 @@
   "network": "YNX Web4 Public Testnet",
   "ynxChainId": 9102,
   "gateway": "0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe",
+  "withdrawalStartBlock": 1202548,
   "generatedAt": "2026-05-30T00:00:00.000Z",
   "routes": [
     {

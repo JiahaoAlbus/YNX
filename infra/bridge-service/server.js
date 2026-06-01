@@ -225,6 +225,7 @@ const runtime = {
   last_error: "",
   last_tx_hash: "",
   last_tx_at: "",
+  withdrawal_scan_active: false,
 };
 
 function saveState() {
@@ -255,6 +256,16 @@ function withdrawalById(withdrawalId) {
 
 function withdrawalByBurn(txHash, logIndex) {
   return state.withdrawals.find((item) => item.burn_tx_hash === txHash && String(item.burn_log_index) === String(logIndex));
+}
+
+function upsertWithdrawal(withdrawal) {
+  const idx = state.withdrawals.findIndex((item) => item.withdrawal_id === withdrawal.withdrawal_id);
+  if (idx >= 0) {
+    state.withdrawals[idx] = { ...state.withdrawals[idx], ...withdrawal, updated_at: nowIso() };
+    return state.withdrawals[idx];
+  }
+  state.withdrawals.unshift(withdrawal);
+  return withdrawal;
 }
 
 function gatewayAddress() {
@@ -643,13 +654,13 @@ async function releaseWithdrawalOnSource(withdrawal, route) {
 }
 
 async function queueWithdrawalFromBurn(route, event, latest) {
-  const existing = withdrawalByBurn(event.transactionHash, event.index);
+  const withdrawalId = normalizeHex32("", `${route.routeId}:${event.transactionHash}:${event.index}`);
+  const existing = withdrawalById(withdrawalId) || withdrawalByBurn(event.transactionHash, event.index);
   if (existing) return { withdrawal: existing, duplicate: true };
   const destinationRecipient = bytes32ToEvmAddress(event.args.destinationRecipient);
   if (!destinationRecipient) {
     throw new Error("invalid_destination_recipient");
   }
-  const withdrawalId = normalizeHex32("", `${route.routeId}:${event.transactionHash}:${event.index}`);
   const amountBaseUnits = BigInt(event.args.amount);
   const withdrawal = {
     withdrawal_id: withdrawalId,
@@ -695,67 +706,134 @@ async function queueWithdrawalFromBurn(route, event, latest) {
     withdrawal.error = error.message || String(error);
   }
   withdrawal.updated_at = nowIso();
-  state.withdrawals.unshift(withdrawal);
+  const existingAfterRelease = withdrawalById(withdrawal.withdrawal_id) || withdrawalByBurn(withdrawal.burn_tx_hash, withdrawal.burn_log_index);
+  if (existingAfterRelease) return { withdrawal: existingAfterRelease, duplicate: true };
+  upsertWithdrawal(withdrawal);
   addAudit("withdrawal.detected", { withdrawal_id: withdrawal.withdrawal_id, route_id: route.routeId, status: withdrawal.status });
   saveState();
   return { withdrawal, duplicate: false };
 }
 
 async function scanYnxBurnWithdrawals() {
-  const results = [];
-  if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) {
-    return [{ ok: false, skipped: true, reason: "ynx_gateway_unconfigured" }];
+  if (runtime.withdrawal_scan_active) {
+    return [{ ok: true, skipped: true, reason: "withdrawal_scan_in_progress" }];
   }
-  const provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
-  const latest = await provider.getBlockNumber();
-  const safeLatest = Math.max(0, latest - BRIDGE_CONFIRMATIONS);
-  const gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, provider);
+  runtime.withdrawal_scan_active = true;
+  const results = [];
+  try {
+    if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) {
+      return [{ ok: false, skipped: true, reason: "ynx_gateway_unconfigured" }];
+    }
+    const provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
+    const latest = await provider.getBlockNumber();
+    const safeLatest = Math.max(0, latest - BRIDGE_CONFIRMATIONS);
+    const gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, provider);
 
-  for (const route of routesConfig.routes || []) {
-    const cursor = withdrawalWatcherState(route.routeId);
-    const defaultStart = Math.max(0, Number(routesConfig.withdrawalStartBlock || route.ynxWithdrawalStartBlock || 0));
-    const lastScannedBlock = Number(cursor.last_scanned_block || 0);
-    const fromBlock = Math.max(defaultStart, lastScannedBlock > 0 ? lastScannedBlock + 1 : defaultStart || safeLatest);
-    const toBlock = Math.min(safeLatest, fromBlock + BRIDGE_WATCHER_MAX_BLOCKS - 1);
-    if (toBlock < fromBlock) {
-      results.push({ routeId: route.routeId, ok: true, scanned: false, latest, safeLatest, last_scanned_block: cursor.last_scanned_block });
+    for (const route of routesConfig.routes || []) {
+      const cursor = withdrawalWatcherState(route.routeId);
+      const defaultStart = Math.max(0, Number(routesConfig.withdrawalStartBlock || route.ynxWithdrawalStartBlock || 0));
+      const lastScannedBlock = Number(cursor.last_scanned_block || 0);
+      const fromBlock = Math.max(defaultStart, lastScannedBlock > 0 ? lastScannedBlock + 1 : defaultStart || safeLatest);
+      const toBlock = Math.min(safeLatest, fromBlock + BRIDGE_WATCHER_MAX_BLOCKS - 1);
+      if (toBlock < fromBlock) {
+        results.push({ routeId: route.routeId, ok: true, scanned: false, latest, safeLatest, last_scanned_block: cursor.last_scanned_block });
+        continue;
+      }
+
+      try {
+        const filter = gateway.filters.BurnRequestedMapped(null, route.wrappedToken, null);
+        const events = await gateway.queryFilter(filter, fromBlock, toBlock);
+        const items = [];
+        for (const event of events) {
+          if (!event.args) continue;
+          const destinationChainId = event.args.destinationChainId.toString();
+          const destinationAssetId = String(event.args.destinationAssetId);
+          const matchedRoute = routeByWrappedAndDestination(event.args.token, destinationChainId, destinationAssetId);
+          if (!matchedRoute || matchedRoute.routeId !== route.routeId) continue;
+          cursor.events_seen += 1;
+          const queued = await queueWithdrawalFromBurn(route, event, latest);
+          if (!queued.duplicate) {
+            cursor.withdrawals_queued += 1;
+            if (queued.withdrawal.status === "released" || queued.withdrawal.status === "already_released") cursor.releases_executed += 1;
+          }
+          items.push({
+            ok: true,
+            withdrawal_id: queued.withdrawal.withdrawal_id,
+            status: queued.withdrawal.status,
+            duplicate: queued.duplicate,
+          });
+        }
+        cursor.last_scanned_block = toBlock;
+        cursor.last_scan_at = nowIso();
+        cursor.last_error = "";
+        results.push({ routeId: route.routeId, ok: true, fromBlock, toBlock, latest, matched: items.length, items });
+      } catch (error) {
+        cursor.last_error = error.message || String(error);
+        cursor.last_scan_at = nowIso();
+        results.push({ routeId: route.routeId, ok: false, error: cursor.last_error });
+      }
+    }
+    if (results.length) saveState();
+    return results;
+  } finally {
+    runtime.withdrawal_scan_active = false;
+  }
+}
+
+async function reconcileWithdrawals() {
+  const bestById = new Map();
+  const statusRank = {
+    released: 5,
+    already_released: 5,
+    queued: 3,
+    release_pending_operator: 2,
+    release_pending_config: 2,
+    release_failed: 1,
+  };
+
+  for (const withdrawal of state.withdrawals) {
+    const existing = bestById.get(withdrawal.withdrawal_id);
+    if (!existing || (statusRank[withdrawal.status] || 0) > (statusRank[existing.status] || 0)) {
+      bestById.set(withdrawal.withdrawal_id, withdrawal);
+    }
+  }
+
+  const results = [];
+  for (const withdrawal of bestById.values()) {
+    const route = routeById(withdrawal.route_id);
+    if (!route || route.sourceKind !== "evm" || !route.lockboxAddress) {
+      results.push({ withdrawal_id: withdrawal.withdrawal_id, ok: false, status: withdrawal.status, reason: "route_not_reconcilable" });
       continue;
     }
-
+    if (["released", "already_released"].includes(withdrawal.status)) {
+      results.push({ withdrawal_id: withdrawal.withdrawal_id, ok: true, status: withdrawal.status });
+      continue;
+    }
     try {
-      const filter = gateway.filters.BurnRequestedMapped(null, route.wrappedToken, null);
-      const events = await gateway.queryFilter(filter, fromBlock, toBlock);
-      const items = [];
-      for (const event of events) {
-        if (!event.args) continue;
-        const destinationChainId = event.args.destinationChainId.toString();
-        const destinationAssetId = String(event.args.destinationAssetId);
-        const matchedRoute = routeByWrappedAndDestination(event.args.token, destinationChainId, destinationAssetId);
-        if (!matchedRoute || matchedRoute.routeId !== route.routeId) continue;
-        cursor.events_seen += 1;
-        const queued = await queueWithdrawalFromBurn(route, event, latest);
-        if (!queued.duplicate) {
-          cursor.withdrawals_queued += 1;
-          if (queued.withdrawal.status === "released" || queued.withdrawal.status === "already_released") cursor.releases_executed += 1;
-        }
-        items.push({
-          ok: true,
-          withdrawal_id: queued.withdrawal.withdrawal_id,
-          status: queued.withdrawal.status,
-          duplicate: queued.duplicate,
-        });
+      const provider = new ethers.JsonRpcProvider(route.rpc);
+      const lockbox = new ethers.Contract(route.lockboxAddress, SOURCE_LOCKBOX_ABI, provider);
+      const processed = await lockbox.processedReleases(withdrawal.withdrawal_id);
+      if (processed) {
+        withdrawal.status = "already_released";
+        withdrawal.release = {
+          ...(withdrawal.release || {}),
+          released: true,
+          already_processed: true,
+          release_id: withdrawal.withdrawal_id,
+          lockbox: route.lockboxAddress,
+        };
+        delete withdrawal.error;
+        withdrawal.updated_at = nowIso();
       }
-      cursor.last_scanned_block = toBlock;
-      cursor.last_scan_at = nowIso();
-      cursor.last_error = "";
-      results.push({ routeId: route.routeId, ok: true, fromBlock, toBlock, latest, matched: items.length, items });
+      results.push({ withdrawal_id: withdrawal.withdrawal_id, ok: true, processed, status: withdrawal.status });
     } catch (error) {
-      cursor.last_error = error.message || String(error);
-      cursor.last_scan_at = nowIso();
-      results.push({ routeId: route.routeId, ok: false, error: cursor.last_error });
+      results.push({ withdrawal_id: withdrawal.withdrawal_id, ok: false, status: withdrawal.status, error: error.message || String(error) });
     }
   }
-  if (results.length) saveState();
+
+  state.withdrawals = Array.from(bestById.values()).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  addAudit("withdrawal.reconciled", { count: results.length });
+  saveState();
   return results;
 }
 
@@ -944,6 +1022,12 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/bridge/withdrawals") {
     return json(res, 200, { ok: true, items: state.withdrawals });
+  }
+
+  if (segments[0] === "bridge" && segments[1] === "withdrawals" && segments[2] === "reconcile" && req.method === "POST") {
+    if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
+    const results = await reconcileWithdrawals();
+    return json(res, 200, { ok: true, items: results });
   }
 
   if (req.method === "POST" && url.pathname === "/bridge/withdrawals/request") {

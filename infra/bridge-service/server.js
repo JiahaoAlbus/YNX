@@ -539,6 +539,88 @@ async function verifyGatewayRoute(route) {
   };
 }
 
+async function routeReadiness(route, options = {}) {
+  const includeSource = Boolean(options.includeSource);
+  const [gatewayCheck, source] = await Promise.all([
+    verifyGatewayRoute(route).catch((error) => ({ routeId: route.routeId, ok: false, error: error.message || String(error) })),
+    includeSource
+      ? sourceStatus(route).catch((error) => ({ routeId: route.routeId, ok: false, error: error.message || String(error) }))
+      : Promise.resolve({ routeId: route.routeId, configured: Boolean(route.rpc), live_check: false }),
+  ]);
+  const depositWatcher = state.watchers[route.routeId] || null;
+  const withdrawalWatcher = state.withdrawal_watchers[route.routeId] || null;
+  const deposits = state.deposits.filter((item) => item.route_id === route.routeId);
+  const withdrawals = state.withdrawals.filter((item) => item.route_id === route.routeId);
+  const mintedDeposits = deposits.filter((item) => item.status === "minted" || item.status === "already_minted").length;
+  const releasedWithdrawals = withdrawals.filter((item) => item.status === "released" || item.status === "already_released").length;
+  const hasLockbox = route.sourceKind === "evm" && Boolean(route.lockboxAddress);
+  const depositWatcherLive = Boolean(depositWatcher && depositWatcher.last_scan_at && !depositWatcher.last_error);
+  const withdrawalWatcherLive = Boolean(withdrawalWatcher && withdrawalWatcher.last_scan_at && !withdrawalWatcher.last_error);
+  const releaseConfigured = route.sourceKind === "evm" && BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY);
+  const capabilities = [];
+  const blockers = [];
+
+  if (gatewayCheck.ok) capabilities.push("ynx_wrapped_route");
+  else blockers.push("ynx_gateway_route_not_verified");
+
+  if (source.ok) capabilities.push("source_chain_reachable");
+  else if (source.configured) capabilities.push("source_chain_configured");
+  else blockers.push("source_chain_unconfigured");
+
+  if (hasLockbox) capabilities.push("source_lockbox");
+  else blockers.push(route.sourceKind === "evm" ? "source_lockbox_unconfigured" : "non_evm_lockbox_not_supported");
+
+  if (depositWatcherLive) capabilities.push("automatic_deposit_watcher");
+  else if (hasLockbox) blockers.push("deposit_watcher_not_live");
+
+  if (withdrawalWatcherLive) capabilities.push("ynx_burn_watcher");
+  else blockers.push("ynx_burn_watcher_not_live");
+
+  if (releaseConfigured) capabilities.push("automatic_source_release");
+  else if (hasLockbox) blockers.push("source_release_not_configured");
+
+  if (mintedDeposits > 0) capabilities.push("deposit_smoke_tested");
+  if (releasedWithdrawals > 0) capabilities.push("withdrawal_smoke_tested");
+
+  let phase = "mapped_route_only";
+  if (hasLockbox && depositWatcherLive && releaseConfigured && withdrawalWatcherLive) phase = "full_loop_ready";
+  if (phase === "full_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
+  else if (hasLockbox && depositWatcherLive && mintedDeposits > 0) phase = "deposit_tested";
+  else if (hasLockbox && depositWatcherLive) phase = "deposit_ready";
+
+  return {
+    routeId: route.routeId,
+    asset: route.asset,
+    displayName: route.displayName,
+    sourceKind: route.sourceKind,
+    sourceNetwork: route.sourceNetwork,
+    wrappedSymbol: route.wrappedSymbol,
+    wrappedToken: route.wrappedToken,
+    phase,
+    ok: Boolean(gatewayCheck.ok),
+    full_loop_ready: phase === "full_loop_ready" || phase === "full_loop_tested",
+    full_loop_tested: phase === "full_loop_tested",
+    capabilities,
+    blockers,
+    source,
+    gateway: gatewayCheck,
+    evidence: {
+      minted_deposits: mintedDeposits,
+      released_withdrawals: releasedWithdrawals,
+      deposit_watcher: depositWatcher,
+      withdrawal_watcher: withdrawalWatcher,
+    },
+  };
+}
+
+async function allRouteReadiness(options = {}) {
+  const items = [];
+  for (const route of routesConfig.routes || []) {
+    items.push(await routeReadiness(route, options));
+  }
+  return items;
+}
+
 async function scanEvmLockboxRoute(route) {
   if (route.sourceKind !== "evm") return { routeId: route.routeId, ok: false, skipped: true, reason: "non_evm_route" };
   if (!route.lockboxAddress) return { routeId: route.routeId, ok: false, skipped: true, reason: "lockbox_unconfigured" };
@@ -930,6 +1012,23 @@ const server = http.createServer(async (req, res) => {
       }
     }
     return json(res, 200, { ok: true, items: results });
+  }
+
+  if (req.method === "GET" && url.pathname === "/bridge/route-readiness") {
+    const includeSource = url.searchParams.get("source") === "1" || url.searchParams.get("include_source") === "1";
+    const items = await allRouteReadiness({ includeSource });
+    return json(res, 200, {
+      ok: items.every((item) => item.ok),
+      source_live_check: includeSource,
+      items,
+      summary: {
+        routes: items.length,
+        full_loop_ready: items.filter((item) => item.full_loop_ready).length,
+        full_loop_tested: items.filter((item) => item.full_loop_tested).length,
+        deposit_tested: items.filter((item) => item.phase === "deposit_tested" || item.phase === "full_loop_tested").length,
+        mapped_route_only: items.filter((item) => item.phase === "mapped_route_only").length,
+      },
+    });
   }
 
   if (req.method === "GET" && url.pathname === "/bridge/watchers") {

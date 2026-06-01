@@ -186,3 +186,55 @@ test("reports watcher state and scans configured routes without lockboxes", asyn
   assert.equal(scan.items[0].skipped, true);
   assert.equal(scan.items[0].reason, "lockbox_unconfigured");
 });
+
+test("reports per-route bridge readiness without claiming unsupported full loops", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-bridge-route-readiness-");
+  const fixtureRoutesFile = path.join(dataDir, "routes-readiness.json");
+  fs.writeFileSync(
+    fixtureRoutesFile,
+    JSON.stringify(
+      {
+        network: "test",
+        ynxChainId: 9102,
+        gateway: "0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe",
+        routes: [
+          {
+            routeId: "btc-testnet-btc",
+            asset: "BTC",
+            displayName: "Bitcoin Testnet BTC",
+            sourceKind: "bitcoin-mock",
+            sourceNetwork: "bitcoin-testnet",
+            sourceChainId: "18332",
+            sourceAssetId: "0x42dce463fe146e09f3002678bf279aadb46a211e0d8f482f6e768bbb7222f6d6",
+            wrappedToken: "0x1887Eb24feefB6538CBc2140B148ba831f313991",
+            wrappedSymbol: "wBTC.y",
+            decimals: 8,
+            rpc: "http://127.0.0.1:1",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  const server = await startNodeServer(
+    serverPath,
+    {
+      BRIDGE_PORT: String(port),
+      BRIDGE_DATA_DIR: dataDir,
+      BRIDGE_ROUTES_FILE: fixtureRoutesFile,
+      BRIDGE_ONCHAIN_ENABLED: "0",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const readiness = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/route-readiness`), 200);
+  assert.equal(readiness.items.length, 1);
+  assert.equal(readiness.items[0].routeId, "btc-testnet-btc");
+  assert.equal(readiness.items[0].phase, "mapped_route_only");
+  assert.equal(readiness.items[0].full_loop_ready, false);
+  assert.equal(readiness.items[0].blockers.includes("non_evm_lockbox_not_supported"), true);
+  assert.equal(readiness.summary.mapped_route_only, 1);
+});

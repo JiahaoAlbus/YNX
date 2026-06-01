@@ -34,10 +34,10 @@ Bridge service: `https://rpc.ynxweb4.com/bridge/*`
 | Source testnet asset | Route | YNX wrapped token | Contract | Decimals | Public-testnet status |
 |---|---|---|---|---:|---|
 | BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | token + route + observer deployed |
-| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | source lockbox + deposit watcher + withdrawal watcher live |
+| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | full loop tested: deposit + withdrawal release |
 | BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | token + route + observer deployed |
 | TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | token + route + observer deployed |
-| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | source lockbox + deposit watcher + withdrawal watcher live |
+| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | full loop tested: deposit + withdrawal release |
 
 The bridge service exposes:
 
@@ -46,6 +46,7 @@ The bridge service exposes:
 - `GET /bridge/routes`
 - `GET /bridge/source-status`
 - `GET /bridge/route-checks`
+- `GET /bridge/route-readiness`
 - `GET /bridge/watchers`
 - `GET /bridge/withdrawal-watchers`
 - `GET /bridge/withdrawals`
@@ -71,13 +72,26 @@ YNX wETH.y mint tx:      0xf25af19868a90ff113987037c435f6c8cff2ef3ddd0c81272cde1
 Sepolia USDC deposit tx: 0xd5cb82a03f7c12053e60783f03be2e16a32102154ba1f644e0284aaff2563c2c
 ```
 
-Live withdrawal smoke test:
+Live withdrawal smoke tests:
 
 ```text
 YNX wUSDC.y approve tx:   0xe6836c7de8c2579356be5d9959de5ba37c4f28301005352172cdae3ae4016776
 YNX wUSDC.y burn tx:      0x03113a31aeb2c2dc17c218e308168ce370d3ba82c26db69878987c5b2f97cb22
 Sepolia USDC release tx:  0xccfde97839036479ca55265a07a2d3770982797bead02864cb72f06591105893
 Amount:                   0.01 wUSDC.y -> 0.01 Sepolia USDC
+
+YNX wETH.y approve tx:    0xf0b81210651625afc7d77d4b2ef887f88ae8a74c9269eb14a90b5e61b218d94c
+YNX wETH.y burn tx:       0x1475b1d8f963462e386fad8f33a19ba2db35f16ca9970a6f2c3ed8c37fd145d6
+Sepolia ETH release tx:   0x35eec0e6feda8a710f9083a237e8a582bd67eb87bce1e0c3ded378fa6331293a
+Amount:                   0.0001 wETH.y -> 0.0001 Sepolia ETH
+```
+
+Current route readiness:
+
+```text
+GET /bridge/route-readiness
+full_loop_tested: eth-sepolia-eth, eth-sepolia-usdc
+mapped_route_only: btc-testnet-btc, bnb-testnet-bnb, tron-shasta-usdt
 ```
 
 BSC testnet BNB deployment still requires testnet gas on the bridge operator
@@ -127,7 +141,7 @@ For each real external asset, YNX needs:
 - a deployed public-testnet or mainnet wrapped token contract; `done on 9102 testnet`
 - a bridge gateway route for the source chain and remote asset ID; `done on 9102 testnet`
 - an observer/signer or verification path for deposits and withdrawals; `Sepolia testnet bridge service ready`
-- EVM source-chain lockbox and watcher; `Sepolia deposit + withdrawal live and tested, BSC testnet awaiting BNB/tBNB funding`
+- EVM source-chain lockbox and watcher; `Sepolia ETH + USDC deposit and withdrawal live and tested, BSC testnet awaiting BNB/tBNB funding`
 - issuer/canonical-token checks for stablecoins;
 - liquidity or market-making plan;
 - per-asset risk limits, pause controls, monitoring, and incident response;

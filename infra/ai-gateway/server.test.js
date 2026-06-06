@@ -72,6 +72,63 @@ function startMockOllama(port) {
   });
 }
 
+function startMockEvmRpc(port) {
+  const txHash = "0x1111111111111111111111111111111111111111111111111111111111111111";
+  const server = http.createServer((req, res) => {
+    res.setHeader("content-type", "application/json");
+    if (req.method !== "POST") {
+      res.statusCode = 404;
+      return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+    }
+    let raw = "";
+    req.on("data", (chunk) => {
+      raw += chunk.toString();
+    });
+    req.on("end", () => {
+      const body = raw ? JSON.parse(raw) : {};
+      if (body.method === "eth_getBlockByNumber") {
+        return res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          id: body.id,
+          result: {
+            number: "0x2a",
+            hash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            timestamp: "0x69400000",
+            transactions: [
+              {
+                hash: txHash,
+                from: "0x0000000000000000000000000000000000000001",
+                to: "0x0000000000000000000000000000000000000002",
+                value: "0x64",
+                nonce: "0x1",
+                gas: "0x5208",
+                gasPrice: "0x1",
+                input: "0x",
+              },
+            ],
+          },
+        }));
+      }
+      if (body.method === "eth_getTransactionReceipt") {
+        return res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          id: body.id,
+          result: {
+            transactionHash: txHash,
+            status: "0x1",
+            gasUsed: "0x5208",
+            logs: [],
+          },
+        }));
+      }
+      return res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: null }));
+    });
+  });
+  return new Promise((resolve) => {
+    server.listen(port, "127.0.0.1", () => resolve({ server, txHash }));
+  });
+}
+
 test("loads legacy array-backed jobs data", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-ai-legacy-");
@@ -436,6 +493,45 @@ test("answers intelligence chat through configured Ollama provider", async (t) =
   assert.equal(chat.ok, true);
   assert.equal(chat.mode, "llm:ollama");
   assert.equal(chat.model, "qwen2.5:1.5b");
-  assert.match(chat.answer, /YNX Intelligence/);
+  assert.equal(chat.answer, "mock ollama intelligence answer");
   assert.equal(chat.model_answer, "mock ollama intelligence answer");
+});
+
+test("answers latest transaction questions from live EVM RPC data", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const evmPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-latest-tx-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  const evm = await startMockEvmRpc(evmPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+  t.after(() => new Promise((resolve) => evm.server.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_API_KEY: "",
+      OPENAI_API_KEY: "",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_EVM_RPC_URL: `http://127.0.0.1:${evmPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "用中文简短总结 YNX 链上最后一次交易数据。" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.match(chat.answer, new RegExp(evm.txHash));
+  assert.match(chat.answer, /实时查询|EVM RPC/);
 });

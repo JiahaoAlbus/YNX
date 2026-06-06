@@ -27,15 +27,28 @@ function formatTime(value) {
   return date.toLocaleString();
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderLines(container, lines) {
+  container.innerHTML = lines.map((line) => `<div>${escapeHtml(line)}</div>`).join("");
+}
+
 function renderTable(container, rows, columns) {
   if (!rows.length) {
     container.innerHTML = "<p class=\"muted\">No data</p>";
     return;
   }
-  const header = `<tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr>`;
+  const header = `<tr>${columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr>`;
   const body = rows
     .map((row) => {
-      const tds = columns.map((c) => `<td>${row[c.key] ?? ""}</td>`).join("");
+      const tds = columns.map((c) => `<td>${escapeHtml(row[c.key])}</td>`).join("");
       return `<tr>${tds}</tr>`;
     })
     .join("");
@@ -53,7 +66,7 @@ async function loadStatus() {
     `Blocks indexed: ${stats.blocks_indexed}`,
     `Txs indexed: ${stats.txs_indexed}`,
   ];
-  statusPanel.innerHTML = status.map((line) => `<div>${line}</div>`).join("");
+  renderLines(statusPanel, status);
   networkMeta.textContent = `Chain ${health.chain_id || "unknown"} • RPC ${health.rpc || ""}`;
 }
 
@@ -79,7 +92,7 @@ async function loadOverview() {
     `AA track: ${String(valueProp.account_abstraction_track)}`,
     `Parallel execution track: ${String(valueProp.parallel_execution_track)}`,
   ];
-  statusPanel.innerHTML += extra.map((line) => `<div>${line}</div>`).join("");
+  statusPanel.innerHTML += extra.map((line) => `<div>${escapeHtml(line)}</div>`).join("");
 }
 
 async function loadBlocks() {
@@ -126,13 +139,11 @@ async function loadValidators() {
     proposer_priority: item.proposer_priority,
     signed_last_block: item.signed_last_block ? "yes" : "no",
   }));
-  validatorsSummary.innerHTML = [
+  renderLines(validatorsSummary, [
     `Height: ${data.latest_height || 0}`,
     `Validators: ${data.total || 0}`,
     `Signed(last block): ${data.signed_count || 0}`,
-  ]
-    .map((line) => `<div>${line}</div>`)
-    .join("");
+  ]);
   renderTable(validatorsTable, rows, [
     { key: "address", label: "Consensus Address" },
     { key: "voting_power", label: "Voting Power" },
@@ -162,18 +173,18 @@ async function runSearch() {
     if (/^[0-9]+$/.test(query)) {
       const block = await fetchJson(`/blocks/${query}`);
       const b = block.block;
-      searchResult.innerHTML = `<div><strong>Block ${b.height}</strong></div>
-        <div>Hash: ${b.hash}</div>
-        <div>Time: ${formatTime(b.time)}</div>
-        <div>Txs: ${b.num_txs}</div>`;
+      searchResult.innerHTML = `<div><strong>Block ${escapeHtml(b.height)}</strong></div>
+        <div>Hash: ${escapeHtml(b.hash)}</div>
+        <div>Time: ${escapeHtml(formatTime(b.time))}</div>
+        <div>Txs: ${escapeHtml(b.num_txs)}</div>`;
     } else {
       const tx = await fetchJson(`/txs/${query}`);
       const t = tx.tx;
-      searchResult.innerHTML = `<div><strong>Tx ${t.hash}</strong></div>
-        <div>Height: ${t.height}</div>
-        <div>Index: ${t.index}</div>
-        <div>Code: ${t.code}</div>
-        <div>Gas: ${t.gas_used}/${t.gas_wanted}</div>`;
+      searchResult.innerHTML = `<div><strong>Tx ${escapeHtml(t.hash)}</strong></div>
+        <div>Height: ${escapeHtml(t.height)}</div>
+        <div>Index: ${escapeHtml(t.index)}</div>
+        <div>Code: ${escapeHtml(t.code)}</div>
+        <div>Gas: ${escapeHtml(t.gas_used)}/${escapeHtml(t.gas_wanted)}</div>`;
     }
   } catch (err) {
     searchResult.textContent = `Not found: ${err.message}`;

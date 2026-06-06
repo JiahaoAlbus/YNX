@@ -9,6 +9,7 @@ Last updated: 2026-04-30
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
 - `docs/en/BUILDER_QUICKSTART.md` — builder quickstart for EVM, Web4 Hub, and AI Gateway surfaces
 - `docs/en/PUBLIC_ASSET_STATUS.md` — current official public-testnet asset status and mainstream asset targets
+- `docs/en/PUBLIC_TESTNET_FEATURE_SECURITY_COMMANDS.md` — server-first feature, AI, trading, bridge, and security acceptance commands
 - `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md` — speed-first trading direction and wrapped BTC/ETH/BNB/stablecoin execution plan
 - `docs/en/V2_VALIDATOR_NODE_JOIN_GUIDE.md` — full validator node onboarding from clean server (non-consensus)
 - `docs/en/V2_CONSENSUS_VALIDATOR_JOIN_GUIDE.md` — full BONDED consensus onboarding flow

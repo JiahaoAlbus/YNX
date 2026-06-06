@@ -42,6 +42,10 @@ function corsHeaders(extra = {}) {
     "access-control-allow-origin": EXPLORER_CORS_ALLOW_ORIGIN,
     "access-control-allow-methods": EXPLORER_CORS_ALLOW_METHODS,
     "access-control-allow-headers": EXPLORER_CORS_ALLOW_HEADERS,
+    "content-security-policy": "default-src 'self'; connect-src 'self' https: http:; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "no-referrer",
     ...extra,
   };
 }

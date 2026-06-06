@@ -209,6 +209,8 @@ const AI_LLM_TIMEOUT_MS = Math.max(1000, parseInt(process.env.AI_LLM_TIMEOUT_MS 
 const AI_PUBLIC_BRIDGE_URL = (process.env.AI_PUBLIC_BRIDGE_URL || "https://rpc.ynxweb4.com/bridge").replace(/\/$/, "");
 const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL || "https://web4.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
+const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
+const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -679,7 +681,148 @@ function compactIntelligenceContext(context) {
       checks: context.web4?.ready?.checks || {},
     },
     site: context.site || {},
+    live_query: context.live_query || {},
   };
+}
+
+async function evmRpc(method, params = []) {
+  if (!AI_PUBLIC_EVM_RPC_URL) return { ok: false, error: "evm_rpc_not_configured" };
+  try {
+    const response = await postJson(
+      AI_PUBLIC_EVM_RPC_URL,
+      { jsonrpc: "2.0", id: 1, method, params },
+      {},
+      { timeout_ms: AI_EVM_RPC_TIMEOUT_MS },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      return { ok: false, error: `evm_http_${response.status}` };
+    }
+    if (response.payload?.error) {
+      return { ok: false, error: response.payload.error.message || response.payload.error.code || "evm_rpc_error" };
+    }
+    return { ok: true, result: response.payload?.result };
+  } catch (error) {
+    return { ok: false, error: error.message || "evm_rpc_failed" };
+  }
+}
+
+function hexToNumber(value) {
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) return null;
+  return Number.parseInt(value, 16);
+}
+
+function wantsLatestTransaction(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    /(最后|最新|最近).*(交易|tx|transaction)/i.test(text) ||
+    /(交易|tx|transaction).*(最后|最新|最近)/i.test(text) ||
+    /\blatest\s+(tx|transaction)\b/i.test(text) ||
+    /\blast\s+(tx|transaction)\b/i.test(text)
+  );
+}
+
+function wantsLiveStatusAnswer(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    wantsLatestTransaction(text) ||
+    /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
+  );
+}
+
+function findLatestKnownTxEvidence() {
+  const candidates = [];
+  const visit = (value, pathParts = [], timestamp = "") => {
+    if (!value || typeof value !== "object") return;
+    const nextTimestamp =
+      typeof value.created_at === "string"
+        ? value.created_at
+        : typeof value.updated_at === "string"
+          ? value.updated_at
+          : typeof value.finalized_at === "string"
+            ? value.finalized_at
+            : timestamp;
+    for (const [key, child] of Object.entries(value)) {
+      const childPath = [...pathParts, key];
+      if (typeof child === "string" && /^0x[0-9a-fA-F]{64}$/.test(child) && /(tx|hash)/i.test(key)) {
+        candidates.push({
+          tx_hash: child,
+          source: childPath.join("."),
+          timestamp: nextTimestamp || "",
+        });
+      } else if (child && typeof child === "object") {
+        visit(child, childPath, nextTimestamp);
+      }
+    }
+  };
+  visit({ jobs: state.jobs, vaults: state.vaults, payments: state.payments, audit_logs: state.audit_logs });
+  candidates.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+  return candidates[0] || null;
+}
+
+async function getLatestEvmTransaction(scanDepth = 1000) {
+  const latest = await evmRpc("eth_getBlockByNumber", ["latest", true]);
+  if (!latest.ok || !latest.result) return { ok: false, error: latest.error || "latest_block_unavailable" };
+
+  const latestNumber = hexToNumber(latest.result.number);
+  if (!Number.isFinite(latestNumber)) return { ok: false, error: "invalid_latest_block_number" };
+
+  for (let height = latestNumber; height >= Math.max(0, latestNumber - scanDepth); height -= 1) {
+    const block =
+      height === latestNumber
+        ? latest.result
+        : (await evmRpc("eth_getBlockByNumber", [`0x${height.toString(16)}`, true])).result;
+    const txs = Array.isArray(block?.transactions) ? block.transactions : [];
+    const tx = txs.find((item) => item && typeof item === "object" && item.hash) || null;
+    if (!tx) continue;
+    const receipt = await evmRpc("eth_getTransactionReceipt", [tx.hash]);
+    return {
+      ok: true,
+      latest_block_number: latestNumber,
+      scanned_blocks: latestNumber - height + 1,
+      block_number: hexToNumber(block.number),
+      block_hash: block.hash || "",
+      block_timestamp: hexToNumber(block.timestamp),
+      transaction_count_in_block: txs.length,
+      transaction: {
+        hash: tx.hash || "",
+        from: tx.from || "",
+        to: tx.to || "",
+        value_wei: tx.value ? BigInt(tx.value).toString() : "0",
+        nonce: hexToNumber(tx.nonce),
+        gas: tx.gas ? BigInt(tx.gas).toString() : "",
+        gas_price: tx.gasPrice ? BigInt(tx.gasPrice).toString() : "",
+        input_bytes: typeof tx.input === "string" && tx.input.startsWith("0x") ? Math.max(0, (tx.input.length - 2) / 2) : 0,
+      },
+      receipt: receipt.ok && receipt.result
+        ? {
+            status: receipt.result.status || "",
+            contract_address: receipt.result.contractAddress || "",
+            gas_used: receipt.result.gasUsed ? BigInt(receipt.result.gasUsed).toString() : "",
+            logs: Array.isArray(receipt.result.logs) ? receipt.result.logs.length : 0,
+          }
+        : null,
+    };
+  }
+  return {
+    ok: false,
+    latest_block_number: latestNumber,
+    scanned_blocks: scanDepth,
+    latest_known_tx: findLatestKnownTxEvidence(),
+    error: "no_transaction_found_in_scan_window",
+  };
+}
+
+async function enrichContextForQuestion(message, context) {
+  if (wantsLatestTransaction(message)) {
+    return {
+      ...context,
+      live_query: {
+        ...(context.live_query || {}),
+        latest_evm_transaction: await getLatestEvmTransaction(),
+      },
+    };
+  }
+  return context;
 }
 
 function llmConfigured() {
@@ -695,6 +838,62 @@ function llmModeLabel() {
 
 function deterministicIntelligenceAnswer(message, context) {
   const zh = hasChinese(message);
+  const latestTx = context.live_query?.latest_evm_transaction;
+  if (latestTx) {
+    if (!latestTx.ok) {
+      const known = latestTx.latest_known_tx;
+      if (zh) {
+        return [
+          `我刚查了 YNX EVM RPC：最新块高度=${latestTx.latest_block_number ?? "-"}，向前扫描 ${latestTx.scanned_blocks ?? "-"} 个块，没有找到新的 EVM 交易。`,
+          known
+            ? `目前 AI/bridge 记录里最新可见链上 tx 证据是 ${known.tx_hash}，来源=${known.source}，记录时间=${known.timestamp || "-"}。`
+            : "AI/bridge 记录里也没有可引用的最近 tx 证据。",
+          "说明：YNX 当前出块很快，但 EVM 交易不是每个块都有；这不是预设文本，是实时 RPC 扫描结果。",
+        ].join("\n");
+      }
+      return [
+        `I queried the YNX EVM RPC: latest_block=${latestTx.latest_block_number ?? "-"}, scanned_blocks=${latestTx.scanned_blocks ?? "-"}, and found no new EVM transaction in that window.`,
+        known
+          ? `Latest known on-chain tx evidence in AI/bridge records: ${known.tx_hash}; source=${known.source}; recorded_at=${known.timestamp || "-"}.`
+          : "No latest known tx evidence is available in AI/bridge records.",
+      ].join("\n");
+    }
+    const tx = latestTx.transaction || {};
+    const receipt = latestTx.receipt || {};
+    if (zh) {
+      return [
+        "我刚从 YNX EVM RPC 实时查询了最近一笔链上交易：",
+        "",
+        `- 最新块高度：${latestTx.latest_block_number}`,
+        `- 找到交易的块：${latestTx.block_number}，该块交易数=${latestTx.transaction_count_in_block}`,
+        `- tx hash：${tx.hash || "-"}`,
+        `- from：${tx.from || "-"}`,
+        `- to：${tx.to || tx.contract_address || "-"}`,
+        `- value wei：${tx.value_wei || "0"}`,
+        `- input bytes：${tx.input_bytes ?? 0}`,
+        `- receipt status：${receipt.status || "-"}`,
+        `- gas used：${receipt.gas_used || "-"}`,
+        `- logs：${receipt.logs ?? "-"}`,
+        "",
+        "说明：这是 YNX 9102 EVM RPC 当前可见的最近 EVM 交易，不是预设文本。",
+      ].join("\n");
+    }
+    return [
+      "I queried the YNX EVM RPC live for the latest on-chain transaction:",
+      "",
+      `- Latest block: ${latestTx.latest_block_number}`,
+      `- Transaction block: ${latestTx.block_number}, txs_in_block=${latestTx.transaction_count_in_block}`,
+      `- tx hash: ${tx.hash || "-"}`,
+      `- from: ${tx.from || "-"}`,
+      `- to: ${tx.to || tx.contract_address || "-"}`,
+      `- value wei: ${tx.value_wei || "0"}`,
+      `- input bytes: ${tx.input_bytes ?? 0}`,
+      `- receipt status: ${receipt.status || "-"}`,
+      `- gas used: ${receipt.gas_used || "-"}`,
+      `- logs: ${receipt.logs ?? "-"}`,
+    ].join("\n");
+  }
+
   const bridgeSummary = context.bridge?.route_readiness?.summary || {};
   const healthStats = context.bridge?.health?.stats || {};
   const aiStats = context.ai?.stats || {};
@@ -732,6 +931,7 @@ async function callConfiguredLlm(message, context) {
     "Use the provided live context. Be candid about testnet limits.",
     "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
     "Answer concisely in the user's language. Keep the answer complete and under 10 short bullets.",
+    "Do not output hidden chain-of-thought or <think> blocks.",
   ].join(" ");
 
   if (AI_LLM_PROVIDER === "ollama") {
@@ -744,13 +944,13 @@ async function callConfiguredLlm(message, context) {
           { role: "system", content: system },
           {
             role: "user",
-            content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}`,
+            content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}\n\n/no_think`,
           },
         ],
         options: {
           temperature: 0.2,
-          num_ctx: 2048,
-          num_predict: 180,
+          num_ctx: 4096,
+          num_predict: 600,
         },
       },
       {},
@@ -961,11 +1161,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/ai/intelligence/brief") {
     if (!AI_INTELLIGENCE_ENABLED) return json(res, 503, { ok: false, error: "intelligence_disabled" });
     const context = await collectIntelligenceContext();
+    const enrichedContext = await enrichContextForQuestion(url.searchParams.get("q") || "status", context);
     return json(res, 200, {
       ok: true,
       mode: llmModeLabel(),
-      answer: deterministicIntelligenceAnswer(url.searchParams.get("q") || "status", context),
-      context,
+      answer: deterministicIntelligenceAnswer(url.searchParams.get("q") || "status", enrichedContext),
+      context: enrichedContext,
     });
   }
 
@@ -975,15 +1176,19 @@ const server = http.createServer(async (req, res) => {
     if (!requireValidBody(res, body)) return;
     const message = String(body.message || body.prompt || body.question || "").trim();
     if (!message) return json(res, 400, { ok: false, error: "message_required" });
-    const context = await collectIntelligenceContext();
+    const context = await enrichContextForQuestion(message, await collectIntelligenceContext());
+    const liveFactAnswer = wantsLiveStatusAnswer(message);
     let llm = null;
-    try {
-      llm = await callConfiguredLlm(message, context);
-    } catch (error) {
-      llm = { ok: false, error: error.message || "llm_request_failed" };
+    if (!liveFactAnswer) {
+      try {
+        llm = await callConfiguredLlm(message, context);
+      } catch (error) {
+        llm = { ok: false, error: error.message || "llm_request_failed" };
+      }
     }
     const usedLlm = Boolean(llm && llm.ok);
-    const answer = deterministicIntelligenceAnswer(message, context);
+    const deterministicAnswer = deterministicIntelligenceAnswer(message, context);
+    const answer = liveFactAnswer || !usedLlm ? deterministicAnswer : llm.text;
     addAudit("intelligence.chat", {
       mode: usedLlm ? llmModeLabel() : "live-deterministic",
       llm_error: llm && !llm.ok ? llm.error : "",

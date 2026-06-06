@@ -152,6 +152,10 @@ post_json_status() {
   local out="${OUTPUT_DIR}/responses/${name}.json"
   local status
   status="$(curl -sS --max-time "$FETCH_TIMEOUT_SEC" -o "$out" -w '%{http_code}' -H 'content-type: application/json' --data "$body" "$url" || true)"
+  if [[ -z "$status" || ! -s "$out" ]]; then
+    printf '{"ok":false,"error":"request_failed_or_timed_out","url":"%s"}\n' "$url" > "$out"
+    status="${status:-000}"
+  fi
   printf '%s' "$status"
 }
 

@@ -206,6 +206,9 @@ const AI_LLM_BASE_URL = (
   (AI_LLM_PROVIDER === "ollama" ? "http://127.0.0.1:11434/api/chat" : "https://api.openai.com/v1/responses")
 ).replace(/\/$/, "");
 const AI_LLM_TIMEOUT_MS = Math.max(1000, parseInt(process.env.AI_LLM_TIMEOUT_MS || "20000", 10) || 20000);
+const AI_LLM_NUM_PREDICT = Math.max(64, parseInt(process.env.AI_LLM_NUM_PREDICT || "220", 10) || 220);
+const AI_LLM_CONTEXT_CHARS = Math.max(1000, parseInt(process.env.AI_LLM_CONTEXT_CHARS || "2500", 10) || 2500);
+const AI_LLM_NUM_CTX = Math.max(1024, parseInt(process.env.AI_LLM_NUM_CTX || "2048", 10) || 2048);
 const AI_PUBLIC_BRIDGE_URL = (process.env.AI_PUBLIC_BRIDGE_URL || "https://rpc.ynxweb4.com/bridge").replace(/\/$/, "");
 const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL || "https://web4.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
@@ -836,6 +839,16 @@ function llmModeLabel() {
   return `llm:${AI_LLM_PROVIDER}`;
 }
 
+function withTimeout(promise, timeoutMs, timeoutPayload) {
+  let timer = null;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(timeoutPayload), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function deterministicIntelligenceAnswer(message, context) {
   const zh = hasChinese(message);
   const latestTx = context.live_query?.latest_evm_transaction;
@@ -935,26 +948,31 @@ async function callConfiguredLlm(message, context) {
   ].join(" ");
 
   if (AI_LLM_PROVIDER === "ollama") {
-    const response = await postJson(
-      AI_LLM_BASE_URL,
-      {
-        model: AI_LLM_MODEL,
-        stream: false,
-        messages: [
-          { role: "system", content: system },
-          {
-            role: "user",
-            content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}\n\n/no_think`,
+    const response = await withTimeout(
+      postJson(
+        AI_LLM_BASE_URL,
+        {
+          model: AI_LLM_MODEL,
+          stream: false,
+          think: false,
+          messages: [
+            { role: "system", content: system },
+            {
+              role: "user",
+              content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, AI_LLM_CONTEXT_CHARS)}`,
+            },
+          ],
+          options: {
+            temperature: 0.2,
+            num_ctx: AI_LLM_NUM_CTX,
+            num_predict: AI_LLM_NUM_PREDICT,
           },
-        ],
-        options: {
-          temperature: 0.2,
-          num_ctx: 4096,
-          num_predict: 600,
         },
-      },
-      {},
-      { timeout_ms: AI_LLM_TIMEOUT_MS },
+        {},
+        { timeout_ms: AI_LLM_TIMEOUT_MS },
+      ),
+      AI_LLM_TIMEOUT_MS,
+      { status: 0, payload: { error: "llm_timeout" } },
     );
     if (response.status < 200 || response.status >= 300) {
       return { ok: false, error: response.payload?.error || `ollama_http_${response.status}` };
@@ -975,19 +993,23 @@ async function callConfiguredLlm(message, context) {
         content: [
           {
             type: "input_text",
-            text: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}`,
+            text: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, AI_LLM_CONTEXT_CHARS)}`,
           },
         ],
       },
     ],
   };
-  const response = await postJson(
-    AI_LLM_BASE_URL,
-    payload,
-    {
-      authorization: `Bearer ${AI_LLM_API_KEY}`,
-    },
-    { timeout_ms: AI_LLM_TIMEOUT_MS },
+  const response = await withTimeout(
+    postJson(
+      AI_LLM_BASE_URL,
+      payload,
+      {
+        authorization: `Bearer ${AI_LLM_API_KEY}`,
+      },
+      { timeout_ms: AI_LLM_TIMEOUT_MS },
+    ),
+    AI_LLM_TIMEOUT_MS,
+    { status: 0, payload: { error: "llm_timeout" } },
   );
   if (response.status < 200 || response.status >= 300) {
     return { ok: false, error: response.payload?.error?.message || response.payload?.error || `llm_http_${response.status}` };

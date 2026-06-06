@@ -18,7 +18,7 @@ Live surfaces:
 - Bridge Service with Sepolia full-loop testing and BTC/BSC/TRON manual-proof routes;
 - Web4 Hub policy, session, agent, tool, intent, and audit controls;
 - AI Gateway intelligence, jobs, vaults, payments, x402, and on-chain settlement;
-- server-local Ollama, target model `qwen3:14b`; official factual answers remain grounded in live chain/RPC queries;
+- server-local Ollama, real-time model `qwen3:1.7b`, with `qwen3:4b/8b/14b` retained for background analysis; official factual answers remain grounded in live chain/RPC queries;
 - website at `https://www.ynxweb4.com`.
 
 ## One-command Acceptance Set

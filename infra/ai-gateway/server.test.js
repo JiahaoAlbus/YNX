@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const http = require("node:http");
 const path = require("node:path");
 
 const {
@@ -12,6 +13,64 @@ const {
 } = require("../test-helpers");
 
 const serverPath = path.join(__dirname, "server.js");
+
+function startMockIntelligenceUpstreams(port) {
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://127.0.0.1:${port}`);
+    res.setHeader("content-type", "application/json");
+    if (url.pathname === "/bridge/health") {
+      return res.end(JSON.stringify({ ok: true, stats: { minted_deposits: 3, released_withdrawals: 2 } }));
+    }
+    if (url.pathname === "/bridge/route-readiness") {
+      return res.end(JSON.stringify({
+        ok: true,
+        summary: { routes: 5, full_loop_tested: 2 },
+        items: [
+          { routeId: "eth-sepolia-eth", phase: "full_loop_tested" },
+          { routeId: "eth-sepolia-usdc", phase: "full_loop_tested" },
+          { routeId: "btc-testnet-btc", phase: "mapped_route_only" },
+        ],
+      }));
+    }
+    if (url.pathname === "/bridge/assets") {
+      return res.end(JSON.stringify({ ok: true, assets: [{ symbol: "YUSD.test" }] }));
+    }
+    if (url.pathname === "/ready") {
+      return res.end(JSON.stringify({ ok: true, checks: { persistence: true } }));
+    }
+    res.statusCode = 404;
+    return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+  });
+  return new Promise((resolve) => {
+    server.listen(port, "127.0.0.1", () => resolve(server));
+  });
+}
+
+function startMockOllama(port) {
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://127.0.0.1:${port}`);
+    res.setHeader("content-type", "application/json");
+    if (req.method === "POST" && url.pathname === "/api/chat") {
+      let raw = "";
+      req.on("data", (chunk) => {
+        raw += chunk.toString();
+      });
+      req.on("end", () => {
+        const body = raw ? JSON.parse(raw) : {};
+        return res.end(JSON.stringify({
+          model: body.model || "qwen2.5:1.5b",
+          message: { role: "assistant", content: "mock ollama intelligence answer" },
+        }));
+      });
+      return;
+    }
+    res.statusCode = 404;
+    return res.end(JSON.stringify({ ok: false, error: "not_found" }));
+  });
+  return new Promise((resolve) => {
+    server.listen(port, "127.0.0.1", () => resolve(server));
+  });
+}
 
 test("loads legacy array-backed jobs data", async (t) => {
   const port = await getFreePort();
@@ -294,4 +353,88 @@ test("reports on-chain readiness and fails requested on-chain writes when signer
   assert.equal(created.status, 502);
   assert.equal(created.body.error, "onchain_vault_create_failed");
   assert.match(created.body.detail, /private_key|required/i);
+});
+
+test("answers intelligence chat from live context without an LLM key", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-intelligence-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_API_KEY: "",
+      OPENAI_API_KEY: "",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const health = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/health`), 200);
+  assert.equal(health.intelligence.enabled, true);
+  assert.equal(health.intelligence.mode, "live-deterministic");
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "我们现在 AI 和交易状态怎么样？" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.equal(chat.mode, "live-deterministic");
+  assert.match(chat.answer, /YNX Intelligence/);
+  assert.match(chat.answer, /full-loop-tested|full_loop_tested|闭环/);
+});
+
+test("answers intelligence chat through configured Ollama provider", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const ollamaPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-ollama-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  const ollama = await startMockOllama(ollamaPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+  t.after(() => new Promise((resolve) => ollama.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_PROVIDER: "ollama",
+      AI_LLM_MODEL: "qwen2.5:1.5b",
+      AI_LLM_BASE_URL: `http://127.0.0.1:${ollamaPort}/api/chat`,
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const health = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/health`), 200);
+  assert.equal(health.intelligence.mode, "llm:ollama");
+  assert.equal(health.intelligence.model, "qwen2.5:1.5b");
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "Summarize YNX." },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.equal(chat.mode, "llm:ollama");
+  assert.equal(chat.model, "qwen2.5:1.5b");
+  assert.equal(chat.answer, "mock ollama intelligence answer");
 });

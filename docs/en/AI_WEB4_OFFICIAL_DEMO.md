@@ -5,7 +5,14 @@ Last updated: 2026-06-06
 
 ## 1. What this demo proves
 
-This demo shows that YNX AI/Web4 is not a chatbot wrapper. It is a bounded execution and settlement flow for AI agents:
+This demo shows that YNX AI/Web4 is not an entertainment chatbot wrapper.
+YNX AI has two public-testnet surfaces:
+
+- the YNX Intelligence Layer, which can answer from live chain, bridge, route,
+  asset, Web4, and AI settlement context;
+- the bounded execution and settlement flow for AI agents.
+
+The settlement flow proves:
 
 - Web4 policy controls agent permissions and budget.
 - Session keys let agents act within explicit limits.
@@ -16,7 +23,7 @@ This demo shows that YNX AI/Web4 is not a chatbot wrapper. It is a bounded execu
 
 In one sentence:
 
-**A user grants an AI agent bounded authority, the agent completes a job, and YNX settles the reward through the AI settlement layer.**
+**YNX AI observes the network, explains the current trading/bridge/AI state, and lets authorized AI agents complete work with auditable payment settlement.**
 
 ## 2. Run locally
 
@@ -35,6 +42,18 @@ output/ai_web4_demo/<run-id>/
 It does not modify public testnet state by default.
 
 ## 3. Public testnet on-chain settlement
+
+The public AI endpoint is live:
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  -d '{"message":"Summarize the current YNX trading and AI status."}' | jq
+```
+
+It runs in live deterministic intelligence mode unless a local Ollama model or
+external LLM provider is configured on the gateway. The endpoint still reads
+live YNX bridge, route, asset, Web4, and AI settlement context in every mode.
 
 The public testnet includes `YNXAISettlement`:
 
@@ -128,15 +147,17 @@ total_payments: 7
 finalized_jobs: 5
 ```
 
-The useful product position is not "AI chat on a chain." It is:
+The useful product position is not "AI chat on a chain" and not only
+"agent permissions." It is:
 
 ```text
-bounded AI authority + machine-payment vaults + auditable job settlement
+live chain intelligence + bridge/trading guidance + bounded AI authority + machine-payment vaults + auditable job settlement
 ```
 
-That means YNX AI is useful when an agent needs permission limits, budget
-limits, result commitments, and reward settlement. It is not a replacement
-for model hosting, general chat, or entertainment-only AI experiences.
+That means YNX AI is useful for users checking what can trade or bridge,
+operators monitoring the network, developers integrating APIs, and agents
+that need permission limits, budget limits, result commitments, and reward
+settlement. It is not yet a decentralized model-hosting network.
 
 ## 7. Run the On-chain Demo
 

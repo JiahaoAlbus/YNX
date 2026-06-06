@@ -1,23 +1,27 @@
-# YNX v2 AI Settlement API (Draft)
+# YNX v2 AI Intelligence and Settlement API (Draft)
 
 Status: Active public-testnet API  
 Last updated: 2026-06-06
 
 ## 1. Purpose
 
-This document defines the first public API surface for the YNX v2 AI settlement workflow.
+This document defines the first public API surface for the YNX v2 AI
+Intelligence Layer and settlement workflow.
 
 The API is designed for:
 
+- users who want a live YNX status and bridge/trading assistant
+- operators who need chain, bridge, Web4, and AI settlement diagnostics
 - AI task publishers
 - AI worker operators
 - verifiers/challengers
 - indexers and explorers
 
-The public testnet has two settlement layers:
+The public testnet has three AI layers:
 
-- API layer: `https://ai.ynxweb4.com`
-- On-chain rail: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
+- Intelligence API: live YNX context and chat at `https://ai.ynxweb4.com/ai/chat`
+- Gateway settlement API: jobs, vaults, payments, x402, audit, and stats at `https://ai.ynxweb4.com`
+- On-chain settlement rail: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
 
 Current public-testnet health:
 
@@ -28,6 +32,14 @@ On-chain:   enabled and ready
 Jobs:       7 total, 5 finalized
 Vaults:     6 total
 Payments:   7 total
+```
+
+Public Intelligence endpoints:
+
+```text
+Brief:      https://ai.ynxweb4.com/ai/intelligence/brief
+Chat:       POST https://ai.ynxweb4.com/ai/chat
+Mode:       live deterministic by default; Ollama or external LLM when configured
 ```
 
 Latest on-chain settlement evidence:
@@ -63,7 +75,46 @@ Finalize tx: 0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
 - `created_height` / `finalized_height`
 - `payout_payment_id` (string, set when reward is settled from vault)
 
-## 4. Suggested Endpoints
+## 4. Intelligence Endpoints
+
+- `GET /ai/intelligence/brief` — live YNX context from Bridge, route readiness, assets, Web4, and AI settlement state
+- `POST /ai/chat` — live YNX assistant response
+
+Example:
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  -d '{"message":"What is live on YNX now, and which assets can complete the bridge loop?"}' | jq
+```
+
+Response shape:
+
+```json
+{
+  "ok": true,
+  "mode": "live-deterministic",
+  "model": "",
+  "answer": "..."
+}
+```
+
+When a runtime model is configured, the gateway keeps the same endpoint and
+switches to LLM mode while preserving live YNX context in the prompt.
+
+Supported runtime model modes:
+
+```text
+AI_LLM_PROVIDER=openai-responses
+AI_LLM_API_KEY=<runtime-only key>
+AI_LLM_MODEL=gpt-4o-mini
+
+AI_LLM_PROVIDER=ollama
+AI_LLM_BASE_URL=http://127.0.0.1:11434/api/chat
+AI_LLM_MODEL=qwen2.5:1.5b
+```
+
+## 5. Settlement Endpoints
 
 - `POST /ai/jobs` — create job
 - `GET /ai/jobs/:id` — job detail
@@ -78,7 +129,7 @@ Finalize tx: 0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
 - `POST /ai/payments/charge` — execute charge from vault
 - `GET /x402/resource` — x402-style paywalled resource
 
-## 5. Optional On-chain Mirroring
+## 6. Optional On-chain Mirroring
 
 The AI Gateway can mirror high-value settlement actions into `YNXAISettlement`.
 This is disabled by default for backward compatibility and can be enabled with:
@@ -94,7 +145,7 @@ AI_ONCHAIN_CONFIRMATIONS=1
 Never commit `AI_ONCHAIN_PRIVATE_KEY`. The gateway signer becomes the on-chain
 vault owner for mirrored vaults.
 
-### 5.1 Create an on-chain-backed vault
+### 6.1 Create an on-chain-backed vault
 
 ```bash
 curl -s https://ai.ynxweb4.com/ai/vaults \
@@ -126,7 +177,7 @@ When enabled, the response includes:
 }
 ```
 
-### 5.2 Create an on-chain-backed AI job
+### 6.2 Create an on-chain-backed AI job
 
 ```bash
 curl -s https://ai.ynxweb4.com/ai/jobs \
@@ -148,7 +199,7 @@ If the vault is on-chain-backed, later `commit`, `challenge`, and `finalize`
 actions are mirrored to the contract and their transaction hashes are written
 back under `job.onchain`.
 
-## 6. Security Requirements
+## 7. Security Requirements
 
 - Every state transition MUST be authorized by signer address.
 - Challenge windows MUST be explicit and time-bounded.
@@ -158,8 +209,10 @@ back under `job.onchain`.
 - x402-style endpoints MUST return deterministic payment requirements when unpaid.
 - Settlement actions MUST be audit-recorded.
 - On-chain mode MUST run with a dedicated limited signer, not a human treasury key.
+- LLM mode MUST not receive private keys, faucet secrets, validator keys, or bridge signer material.
+- Intelligence answers MUST clearly distinguish deployed testnet contracts/routes from production liquidity or external mainnet custody.
 
-## 7. Rollout Policy
+## 8. Rollout Policy
 
 - v2 public testnet uses this API as integration contract.
 - Breaking changes MUST increment version and include migration notes.

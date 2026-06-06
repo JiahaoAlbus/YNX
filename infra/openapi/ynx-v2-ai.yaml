@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
-  title: YNX v2 AI Settlement API
+  title: YNX v2 AI Intelligence and Settlement API
   version: 2.0.0
-  description: AI jobs, machine-payment vaults, programmable charges, and x402-style protected resources.
+  description: Live chain intelligence, AI assistant responses, AI jobs, machine-payment vaults, programmable charges, and x402-style protected resources.
 servers:
   - url: http://127.0.0.1:38090
 paths:
@@ -15,6 +15,26 @@ paths:
   /ai/stats:
     get:
       summary: AI gateway aggregate stats
+      responses:
+        "200":
+          description: OK
+  /ai/intelligence/brief:
+    get:
+      summary: Live YNX Intelligence Layer context
+      description: Returns current bridge, route, asset, Web4, and AI settlement context used by the YNX AI assistant.
+      responses:
+        "200":
+          description: OK
+  /ai/chat:
+    post:
+      summary: Ask the YNX Intelligence Layer
+      description: Answers with live YNX public-testnet context. Uses a configured LLM when available and a deterministic live analyst mode otherwise.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
       responses:
         "200":
           description: OK
@@ -185,3 +205,12 @@ components:
           type: number
         max_per_payment:
           type: number
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 4000

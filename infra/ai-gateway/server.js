@@ -101,7 +101,7 @@ function normalizeState(loaded) {
   };
 }
 
-function postJson(targetUrl, payload, extraHeaders = {}) {
+function postJson(targetUrl, payload, extraHeaders = {}, options = {}) {
   return new Promise((resolve, reject) => {
     const url = new URL(targetUrl);
     const transport = url.protocol === "https:" ? https : http;
@@ -112,6 +112,7 @@ function postJson(targetUrl, payload, extraHeaders = {}) {
         hostname: url.hostname,
         port: url.port || (url.protocol === "https:" ? 443 : 80),
         path: `${url.pathname}${url.search}`,
+        timeout: options.timeout_ms || 20000,
         headers: {
           "content-type": "application/json",
           "content-length": Buffer.byteLength(body),
@@ -135,8 +136,42 @@ function postJson(targetUrl, payload, extraHeaders = {}) {
       }
     );
 
+    req.on("timeout", () => req.destroy(new Error("upstream_timeout")));
     req.on("error", reject);
     req.write(body);
+    req.end();
+  });
+}
+
+function getJson(targetUrl, options = {}) {
+  return new Promise((resolve) => {
+    const url = new URL(targetUrl);
+    const transport = url.protocol === "https:" ? https : http;
+    const req = transport.request(
+      {
+        method: "GET",
+        hostname: url.hostname,
+        port: url.port || (url.protocol === "https:" ? 443 : 80),
+        path: `${url.pathname}${url.search}`,
+        timeout: options.timeout_ms || 8000,
+        headers: options.headers || {},
+      },
+      (res) => {
+        let raw = "";
+        res.on("data", (chunk) => {
+          raw += chunk.toString();
+        });
+        res.on("end", () => {
+          try {
+            resolve({ status: res.statusCode || 0, payload: raw ? JSON.parse(raw) : {} });
+          } catch {
+            resolve({ status: res.statusCode || 0, payload: { raw } });
+          }
+        });
+      }
+    );
+    req.on("timeout", () => req.destroy(new Error("upstream_timeout")));
+    req.on("error", (error) => resolve({ status: 0, payload: { ok: false, error: error.message || "request_failed" } }));
     req.end();
   });
 }
@@ -162,6 +197,18 @@ const AI_ONCHAIN_RPC_URL = process.env.AI_ONCHAIN_RPC_URL || process.env.YNX_PUB
 const AI_ONCHAIN_PRIVATE_KEY = process.env.AI_ONCHAIN_PRIVATE_KEY || process.env.YNX_EVM_PRIVATE_KEY || "";
 const AI_SETTLEMENT_CONTRACT = process.env.AI_SETTLEMENT_CONTRACT || process.env.YNX_AI_SETTLEMENT_CONTRACT || "";
 const AI_ONCHAIN_CONFIRMATIONS = Math.max(0, parseInt(process.env.AI_ONCHAIN_CONFIRMATIONS || "1", 10) || 0);
+const AI_INTELLIGENCE_ENABLED = process.env.AI_INTELLIGENCE_ENABLED !== "0";
+const AI_LLM_PROVIDER = (process.env.AI_LLM_PROVIDER || "openai-responses").toLowerCase();
+const AI_LLM_API_KEY = process.env.AI_LLM_API_KEY || process.env.OPENAI_API_KEY || "";
+const AI_LLM_MODEL = process.env.AI_LLM_MODEL || process.env.OPENAI_MODEL || (AI_LLM_PROVIDER === "ollama" ? "qwen2.5:1.5b" : "gpt-4o-mini");
+const AI_LLM_BASE_URL = (
+  process.env.AI_LLM_BASE_URL ||
+  (AI_LLM_PROVIDER === "ollama" ? "http://127.0.0.1:11434/api/chat" : "https://api.openai.com/v1/responses")
+).replace(/\/$/, "");
+const AI_LLM_TIMEOUT_MS = Math.max(1000, parseInt(process.env.AI_LLM_TIMEOUT_MS || "20000", 10) || 20000);
+const AI_PUBLIC_BRIDGE_URL = (process.env.AI_PUBLIC_BRIDGE_URL || "https://rpc.ynxweb4.com/bridge").replace(/\/$/, "");
+const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL || "https://web4.ynxweb4.com").replace(/\/$/, "");
+const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -549,6 +596,213 @@ function summarizeStats() {
   };
 }
 
+async function collectIntelligenceContext() {
+  const [bridgeHealth, routeReadiness, bridgeAssets, web4Ready] = await Promise.all([
+    getJson(`${AI_PUBLIC_BRIDGE_URL}/health`),
+    getJson(`${AI_PUBLIC_BRIDGE_URL}/route-readiness`),
+    getJson(`${AI_PUBLIC_BRIDGE_URL}/assets`),
+    getJson(`${AI_PUBLIC_WEB4_URL}/ready`),
+  ]);
+  return {
+    chain_id: AI_CHAIN_ID,
+    generated_at: nowIso(),
+      ai: {
+        service: "ynx-ai-gateway",
+        intelligence_enabled: AI_INTELLIGENCE_ENABLED,
+        llm_configured: llmConfigured(),
+        llm_provider: AI_LLM_PROVIDER,
+        model: llmConfigured() ? AI_LLM_MODEL : "",
+      onchain: {
+        enabled: AI_ONCHAIN_ENABLED,
+        ready: onchainConfigReady(),
+        settlement_contract: AI_SETTLEMENT_CONTRACT || "",
+        last_tx_hash: onchainRuntime.last_tx_hash,
+        last_error: onchainRuntime.last_error,
+      },
+      stats: summarizeStats(),
+    },
+    web4: {
+      url: AI_PUBLIC_WEB4_URL,
+      status: web4Ready.status,
+      ready: web4Ready.payload,
+    },
+    bridge: {
+      url: AI_PUBLIC_BRIDGE_URL,
+      health_status: bridgeHealth.status,
+      health: bridgeHealth.payload,
+      route_readiness_status: routeReadiness.status,
+      route_readiness: routeReadiness.payload,
+      assets_status: bridgeAssets.status,
+      assets: bridgeAssets.payload,
+    },
+    site: {
+      url: AI_PUBLIC_SITE_URL,
+      pages: ["/readiness", "/bridge", "/withdraw", "/trading", "/docs/en/ai-web4-official-demo.md"],
+    },
+  };
+}
+
+function hasChinese(text) {
+  return /[\u3400-\u9fff]/.test(String(text || ""));
+}
+
+function summarizeRoutePhases(context) {
+  const items = context.bridge?.route_readiness?.items || [];
+  if (!Array.isArray(items) || items.length === 0) return "route readiness unavailable";
+  return items.map((item) => `${item.routeId}:${item.phase}`).join(", ");
+}
+
+function compactIntelligenceContext(context) {
+  const routeReadiness = context.bridge?.route_readiness || {};
+  const bridgeHealth = context.bridge?.health || {};
+  return {
+    generated_at: context.generated_at,
+    chain_id: context.chain_id,
+    ai: {
+      stats: context.ai?.stats || {},
+      onchain: context.ai?.onchain || {},
+    },
+    bridge: {
+      stats: bridgeHealth.stats || {},
+      routes: routeReadiness.summary || {},
+      route_phases: Array.isArray(routeReadiness.items)
+        ? routeReadiness.items.map((item) => ({
+            routeId: item.routeId,
+            phase: item.phase,
+            full_loop_tested: item.full_loop_tested,
+          }))
+        : [],
+    },
+    web4: {
+      status: context.web4?.status || 0,
+      ok: context.web4?.ready?.ok,
+      checks: context.web4?.ready?.checks || {},
+    },
+    site: context.site || {},
+  };
+}
+
+function llmConfigured() {
+  if (!AI_INTELLIGENCE_ENABLED) return false;
+  if (AI_LLM_PROVIDER === "ollama") return Boolean(AI_LLM_BASE_URL);
+  return Boolean(AI_LLM_API_KEY);
+}
+
+function llmModeLabel() {
+  if (!llmConfigured()) return "live-deterministic";
+  return `llm:${AI_LLM_PROVIDER}`;
+}
+
+function deterministicIntelligenceAnswer(message, context) {
+  const zh = hasChinese(message);
+  const bridgeSummary = context.bridge?.route_readiness?.summary || {};
+  const healthStats = context.bridge?.health?.stats || {};
+  const aiStats = context.ai?.stats || {};
+  const onchain = context.ai?.onchain || {};
+  const routePhases = summarizeRoutePhases(context);
+  if (zh) {
+    return [
+      "我是 YNX Intelligence，当前直接运行在 YNX AI Gateway 上。",
+      "",
+      `交易/桥状态：${bridgeSummary.full_loop_tested || 0}/${bridgeSummary.routes || 0} 条 route 已完成 full-loop-tested；当前路线为 ${routePhases}。`,
+      `Sepolia 闭环证据：minted deposits=${healthStats.minted_deposits ?? "-"}，released withdrawals=${healthStats.released_withdrawals ?? "-"}。`,
+      `AI 链上结算：${onchain.enabled && onchain.ready ? "已开启并 ready" : "未完全 ready"}，settlement contract=${onchain.settlement_contract || "-"}，最近 tx=${onchain.last_tx_hash || "-"}。`,
+      `AI 任务统计：jobs=${aiStats.total_jobs ?? 0}，vaults=${aiStats.total_vaults ?? 0}，payments=${aiStats.total_payments ?? 0}，finalized=${aiStats.by_status?.finalized ?? 0}。`,
+      "",
+      "产品定位建议：YNX AI 不应只叫 agent 权限与结算层，而应定位为 Intelligence Layer：链上状态分析、交易/跨链助手、AI 任务执行、机器支付、权限控制、链上结算、运维预警和开发者问答的组合。",
+      "下一步最有价值的是：继续扩大 full-loop-tested 交易路线，并让服务器本地模型/外部模型持续接入实时 YNX 上下文，形成真正的链上智能运营与交易助手。",
+    ].join("\n");
+  }
+  return [
+    "I am YNX Intelligence, running inside the YNX AI Gateway.",
+    "",
+    `Bridge/trading status: ${bridgeSummary.full_loop_tested || 0}/${bridgeSummary.routes || 0} routes are full-loop-tested; phases: ${routePhases}.`,
+    `Sepolia loop evidence: minted deposits=${healthStats.minted_deposits ?? "-"}, released withdrawals=${healthStats.released_withdrawals ?? "-"}.`,
+    `AI on-chain settlement: ${onchain.enabled && onchain.ready ? "enabled and ready" : "not fully ready"}, contract=${onchain.settlement_contract || "-"}, latest tx=${onchain.last_tx_hash || "-"}.`,
+    `AI stats: jobs=${aiStats.total_jobs ?? 0}, vaults=${aiStats.total_vaults ?? 0}, payments=${aiStats.total_payments ?? 0}, finalized=${aiStats.by_status?.finalized ?? 0}.`,
+    "",
+    "Product position: YNX AI should be the Intelligence Layer: chain-state analysis, bridge/trading assistant, AI task execution, machine payments, policy control, on-chain settlement, ops alerts, and developer Q&A.",
+  ].join("\n");
+}
+
+async function callConfiguredLlm(message, context) {
+  if (!llmConfigured()) return null;
+  const system = [
+    "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
+    "Use the provided live context. Be candid about testnet limits.",
+    "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
+  ].join(" ");
+
+  if (AI_LLM_PROVIDER === "ollama") {
+    const response = await postJson(
+      AI_LLM_BASE_URL,
+      {
+        model: AI_LLM_MODEL,
+        stream: false,
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}`,
+          },
+        ],
+        options: {
+          temperature: 0.2,
+          num_ctx: 2048,
+          num_predict: 180,
+        },
+      },
+      {},
+      { timeout_ms: AI_LLM_TIMEOUT_MS },
+    );
+    if (response.status < 200 || response.status >= 300) {
+      return { ok: false, error: response.payload?.error || `ollama_http_${response.status}` };
+    }
+    return {
+      ok: true,
+      text: response.payload?.message?.content || response.payload?.response || deterministicIntelligenceAnswer(message, context),
+      raw_model: response.payload?.model || AI_LLM_MODEL,
+    };
+  }
+
+  const payload = {
+    model: AI_LLM_MODEL,
+    instructions: system,
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, 5000)}`,
+          },
+        ],
+      },
+    ],
+  };
+  const response = await postJson(
+    AI_LLM_BASE_URL,
+    payload,
+    {
+      authorization: `Bearer ${AI_LLM_API_KEY}`,
+    },
+    { timeout_ms: AI_LLM_TIMEOUT_MS },
+  );
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, error: response.payload?.error?.message || response.payload?.error || `llm_http_${response.status}` };
+  }
+  const outputText =
+    response.payload.output_text ||
+    (Array.isArray(response.payload.output)
+      ? response.payload.output
+          .flatMap((item) => (Array.isArray(item.content) ? item.content : []))
+          .map((item) => item.text || "")
+          .filter(Boolean)
+          .join("\n")
+      : "");
+  return { ok: true, text: outputText || deterministicIntelligenceAnswer(message, context), raw_model: response.payload.model || AI_LLM_MODEL };
+}
+
 async function authorizeViaWeb4(req, action, options = {}) {
   const policyId = options.policy_id || "";
   if (!policyId) {
@@ -635,6 +889,13 @@ const server = http.createServer(async (req, res) => {
       service: "ynx-ai-gateway",
       enforce_policy: AI_ENFORCE_POLICY,
       has_web4_authorizer: Boolean(AI_WEB4_HUB_URL),
+      intelligence: {
+        enabled: AI_INTELLIGENCE_ENABLED,
+        llm_configured: llmConfigured(),
+        llm_provider: AI_LLM_PROVIDER,
+        model: llmConfigured() ? AI_LLM_MODEL : "",
+        mode: llmModeLabel(),
+      },
       onchain: {
         enabled: AI_ONCHAIN_ENABLED,
         ready: onchainConfigReady(),
@@ -693,6 +954,48 @@ const server = http.createServer(async (req, res) => {
       chain_id: AI_CHAIN_ID,
       enforce_policy: AI_ENFORCE_POLICY,
       ...summarizeStats(),
+    });
+  }
+
+  if (req.method === "GET" && url.pathname === "/ai/intelligence/brief") {
+    if (!AI_INTELLIGENCE_ENABLED) return json(res, 503, { ok: false, error: "intelligence_disabled" });
+    const context = await collectIntelligenceContext();
+    return json(res, 200, {
+      ok: true,
+      mode: llmModeLabel(),
+      answer: deterministicIntelligenceAnswer(url.searchParams.get("q") || "status", context),
+      context,
+    });
+  }
+
+  if (req.method === "POST" && url.pathname === "/ai/chat") {
+    if (!AI_INTELLIGENCE_ENABLED) return json(res, 503, { ok: false, error: "intelligence_disabled" });
+    const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const message = String(body.message || body.prompt || body.question || "").trim();
+    if (!message) return json(res, 400, { ok: false, error: "message_required" });
+    const context = await collectIntelligenceContext();
+    let llm = null;
+    try {
+      llm = await callConfiguredLlm(message, context);
+    } catch (error) {
+      llm = { ok: false, error: error.message || "llm_request_failed" };
+    }
+    const usedLlm = Boolean(llm && llm.ok);
+    const answer = usedLlm ? llm.text : deterministicIntelligenceAnswer(message, context);
+    addAudit("intelligence.chat", {
+      mode: usedLlm ? llmModeLabel() : "live-deterministic",
+      llm_error: llm && !llm.ok ? llm.error : "",
+      message_preview: message.slice(0, 160),
+    });
+    persist();
+    return json(res, 200, {
+      ok: true,
+      mode: usedLlm ? llmModeLabel() : "live-deterministic",
+      model: usedLlm ? llm.raw_model || AI_LLM_MODEL : "",
+      answer,
+      llm_error: llm && !llm.ok ? llm.error : "",
+      context: body.include_context === true || body.include_context === "1" ? context : undefined,
     });
   }
 

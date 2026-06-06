@@ -5,7 +5,13 @@
 
 ## 1. 这个演示说明什么
 
-这个 demo 用一个最小闭环说明 YNX 的 AI/Web4 不是“聊天机器人”，而是：
+这个 demo 说明 YNX 的 AI/Web4 不是娱乐聊天机器人，也不只是
+“AI agent 权限与结算层”。YNX AI 在公开测试网上有两层能力：
+
+- YNX Intelligence Layer：读取链、桥、route、资产、Web4、AI settlement 的实时状态，回答“现在能做什么、哪里卡住、下一步怎么接”；
+- AI agent 执行与结算流：在 owner/policy/session 限制内执行任务，并通过 vault / job / payment / settlement 结算。
+
+结算流证明：
 
 - Web4 policy 管住 AI Agent 的权限和预算；
 - session key 让 Agent 可以在限制范围内自动执行；
@@ -16,7 +22,7 @@
 
 一句话：
 
-**用户给 AI Agent 一个有限授权，Agent 完成任务后，通过 YNX 的 AI 结算层自动付款。**
+**YNX AI 可以观察网络、解释当前交易/跨链/AI 状态，也可以让授权 AI Agent 完成任务并留下可审计的付款结算。**
 
 ## 2. 本地一键运行
 
@@ -34,7 +40,22 @@ output/ai_web4_demo/<run-id>/
 
 它不会污染公开测试网。
 
-## 3. 公开测试网链上结算
+## 3. 公开测试网 AI Intelligence API
+
+公开 AI 入口已经上线：
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  -d '{"message":"总结一下现在 YNX 的交易主线和 AI 状态。"}' | jq
+```
+
+默认是 live deterministic intelligence mode：它会读实时 YNX bridge、
+route、asset、Web4、AI settlement 状态，再给出确定性回答。服务器配置
+本地 Ollama 模型或外部 LLM provider 后，同一个接口会切换到 LLM 模式，
+但仍然保留实时 YNX 上下文。
+
+## 4. 公开测试网链上结算
 
 公开测试网已经部署 `YNXAISettlement`：
 
@@ -52,7 +73,7 @@ output/ai_web4_demo/<run-id>/
 
 AI Gateway 仍然是面向用户/API 的入口；链上合约负责让高价值 AI 任务的结算可验证。
 
-## 4. 演示流程
+## 5. 演示流程
 
 1. 创建 Web4 policy。
 2. owner 签发带上限的 session key。
@@ -62,7 +83,7 @@ AI Gateway 仍然是面向用户/API 的入口；链上合约负责让高价值 
 6. job finalize 后，从 vault 自动结算 reward。
 7. 输出每一步 JSON 证据文件。
 
-## 5. 用线上服务跑
+## 6. 用线上服务跑
 
 如果要指向已部署的服务，可以显式传入 URL：
 
@@ -75,7 +96,7 @@ AI_URL=https://ai.ynxweb4.com \
 
 注意：线上执行会写入线上 Web4/AI Gateway 的测试数据，只应在测试网环境使用。
 
-## 6. 公开测试网实测证据
+## 7. 公开测试网实测证据
 
 最新一次线上服务 demo：
 
@@ -129,10 +150,11 @@ total_payments: 7
 finalized_jobs: 5
 ```
 
-## 7. 对外解释口径
+## 8. 对外解释口径
 
 这个 demo 展示的是 YNX 的核心差异：
 
+- YNX AI 可以直接读公开测试网的 bridge、route、asset、Web4、AI gateway 状态；
 - 传统链主要结算人手动发起的交易；
 - YNX 让 AI Agent 在 owner/policy/session 限制内自动执行；
 - AI 任务有结果承诺、挑战窗口、最终结算和审计记录；
@@ -141,12 +163,14 @@ finalized_jobs: 5
 最准确的产品定位是：
 
 ```text
-AI 的有限授权 + 机器支付预算 + 可审计任务结算
+实时链上智能分析 + 跨链/交易引导 + AI 的有限授权 + 机器支付预算 + 可审计任务结算
 ```
 
-它不是模型托管，也不是通用聊天机器人，更不是只做娱乐口号的 AI。
+它现在不是去中心化模型托管网络，也不是只做娱乐口号的 AI。公开测试网
+已经有实时 AI Intelligence API、Web4 授权、AI vault/job/payment 和链上
+settlement 证据。
 
-## 8. 跑链上 demo
+## 9. 跑链上 demo
 
 ```bash
 YNX_DEMO_USE_EXISTING=1 \

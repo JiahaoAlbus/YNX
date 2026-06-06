@@ -36,7 +36,12 @@ YNX should not claim BTC/ETH/BNB/USDT/USDC trading, mainnet-candidate readiness,
 
 ## AI positioning
 
-YNX should not sell AI as a generic chatbot feature. The useful AI angle is:
+YNX should not sell AI as a generic chatbot feature or only as an "agent
+permission" feature. The useful direction is broader:
+
+`YNX Intelligence Layer: live chain intelligence, bridge/trading guidance, AI task execution, machine payments, owner policy controls, on-chain settlement, operational alerts, and developer support on top of YNX.`
+
+The agent settlement sentence remains an important sub-capability:
 
 `AI agents can act under owner-defined Web4 policy and settle work on YNX through verifiable job/vault/payment rails.`
 
@@ -44,11 +49,15 @@ Current public-testnet status:
 
 - Web4 Hub: policies, sessions, identities, agents, intents, tool authorization, and audit logs.
 - AI Gateway: vaults, jobs, result commits, challenge/finalize flow, x402-style resource payment, and stats.
+- Intelligence API: `POST /ai/chat` and `GET /ai/intelligence/brief` expose live public-testnet context from the bridge, route registry, asset status, Web4 Hub, and AI settlement gateway.
 - On-chain settlement: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`.
 
-This is useful for autonomous tools, paid API calls, agent marketplaces, task bounties,
-and enterprise AI execution budgets. It is not enough to claim generalized AI
-intelligence, decentralized model hosting, or production-grade AI commerce yet.
+This is useful for chain operators, traders testing bridge routes, autonomous
+tools, paid API calls, agent marketplaces, task bounties, and enterprise AI
+execution budgets. The public testnet now has a live deterministic intelligence
+mode and can switch to a configured LLM provider through runtime environment
+variables. It is not yet a decentralized model-hosting network or production
+AI-commerce mainnet.
 
 References:
 

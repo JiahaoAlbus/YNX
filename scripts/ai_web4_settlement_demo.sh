@@ -11,6 +11,10 @@ WEB4_INTERNAL_TOKEN="${WEB4_INTERNAL_TOKEN:-demo-internal-token}"
 WEB4_URL="${WEB4_URL:-http://127.0.0.1:$WEB4_PORT}"
 AI_URL="${AI_URL:-http://127.0.0.1:$AI_GATEWAY_PORT}"
 YNX_DEMO_USE_EXISTING="${YNX_DEMO_USE_EXISTING:-0}"
+YNX_DEMO_ONCHAIN="${YNX_DEMO_ONCHAIN:-0}"
+YNX_DEMO_ONCHAIN_VAULT_WEI="${YNX_DEMO_ONCHAIN_VAULT_WEI:-1000000000000000}"
+YNX_DEMO_ONCHAIN_REWARD_WEI="${YNX_DEMO_ONCHAIN_REWARD_WEI:-100000000000000}"
+YNX_DEMO_ONCHAIN_MAX_PER_PAYMENT_WEI="${YNX_DEMO_ONCHAIN_MAX_PER_PAYMENT_WEI:-1000000000000000}"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -94,6 +98,7 @@ echo "Run id: $RUN_ID"
 echo "Web4: $WEB4_URL"
 echo "AI:   $AI_URL"
 echo "Output: $OUTPUT_DIR"
+echo "On-chain: $YNX_DEMO_ONCHAIN"
 echo
 
 OWNER="demo-owner-$RUN_ID"
@@ -152,6 +157,9 @@ vault_body="$(jq -n \
   --arg vault_id "$VAULT_ID" \
   --arg owner "$OWNER" \
   --arg policy_id "$policy_id" \
+  --arg onchain "$YNX_DEMO_ONCHAIN" \
+  --arg onchain_value_wei "$YNX_DEMO_ONCHAIN_VAULT_WEI" \
+  --arg onchain_max_per_payment_wei "$YNX_DEMO_ONCHAIN_MAX_PER_PAYMENT_WEI" \
   '{
     vault_id: $vault_id,
     owner: $owner,
@@ -160,7 +168,11 @@ vault_body="$(jq -n \
     max_daily_spend: 100,
     max_per_payment: 50,
     metadata: { purpose: "demo AI reward budget" }
-  }')"
+  } + if $onchain == "1" then {
+    onchain: true,
+    onchain_value_wei: $onchain_value_wei,
+    onchain_max_per_payment_wei: $onchain_max_per_payment_wei
+  } else {} end')"
 vault_json="$(post_json "$AI_URL/ai/vaults" "$vault_body" -H "x-ynx-session: $session_token")"
 save_step "03_vault" "$vault_json"
 vault_id="$(printf '%s\n' "$vault_json" | jq -r '.vault.vault_id')"
@@ -171,6 +183,8 @@ job_body="$(jq -n \
   --arg creator "$OWNER" \
   --arg policy_id "$policy_id" \
   --arg vault_id "$vault_id" \
+  --arg onchain "$YNX_DEMO_ONCHAIN" \
+  --arg reward_wei "$YNX_DEMO_ONCHAIN_REWARD_WEI" \
   '{
     job_id: $job_id,
     creator: $creator,
@@ -180,7 +194,12 @@ job_body="$(jq -n \
     stake: "5",
     input_uri: "ipfs://ynx-demo/summarize-market-brief",
     challenge_window_blocks: 12
-  }')"
+  } + if $onchain == "1" then {
+    onchain: true,
+    reward_wei: $reward_wei,
+    stake_wei: "0",
+    challenge_window_blocks: 0
+  } else {} end')"
 job_json="$(post_json "$AI_URL/ai/jobs" "$job_body" -H "x-ynx-session: $session_token")"
 save_step "04_job_created" "$job_json"
 job_id="$(printf '%s\n' "$job_json" | jq -r '.job.job_id')"
@@ -199,6 +218,10 @@ commit_body="$(jq -n \
 commit_json="$(post_json "$AI_URL/ai/jobs/$job_id/commit" "$commit_body" -H "x-ynx-session: $session_token")"
 save_step "05_job_committed" "$commit_json"
 echo "5. Worker committed result hash: $result_hash"
+
+if [[ "$YNX_DEMO_ONCHAIN" == "1" ]]; then
+  sleep "${YNX_DEMO_ONCHAIN_FINALIZE_DELAY_SEC:-3}"
+fi
 
 finalize_body="$(jq -n --arg policy_id "$policy_id" '{ policy_id: $policy_id, status: "finalized" }')"
 finalize_json="$(post_json "$AI_URL/ai/jobs/$job_id/finalize" "$finalize_body" -H "x-ynx-session: $session_token")"
@@ -221,6 +244,7 @@ cat > "$OUTPUT_DIR/README.md" <<EOF
 - Vault: \`$vault_id\`
 - Job: \`$job_id\`
 - Reward payment: \`$payment_id\`
+- On-chain: \`$YNX_DEMO_ONCHAIN\`
 
 Flow:
 

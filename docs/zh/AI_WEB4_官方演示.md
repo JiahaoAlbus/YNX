@@ -1,7 +1,7 @@
 # YNX AI/Web4 官方演示
 
 状态：active  
-最后更新：2026-06-01
+最后更新：2026-06-06
 
 ## 1. 这个演示说明什么
 
@@ -98,6 +98,37 @@ total_payments: 6
 finalized_jobs: 4
 ```
 
+最新一次线上链上结算 demo：
+
+```text
+Run id: public_onchain_20260606T053758Z
+Policy: policy_public_onchain_20260606T053758Z
+Session: session_public_onchain_20260606T053758Z
+Vault: vault_public_onchain_20260606T053758Z
+Job: job_public_onchain_20260606T053758Z
+Reward payment: pay_4c49fd5155e98b0a
+Result hash: b4ce44dfea5c975259fc59842ef41bfd003363eea870be6f96ebdcc580871a91
+```
+
+链上结算交易：
+
+```text
+Vault create tx: 0xd163ecab53a39d7a3f81631f1fce6d63dc5e9546056efe9c912dadcbd4611dd4
+Job create tx:   0x5399e55a19c6732bcc0627abdf14293a9a8c86edc960e2b494187f972154b26a
+Commit tx:       0x9626e37e4fd51fd611aae120b07f4e9f2f4ee336716431837a9b3f6f968cb401
+Finalize tx:     0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
+Contract:        0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
+```
+
+链上 demo 后的 AI Gateway 统计：
+
+```text
+total_jobs: 7
+total_vaults: 6
+total_payments: 7
+finalized_jobs: 5
+```
+
 ## 7. 对外解释口径
 
 这个 demo 展示的是 YNX 的核心差异：
@@ -114,3 +145,15 @@ AI 的有限授权 + 机器支付预算 + 可审计任务结算
 ```
 
 它不是模型托管，也不是通用聊天机器人，更不是只做娱乐口号的 AI。
+
+## 8. 跑链上 demo
+
+```bash
+YNX_DEMO_USE_EXISTING=1 \
+YNX_DEMO_ONCHAIN=1 \
+WEB4_URL=https://web4.ynxweb4.com \
+AI_URL=https://ai.ynxweb4.com \
+./scripts/ai_web4_settlement_demo.sh
+```
+
+这会写入测试网数据，并通过配置好的 AI settlement signer 发送 YNX 公开测试网 EVM 交易。

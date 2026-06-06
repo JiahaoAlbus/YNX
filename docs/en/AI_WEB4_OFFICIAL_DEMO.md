@@ -1,7 +1,7 @@
 # YNX AI/Web4 Official Demo
 
 Status: active  
-Last updated: 2026-06-01
+Last updated: 2026-06-06
 
 ## 1. What this demo proves
 
@@ -97,6 +97,37 @@ total_payments: 6
 finalized_jobs: 4
 ```
 
+Latest public-service **on-chain** demo run:
+
+```text
+Run id: public_onchain_20260606T053758Z
+Policy: policy_public_onchain_20260606T053758Z
+Session: session_public_onchain_20260606T053758Z
+Vault: vault_public_onchain_20260606T053758Z
+Job: job_public_onchain_20260606T053758Z
+Reward payment: pay_4c49fd5155e98b0a
+Result hash: b4ce44dfea5c975259fc59842ef41bfd003363eea870be6f96ebdcc580871a91
+```
+
+On-chain settlement transactions:
+
+```text
+Vault create tx: 0xd163ecab53a39d7a3f81631f1fce6d63dc5e9546056efe9c912dadcbd4611dd4
+Job create tx:   0x5399e55a19c6732bcc0627abdf14293a9a8c86edc960e2b494187f972154b26a
+Commit tx:       0x9626e37e4fd51fd611aae120b07f4e9f2f4ee336716431837a9b3f6f968cb401
+Finalize tx:     0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
+Contract:        0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf
+```
+
+Live public-testnet AI stats after the on-chain run:
+
+```text
+total_jobs: 7
+total_vaults: 6
+total_payments: 7
+finalized_jobs: 5
+```
+
 The useful product position is not "AI chat on a chain." It is:
 
 ```text
@@ -106,3 +137,16 @@ bounded AI authority + machine-payment vaults + auditable job settlement
 That means YNX AI is useful when an agent needs permission limits, budget
 limits, result commitments, and reward settlement. It is not a replacement
 for model hosting, general chat, or entertainment-only AI experiences.
+
+## 7. Run the On-chain Demo
+
+```bash
+YNX_DEMO_USE_EXISTING=1 \
+YNX_DEMO_ONCHAIN=1 \
+WEB4_URL=https://web4.ynxweb4.com \
+AI_URL=https://ai.ynxweb4.com \
+./scripts/ai_web4_settlement_demo.sh
+```
+
+This writes testnet data and sends YNX public-testnet EVM transactions using
+the configured AI settlement signer.

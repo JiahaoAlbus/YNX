@@ -1,7 +1,7 @@
 # YNX v2 AI Settlement API (Draft)
 
 Status: Active public-testnet API  
-Last updated: 2026-06-01
+Last updated: 2026-06-06
 
 ## 1. Purpose
 
@@ -25,9 +25,19 @@ Current public-testnet health:
 AI Gateway: https://ai.ynxweb4.com/health
 Ready:      https://ai.ynxweb4.com/ready
 On-chain:   enabled and ready
-Jobs:       6 total, 4 finalized
-Vaults:     5 total
-Payments:   6 total
+Jobs:       7 total, 5 finalized
+Vaults:     6 total
+Payments:   7 total
+```
+
+Latest on-chain settlement evidence:
+
+```text
+Job:         job_public_onchain_20260606T053758Z
+Vault tx:    0xd163ecab53a39d7a3f81631f1fce6d63dc5e9546056efe9c912dadcbd4611dd4
+Job tx:      0x5399e55a19c6732bcc0627abdf14293a9a8c86edc960e2b494187f972154b26a
+Commit tx:   0x9626e37e4fd51fd611aae120b07f4e9f2f4ee336716431837a9b3f6f968cb401
+Finalize tx: 0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
 ```
 
 ## 2. Job Lifecycle

@@ -150,6 +150,49 @@ test("queues outbound withdrawal requests", async (t) => {
   assert.equal(created.withdrawal.amount_base_units, "1500000000000000000");
 });
 
+test("marks manually released withdrawals with source proof", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-bridge-release-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      BRIDGE_PORT: String(port),
+      BRIDGE_DATA_DIR: dataDir,
+      BRIDGE_ROUTES_FILE: routesFile,
+      BRIDGE_ONCHAIN_ENABLED: "0",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/bridge/withdrawals/request`, {
+      method: "POST",
+      body: {
+        route_id: "tron-shasta-usdt",
+        burn_tx_hash: "0xburn",
+        destination_recipient: "TManualReleaseRecipient",
+        amount: "3.5",
+      },
+    }),
+    201,
+  );
+
+  const released = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/bridge/withdrawals/${created.withdrawal.withdrawal_id}/mark-released`, {
+      method: "POST",
+      body: {
+        release_tx_hash: "tron-shasta-release-tx",
+        proof: { mode: "operator-manual-release" },
+      },
+    }),
+    200,
+  );
+  assert.equal(released.withdrawal.status, "released");
+  assert.equal(released.withdrawal.release.manual, true);
+  assert.equal(released.withdrawal.release.tx_hash, "tron-shasta-release-tx");
+});
+
 test("reports watcher state and scans configured routes without lockboxes", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-bridge-watchers-");
@@ -166,7 +209,11 @@ test("reports watcher state and scans configured routes without lockboxes", asyn
       BRIDGE_PORT: String(port),
       BRIDGE_DATA_DIR: dataDir,
       BRIDGE_ROUTES_FILE: fixtureRoutesFile,
-      BRIDGE_ONCHAIN_ENABLED: "0",
+      BRIDGE_ONCHAIN_ENABLED: "1",
+      BRIDGE_YNX_RPC_URL: "http://127.0.0.1:1",
+      BRIDGE_RELAYER_MODE: "private-key",
+      BRIDGE_ATTESTER_PRIVATE_KEY: "0x1111111111111111111111111111111111111111111111111111111111111111",
+      BRIDGE_RELAYER_PRIVATE_KEY: "0x2222222222222222222222222222222222222222222222222222222222222222",
     },
     `http://127.0.0.1:${port}/ready`,
   );
@@ -224,7 +271,11 @@ test("reports per-route bridge readiness without claiming unsupported full loops
       BRIDGE_PORT: String(port),
       BRIDGE_DATA_DIR: dataDir,
       BRIDGE_ROUTES_FILE: fixtureRoutesFile,
-      BRIDGE_ONCHAIN_ENABLED: "0",
+      BRIDGE_ONCHAIN_ENABLED: "1",
+      BRIDGE_YNX_RPC_URL: "http://127.0.0.1:1",
+      BRIDGE_RELAYER_MODE: "private-key",
+      BRIDGE_ATTESTER_PRIVATE_KEY: "0x1111111111111111111111111111111111111111111111111111111111111111",
+      BRIDGE_RELAYER_PRIVATE_KEY: "0x2222222222222222222222222222222222222222222222222222222222222222",
     },
     `http://127.0.0.1:${port}/ready`,
   );
@@ -235,6 +286,8 @@ test("reports per-route bridge readiness without claiming unsupported full loops
   assert.equal(readiness.items[0].routeId, "btc-testnet-btc");
   assert.equal(readiness.items[0].phase, "mapped_route_only");
   assert.equal(readiness.items[0].full_loop_ready, false);
-  assert.equal(readiness.items[0].blockers.includes("non_evm_lockbox_not_supported"), true);
+  assert.equal(readiness.items[0].capabilities.includes("operator_verified_deposit_proof"), true);
+  assert.equal(readiness.items[0].capabilities.includes("manual_deposit_proof"), true);
+  assert.equal(readiness.items[0].blockers.includes("automatic_source_release_not_supported"), true);
   assert.equal(readiness.summary.mapped_route_only, 1);
 });

@@ -1,7 +1,7 @@
 # YNX Testnet Trading Manual
 
 Status: public-testnet trading pilot  
-Last updated: 2026-06-01  
+Last updated: 2026-06-06  
 Scope: YNX public testnet `ynx_9102-1`
 
 ## Summary
@@ -94,6 +94,21 @@ Sepolia ETH/USDC deposit -> YNX wETH.y/wUSDC.y mint
 YNX wrapped asset swap -> YNX wrapped asset burn
 YNX burn watcher -> Sepolia lockbox release
 ```
+
+The public testnet also has a manual proof loop for BTC testnet BTC, BSC
+testnet BNB, and TRON Shasta USDT:
+
+```text
+external testnet deposit verified by operator
+-> /bridge/deposits/prove
+-> YNX wrapped asset mint
+-> YNX wrapped asset burn
+-> YNX burn watcher queues withdrawal
+-> external release proof recorded with /bridge/withdrawals/:id/mark-released
+```
+
+Manual proof routes are valid for public-testnet engineering and audit-trail
+testing. They are not yet production automatic bridge routes.
 
 Smoke withdrawal evidence:
 

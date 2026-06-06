@@ -1,7 +1,7 @@
 # YNX 测试网交易手册
 
 状态：公开测试网交易 pilot  
-最后更新：2026-06-01  
+最后更新：2026-06-06  
 范围：YNX 公开测试网 `ynx_9102-1`
 
 ## 摘要
@@ -92,6 +92,21 @@ Sepolia ETH/USDC 充值 -> YNX wETH.y/wUSDC.y 铸造
 YNX wrapped asset swap -> YNX wrapped asset burn
 YNX burn watcher -> Sepolia lockbox release
 ```
+
+公开测试网也已经给 BTC testnet BTC、BSC testnet BNB、TRON Shasta USDT
+补上 manual proof 闭环：
+
+```text
+外部测试网充值由 operator 验真
+-> /bridge/deposits/prove
+-> YNX 铸出 wrapped asset
+-> YNX burn wrapped asset
+-> YNX burn watcher 排队提现
+-> operator 外部释放资产，并用 /bridge/withdrawals/:id/mark-released 记录 release proof
+```
+
+manual proof route 可用于公开测试网工程闭环和审计记录测试，但还不是生产级
+自动 bridge route。
 
 提现 smoke test 证据：
 

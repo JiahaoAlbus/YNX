@@ -554,9 +554,12 @@ async function routeReadiness(route, options = {}) {
   const mintedDeposits = deposits.filter((item) => item.status === "minted" || item.status === "already_minted").length;
   const releasedWithdrawals = withdrawals.filter((item) => item.status === "released" || item.status === "already_released").length;
   const hasLockbox = route.sourceKind === "evm" && Boolean(route.lockboxAddress);
+  const manualProofSupported = !hasLockbox;
+  const manualProofReady = manualProofSupported && onchainReady();
   const depositWatcherLive = Boolean(depositWatcher && depositWatcher.last_scan_at && !depositWatcher.last_error);
   const withdrawalWatcherLive = Boolean(withdrawalWatcher && withdrawalWatcher.last_scan_at && !withdrawalWatcher.last_error);
-  const releaseConfigured = route.sourceKind === "evm" && BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY);
+  const releaseConfigured = hasLockbox && BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY);
+  const manualSourceRelease = !hasLockbox && withdrawalWatcherLive;
   const capabilities = [];
   const blockers = [];
 
@@ -568,23 +571,30 @@ async function routeReadiness(route, options = {}) {
   else blockers.push("source_chain_unconfigured");
 
   if (hasLockbox) capabilities.push("source_lockbox");
-  else blockers.push(route.sourceKind === "evm" ? "source_lockbox_unconfigured" : "non_evm_lockbox_not_supported");
+  else if (manualProofSupported) capabilities.push("operator_verified_deposit_proof");
+  else blockers.push(route.sourceKind === "evm" ? "source_lockbox_unconfigured" : "operator_proof_lane_not_ready");
 
   if (depositWatcherLive) capabilities.push("automatic_deposit_watcher");
   else if (hasLockbox) blockers.push("deposit_watcher_not_live");
+  else if (manualProofSupported) capabilities.push("manual_deposit_proof");
 
   if (withdrawalWatcherLive) capabilities.push("ynx_burn_watcher");
   else blockers.push("ynx_burn_watcher_not_live");
 
   if (releaseConfigured) capabilities.push("automatic_source_release");
+  else if (manualSourceRelease) capabilities.push("manual_source_release_proof");
   else if (hasLockbox) blockers.push("source_release_not_configured");
+  else blockers.push("automatic_source_release_not_supported");
 
   if (mintedDeposits > 0) capabilities.push("deposit_smoke_tested");
   if (releasedWithdrawals > 0) capabilities.push("withdrawal_smoke_tested");
 
   let phase = "mapped_route_only";
   if (hasLockbox && depositWatcherLive && releaseConfigured && withdrawalWatcherLive) phase = "full_loop_ready";
+  else if (manualProofReady && withdrawalWatcherLive) phase = "manual_loop_ready";
   if (phase === "full_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
+  else if (phase === "manual_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
+  else if (manualProofReady && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && depositWatcherLive && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && depositWatcherLive) phase = "deposit_ready";
 
@@ -1127,6 +1137,51 @@ const server = http.createServer(async (req, res) => {
     if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
     const results = await reconcileWithdrawals();
     return json(res, 200, { ok: true, items: results });
+  }
+
+  if (
+    segments[0] === "bridge" &&
+    segments[1] === "withdrawals" &&
+    segments[2] &&
+    segments[3] === "mark-released" &&
+    req.method === "POST"
+  ) {
+    if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
+    const body = await parseBody(req, BRIDGE_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const withdrawal = withdrawalById(segments[2]);
+    if (!withdrawal) return json(res, 404, { ok: false, error: "withdrawal_not_found" });
+    const route = routeById(withdrawal.route_id);
+    if (!route) return json(res, 400, { ok: false, error: "route_not_found" });
+    if (["released", "already_released"].includes(withdrawal.status)) {
+      return json(res, 200, { ok: true, withdrawal, duplicate: true });
+    }
+    const releaseTxHash = String(body.release_tx_hash || body.tx_hash || "").trim();
+    if (!releaseTxHash) return json(res, 400, { ok: false, error: "release_tx_hash_required" });
+    withdrawal.status = "released";
+    withdrawal.release = {
+      released: true,
+      manual: true,
+      release_id: withdrawal.withdrawal_id,
+      source_kind: route.sourceKind,
+      source_network: route.sourceNetwork,
+      tx_hash: releaseTxHash,
+      amount_base_units: withdrawal.amount_base_units,
+      recipient: withdrawal.destination_recipient,
+      proof: body.proof || {},
+      confirmed_at: nowIso(),
+    };
+    delete withdrawal.error;
+    delete withdrawal.release_reason;
+    withdrawal.updated_at = nowIso();
+    addAudit("withdrawal.mark_released", {
+      withdrawal_id: withdrawal.withdrawal_id,
+      route_id: withdrawal.route_id,
+      source_kind: route.sourceKind,
+      release_tx_hash: releaseTxHash,
+    });
+    saveState();
+    return json(res, 200, { ok: true, withdrawal });
   }
 
   if (req.method === "POST" && url.pathname === "/bridge/withdrawals/request") {

@@ -100,7 +100,10 @@ Response shape:
 ```
 
 When a runtime model is configured, the gateway keeps the same endpoint and
-switches to LLM mode while preserving live YNX context in the prompt.
+switches to LLM mode while preserving live YNX context in the prompt. The
+official `answer` remains generated from deterministic live facts so route,
+asset, and settlement status do not drift. Optional raw model text is returned
+only when `include_model_answer` is set.
 
 Supported runtime model modes:
 

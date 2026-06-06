@@ -54,6 +54,8 @@ curl -s https://ai.ynxweb4.com/ai/chat \
 It runs in live deterministic intelligence mode unless a local Ollama model or
 external LLM provider is configured on the gateway. The endpoint still reads
 live YNX bridge, route, asset, Web4, and AI settlement context in every mode.
+To keep official status accurate, `answer` is generated from deterministic
+live facts; raw model text is exposed only when `include_model_answer` is set.
 
 The public testnet includes `YNXAISettlement`:
 

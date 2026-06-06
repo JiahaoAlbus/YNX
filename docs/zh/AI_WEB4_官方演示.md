@@ -53,7 +53,9 @@ curl -s https://ai.ynxweb4.com/ai/chat \
 默认是 live deterministic intelligence mode：它会读实时 YNX bridge、
 route、asset、Web4、AI settlement 状态，再给出确定性回答。服务器配置
 本地 Ollama 模型或外部 LLM provider 后，同一个接口会切换到 LLM 模式，
-但仍然保留实时 YNX 上下文。
+但仍然保留实时 YNX 上下文。为了避免模型把 route / 资产 / settlement
+状态说错，官方 `answer` 由实时确定性上下文生成；如需查看模型原始补充，
+请求里可以传 `include_model_answer: true`。
 
 ## 4. 公开测试网链上结算
 

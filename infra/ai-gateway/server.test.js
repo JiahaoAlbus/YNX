@@ -429,12 +429,13 @@ test("answers intelligence chat through configured Ollama provider", async (t) =
   const chat = assertJson(
     await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
       method: "POST",
-      body: { message: "Summarize YNX." },
+      body: { message: "Summarize YNX.", include_model_answer: true },
     }),
     200
   );
   assert.equal(chat.ok, true);
   assert.equal(chat.mode, "llm:ollama");
   assert.equal(chat.model, "qwen2.5:1.5b");
-  assert.equal(chat.answer, "mock ollama intelligence answer");
+  assert.match(chat.answer, /YNX Intelligence/);
+  assert.equal(chat.model_answer, "mock ollama intelligence answer");
 });

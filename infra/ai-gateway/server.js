@@ -731,6 +731,7 @@ async function callConfiguredLlm(message, context) {
     "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
     "Use the provided live context. Be candid about testnet limits.",
     "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
+    "Answer concisely in the user's language. Keep the answer complete and under 10 short bullets.",
   ].join(" ");
 
   if (AI_LLM_PROVIDER === "ollama") {
@@ -982,7 +983,7 @@ const server = http.createServer(async (req, res) => {
       llm = { ok: false, error: error.message || "llm_request_failed" };
     }
     const usedLlm = Boolean(llm && llm.ok);
-    const answer = usedLlm ? llm.text : deterministicIntelligenceAnswer(message, context);
+    const answer = deterministicIntelligenceAnswer(message, context);
     addAudit("intelligence.chat", {
       mode: usedLlm ? llmModeLabel() : "live-deterministic",
       llm_error: llm && !llm.ok ? llm.error : "",
@@ -994,6 +995,7 @@ const server = http.createServer(async (req, res) => {
       mode: usedLlm ? llmModeLabel() : "live-deterministic",
       model: usedLlm ? llm.raw_model || AI_LLM_MODEL : "",
       answer,
+      model_answer: usedLlm && (body.include_model_answer === true || body.include_model_answer === "1") ? llm.text : undefined,
       llm_error: llm && !llm.ok ? llm.error : "",
       context: body.include_context === true || body.include_context === "1" ? context : undefined,
     });

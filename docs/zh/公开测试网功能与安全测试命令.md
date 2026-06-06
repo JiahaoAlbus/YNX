@@ -92,6 +92,22 @@ curl -s https://web4.ynxweb4.com/ready | jq
 curl -s https://rpc.ynxweb4.com/bridge/health | jq
 ```
 
+## 4.1 全服务命令
+
+```bash
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'systemctl list-units --type=service --no-pager | grep -i ynx'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'systemctl is-active ynx-v2-node.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-faucet.service ynx-v2-bridge-service.service ynx-v2-web4-hub.service ynx-v2-ai-gateway.service'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'journalctl -u ynx-v2-node.service -u ynx-v2-indexer.service -u ynx-v2-bridge-service.service -u ynx-v2-web4-hub.service -u ynx-v2-ai-gateway.service -n 160 --no-pager'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'cd /home/ubuntu/YNX && scripts/public_security_gate.sh && scripts/public_testnet_extreme_readiness.sh && scripts/public_bridge_full_loop_probe.sh && scripts/public_ai_onchain_settlement_probe.sh && scripts/public_uptime_slo_probe.sh --once'
+```
+
 ## 5. 资产与交易检查
 
 核心地址：
@@ -187,6 +203,8 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 YNX AI 不是只做“限制 AI 能干什么”。当前定位应更全面：
 
 - YNX 状态智能层：读取链、bridge、资产、Web4、AI settlement 的实时事实；
+- 验证人/共识状态：实时读取 indexer `/validators`，回答高度、验证人数量、上一块签名数、voting power；
+- 链上交易查询：实时扫 YNX EVM RPC 最近交易，并回退到 AI/bridge 已知 tx 证据；
 - AI agent 权限层：通过 Web4 policy/session 控制 agent 能调用哪些工具、花多少钱、执行多少次；
 - AI 结算层：job、vault、payment、x402、on-chain settlement；
 - AI 风控层：官方答案用实时事实生成，LLM 原始输出默认隐藏，避免模型胡说路线状态；
@@ -206,6 +224,18 @@ AI 问答：
 curl -s https://ai.ynxweb4.com/ai/chat \
   -H 'content-type: application/json' \
   --data '{"message":"用中文简短总结 YNX 当前 AI、交易、跨链状态。"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  --data '{"message":"我们链验证人的状态怎么样？"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  --data '{"message":"用中文简短总结 YNX 链上最后一次交易数据。"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  --data '{"message":"给 YNX AI 交易助手第一版提三个功能建议，简短。"}' | jq
 ```
 
 查看服务器模型原始输出，需要显式 opt-in：

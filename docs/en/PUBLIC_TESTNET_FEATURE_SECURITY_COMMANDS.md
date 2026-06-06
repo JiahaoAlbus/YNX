@@ -83,6 +83,22 @@ curl -s https://web4.ynxweb4.com/ready | jq
 curl -s https://rpc.ynxweb4.com/bridge/health | jq
 ```
 
+## All Service Commands
+
+```bash
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'systemctl list-units --type=service --no-pager | grep -i ynx'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'systemctl is-active ynx-v2-node.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-faucet.service ynx-v2-bridge-service.service ynx-v2-web4-hub.service ynx-v2-ai-gateway.service'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'journalctl -u ynx-v2-node.service -u ynx-v2-indexer.service -u ynx-v2-bridge-service.service -u ynx-v2-web4-hub.service -u ynx-v2-ai-gateway.service -n 160 --no-pager'
+
+ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+  'cd /home/ubuntu/YNX && scripts/public_security_gate.sh && scripts/public_testnet_extreme_readiness.sh && scripts/public_bridge_full_loop_probe.sh && scripts/public_ai_onchain_settlement_probe.sh && scripts/public_uptime_slo_probe.sh --once'
+```
+
 ## Asset and Trading Checks
 
 ```bash
@@ -146,6 +162,8 @@ Expected: `401` or `403`.
 YNX AI is broader than “AI agent permissions and settlement”:
 
 - live YNX intelligence over chain, bridge, assets, Web4, and AI settlement;
+- validator and consensus status from the live indexer `/validators` endpoint;
+- latest EVM transaction lookup with fallback to known AI/bridge transaction evidence;
 - Web4 policy/session control for agent actions, spend, tool scope, and usage;
 - job, vault, payment, x402, and on-chain settlement;
 - factual answer guardrails: official answers are generated from live facts, raw model text is hidden by default;
@@ -158,6 +176,12 @@ curl -s https://ai.ynxweb4.com/ai/intelligence/brief | jq
 curl -s https://ai.ynxweb4.com/ai/chat \
   -H 'content-type: application/json' \
   --data '{"message":"Summarize current YNX AI, trading, and bridge status."}' | jq
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  --data '{"message":"validator status?"}' | jq
+curl -s https://ai.ynxweb4.com/ai/chat \
+  -H 'content-type: application/json' \
+  --data '{"message":"Summarize the latest YNX on-chain transaction."}' | jq
 curl -s https://ai.ynxweb4.com/ai/chat \
   -H 'content-type: application/json' \
   --data '{"message":"Summarize current YNX AI, trading, and bridge status.","include_model_answer":true}' | jq

@@ -38,6 +38,21 @@ function startMockIntelligenceUpstreams(port) {
     if (url.pathname === "/ready") {
       return res.end(JSON.stringify({ ok: true, checks: { persistence: true } }));
     }
+    if (url.pathname === "/ynx/overview") {
+      return res.end(JSON.stringify({ ok: true, chain_id: "ynx_9102-1", latest_height: 42, track: "v2-web4" }));
+    }
+    if (url.pathname === "/validators") {
+      return res.end(JSON.stringify({
+        ok: true,
+        latest_height: 42,
+        total: 2,
+        signed_count: 2,
+        validators: [
+          { address: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", voting_power: 1000, proposer_priority: 3, signed_last_block: true },
+          { address: "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", voting_power: 501, proposer_priority: -3, signed_last_block: true },
+        ],
+      }));
+    }
     res.statusCode = 404;
     return res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
@@ -430,6 +445,7 @@ test("answers intelligence chat from live context without an LLM key", async (t)
       OPENAI_API_KEY: "",
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
     },
     `http://127.0.0.1:${aiPort}/ready`
   );
@@ -450,6 +466,43 @@ test("answers intelligence chat from live context without an LLM key", async (t)
   assert.equal(chat.mode, "live-deterministic");
   assert.match(chat.answer, /YNX Intelligence/);
   assert.match(chat.answer, /full-loop-tested|full_loop_tested|闭环/);
+});
+
+test("answers validator status questions from live indexer data", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-validators-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_API_KEY: "",
+      OPENAI_API_KEY: "",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "我们链验证人的状态怎么样？" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.match(chat.answer, /验证人状态/);
+  assert.match(chat.answer, /上一块签名：2\/2/);
+  assert.doesNotMatch(chat.answer, /交易\/桥状态/);
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {
@@ -474,6 +527,7 @@ test("answers intelligence chat through configured Ollama provider", async (t) =
       AI_LLM_BASE_URL: `http://127.0.0.1:${ollamaPort}/api/chat`,
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
     },
     `http://127.0.0.1:${aiPort}/ready`
   );
@@ -518,6 +572,7 @@ test("answers latest transaction questions from live EVM RPC data", async (t) =>
       OPENAI_API_KEY: "",
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_EVM_RPC_URL: `http://127.0.0.1:${evmPort}`,
     },
     `http://127.0.0.1:${aiPort}/ready`

@@ -293,6 +293,15 @@ else
   record_ai "local_llm_opt_in_output" WARN "LLM not configured; deterministic mode only"
 fi
 
+status="$(post_json_status ai_chat_validators "${AI_URL}/ai/chat" '{"message":"我们链验证人的状态怎么样？"}')"
+assert_status "ai_chat_validator_status" "$status" '^200$' "validator live status"
+validator_answer="$(jq -r '.answer // ""' "${OUTPUT_DIR}/responses/ai_chat_validators.json")"
+if [[ "$validator_answer" == *"验证人"* && "$validator_answer" == *"上一块签名"* ]]; then
+  record_ai "validator_status_live_answer" PASS "validator answer includes live signing status"
+else
+  record_ai "validator_status_live_answer" FAIL "validator answer did not include live signing status"
+fi
+
 ai_onchain="$(jq -r '.intelligence.mode // .ai.model // empty' "${OUTPUT_DIR}/responses/ai_health.json")"
 settlement_ready="$(jq -r '.onchain.ready // false' "${OUTPUT_DIR}/responses/ai_health.json")"
 stats_jobs="$(jq -r '.stats.total_jobs // 0' "${OUTPUT_DIR}/responses/ai_health.json")"

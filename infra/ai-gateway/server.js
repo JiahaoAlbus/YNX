@@ -212,6 +212,7 @@ const AI_LLM_NUM_CTX = Math.max(1024, parseInt(process.env.AI_LLM_NUM_CTX || "20
 const AI_PUBLIC_BRIDGE_URL = (process.env.AI_PUBLIC_BRIDGE_URL || "https://rpc.ynxweb4.com/bridge").replace(/\/$/, "");
 const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL || "https://web4.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
+const AI_PUBLIC_INDEXER_URL = (process.env.AI_PUBLIC_INDEXER_URL || "https://indexer.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
 const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
 
@@ -602,11 +603,13 @@ function summarizeStats() {
 }
 
 async function collectIntelligenceContext() {
-  const [bridgeHealth, routeReadiness, bridgeAssets, web4Ready] = await Promise.all([
+  const [bridgeHealth, routeReadiness, bridgeAssets, web4Ready, indexerOverview, validators] = await Promise.all([
     getJson(`${AI_PUBLIC_BRIDGE_URL}/health`),
     getJson(`${AI_PUBLIC_BRIDGE_URL}/route-readiness`),
     getJson(`${AI_PUBLIC_BRIDGE_URL}/assets`),
     getJson(`${AI_PUBLIC_WEB4_URL}/ready`),
+    getJson(`${AI_PUBLIC_INDEXER_URL}/ynx/overview`),
+    getJson(`${AI_PUBLIC_INDEXER_URL}/validators`),
   ]);
   return {
     chain_id: AI_CHAIN_ID,
@@ -630,6 +633,13 @@ async function collectIntelligenceContext() {
       url: AI_PUBLIC_WEB4_URL,
       status: web4Ready.status,
       ready: web4Ready.payload,
+    },
+    chain: {
+      indexer_url: AI_PUBLIC_INDEXER_URL,
+      overview_status: indexerOverview.status,
+      overview: indexerOverview.payload,
+      validators_status: validators.status,
+      validators: validators.payload,
     },
     bridge: {
       url: AI_PUBLIC_BRIDGE_URL,
@@ -683,6 +693,18 @@ function compactIntelligenceContext(context) {
       ok: context.web4?.ready?.ok,
       checks: context.web4?.ready?.checks || {},
     },
+    chain: {
+      overview: {
+        chain_id: context.chain?.overview?.chain_id,
+        track: context.chain?.overview?.track,
+        height: context.chain?.overview?.latest_height,
+      },
+      validators: {
+        latest_height: context.chain?.validators?.latest_height,
+        total: context.chain?.validators?.total,
+        signed_count: context.chain?.validators?.signed_count,
+      },
+    },
     site: context.site || {},
     live_query: context.live_query || {},
   };
@@ -724,10 +746,16 @@ function wantsLatestTransaction(message) {
   );
 }
 
+function wantsValidatorStatus(message) {
+  const text = String(message || "").toLowerCase();
+  return /(验证人|验证节点|validator|validators|共识|签名|出块|投票|voting[_ -]?power|staking)/i.test(text);
+}
+
 function wantsLiveStatusAnswer(message) {
   const text = String(message || "").toLowerCase();
   return (
     wantsLatestTransaction(text) ||
+    wantsValidatorStatus(text) ||
     /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
   );
 }
@@ -851,6 +879,48 @@ function withTimeout(promise, timeoutMs, timeoutPayload) {
 
 function deterministicIntelligenceAnswer(message, context) {
   const zh = hasChinese(message);
+  if (wantsValidatorStatus(message)) {
+    const validators = context.chain?.validators || {};
+    const rows = Array.isArray(validators.validators) ? validators.validators : [];
+    const total = validators.total ?? rows.length;
+    const signed = validators.signed_count ?? rows.filter((row) => row.signed_last_block).length;
+    const latestHeight = validators.latest_height ?? "-";
+    const topRows = rows
+      .slice()
+      .sort((a, b) => Number(b.voting_power || 0) - Number(a.voting_power || 0))
+      .slice(0, 8);
+    const detailsZh = topRows.map((row, idx) => {
+      const short = row.address ? `${row.address.slice(0, 8)}...${row.address.slice(-6)}` : "-";
+      return `${idx + 1}. ${short} power=${row.voting_power ?? 0} signed_last_block=${row.signed_last_block ? "yes" : "no"} proposer_priority=${row.proposer_priority ?? 0}`;
+    });
+    const detailsEn = topRows.map((row, idx) => {
+      const short = row.address ? `${row.address.slice(0, 8)}...${row.address.slice(-6)}` : "-";
+      return `${idx + 1}. ${short} power=${row.voting_power ?? 0} signed_last_block=${row.signed_last_block ? "yes" : "no"} proposer_priority=${row.proposer_priority ?? 0}`;
+    });
+    if (zh) {
+      return [
+        "我刚从 YNX Indexer 实时查询了验证人状态：",
+        "",
+        `- 最新高度：${latestHeight}`,
+        `- 验证人数量：${total}`,
+        `- 上一块签名：${signed}/${total}`,
+        `- 状态判断：${Number(total) > 0 && Number(signed) === Number(total) ? "全部在线签名" : "存在未签名或数据不完整，需要检查节点/网络"}`,
+        "",
+        ...detailsZh,
+      ].join("\n");
+    }
+    return [
+      "I queried the YNX Indexer live for validator status:",
+      "",
+      `- Latest height: ${latestHeight}`,
+      `- Validators: ${total}`,
+      `- Signed last block: ${signed}/${total}`,
+      `- Status: ${Number(total) > 0 && Number(signed) === Number(total) ? "all listed validators signed" : "one or more validators did not sign or data is incomplete"}`,
+      "",
+      ...detailsEn,
+    ].join("\n");
+  }
+
   const latestTx = context.live_query?.latest_evm_transaction;
   if (latestTx) {
     if (!latestTx.ok) {

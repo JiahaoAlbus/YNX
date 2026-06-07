@@ -168,7 +168,8 @@ YNX AI is broader than “AI agent permissions and settlement”:
 - job, vault, payment, x402, and on-chain settlement;
 - factual answer guardrails: official answers are generated from live facts, raw model text is hidden by default;
 - operations assistant for route, trading, bridge, and settlement status;
-- website AI console at `/ai`.
+- website AI console at `/ai`;
+- AI action layer through `/ai/actions` and `/ai/actions/run`, so the AI can run controlled actions such as reading assets, validators, bridge readiness, creating monitoring jobs, and triggering protected bridge watcher scans.
 
 ```bash
 curl -s https://ai.ynxweb4.com/health | jq
@@ -186,6 +187,53 @@ curl -s https://ai.ynxweb4.com/ai/chat \
   -H 'content-type: application/json' \
   --data '{"message":"Summarize current YNX AI, trading, and bridge status.","include_model_answer":true}' | jq
 ```
+
+AI action catalog:
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/actions | jq
+```
+
+Public read actions:
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"chain.status"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"validators.status"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"assets.list"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"bridge.readiness"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"tx.latest"}' | jq
+```
+
+Protected actions require a Web4 policy/session. Without authorization they must fail:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"ai.monitor.create","target":"validators"}'
+```
+
+Expected: `400`, `401`, or `403`.
+
+Supported protected actions:
+
+- `ai.monitor.create` creates an AI monitoring job;
+- `bridge.watchers.scan` triggers bridge deposit watcher scanning and requires Web4 session plus a server-side bridge operator token;
+- `bridge.withdrawals.scan` triggers YNX burn/withdrawal watcher scanning and requires Web4 session plus a server-side bridge operator token.
 
 ```bash
 ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \

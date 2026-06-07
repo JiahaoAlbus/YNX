@@ -48,6 +48,20 @@ function startMockIntelligenceUpstreams(port) {
         riskNotice: "Public-testnet assets only.",
       }));
     }
+    if (req.method === "POST" && url.pathname === "/bridge/watchers/scan") {
+      if (req.headers["x-ynx-bridge-token"] !== "bridge-token-test") {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ ok: false, error: "operator_token_required" }));
+      }
+      return res.end(JSON.stringify({ ok: true, scanned: [{ routeId: "eth-sepolia-usdc", events_seen: 1 }] }));
+    }
+    if (req.method === "POST" && url.pathname === "/bridge/withdrawal-watchers/scan") {
+      if (req.headers["x-ynx-bridge-token"] !== "bridge-token-test") {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ ok: false, error: "operator_token_required" }));
+      }
+      return res.end(JSON.stringify({ ok: true, scanned: [{ routeId: "eth-sepolia-usdc", withdrawals_queued: 1 }] }));
+    }
     if (url.pathname === "/ready") {
       return res.end(JSON.stringify({ ok: true, checks: { persistence: true } }));
     }
@@ -596,6 +610,150 @@ test("grounds feature suggestions in live YNX assets and settlement context", as
   assert.match(chat.answer, /验证人签名/);
   assert.match(chat.answer, /AI vault\/payment\/job|AI 结算/);
   assert.doesNotMatch(chat.answer, /行情预测/);
+});
+
+test("exposes AI actions and runs public read actions", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-actions-read-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const actions = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/actions`), 200);
+  assert.equal(actions.ok, true);
+  assert.ok(actions.actions.some((item) => item.action === "assets.list"));
+  assert.ok(actions.actions.some((item) => item.action === "ai.monitor.create"));
+
+  const assets = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      body: { action: "assets.list" },
+    }),
+    200
+  );
+  assert.equal(assets.ok, true);
+  assert.equal(assets.result.assets[0].symbol, "NYXT");
+  assert.equal(assets.result.pairs[0].label, "wUSDC.y/YUSD.test");
+});
+
+test("protects AI action writes with Web4 policy sessions", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-actions-write-");
+  const web4Dir = await makeTempDir("ynx-web4-actions-write-");
+  const internalToken = "test-internal-token-actions";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_BRIDGE_OPERATOR_TOKEN: "bridge-token-test",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const denied = await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+    method: "POST",
+    body: { action: "ai.monitor.create", target: "validators" },
+  });
+  assert.equal(denied.status, 400);
+  assert.equal(denied.body.error, "policy_required");
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-actions",
+        allowed_actions: ["ai.job.create", "ai.bridge.watchers.scan"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.job.create", "ai.bridge.watchers.scan"],
+        ttl_sec: 600,
+        max_ops: 4,
+      },
+    }),
+    201
+  );
+
+  const monitor = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "ai.monitor.create",
+        policy_id: policy.policy.policy_id,
+        target: "validators",
+      },
+    }),
+    201
+  );
+  assert.equal(monitor.ok, true);
+  assert.equal(monitor.job.metadata.kind, "monitor");
+  assert.equal(monitor.job.policy_id, policy.policy.policy_id);
+
+  const scan = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "bridge.watchers.scan",
+        policy_id: policy.policy.policy_id,
+        route_id: "eth-sepolia-usdc",
+      },
+    }),
+    200
+  );
+  assert.equal(scan.ok, true);
+  assert.equal(scan.upstream.ok, true);
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {

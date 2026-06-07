@@ -209,7 +209,8 @@ YNX AI 不是只做“限制 AI 能干什么”。当前定位应更全面：
 - AI 结算层：job、vault、payment、x402、on-chain settlement；
 - AI 风控层：官方答案用实时事实生成，LLM 原始输出默认隐藏，避免模型胡说路线状态；
 - AI 运维层：给 operator 和用户解释当前链、交易、跨链、结算是否 ready；
-- AI 产品层：官网 `/ai` console 可直接问当前 YNX 状态。
+- AI 产品层：官网 `/ai` console 可直接问当前 YNX 状态；
+- AI 动作层：`/ai/actions` 和 `/ai/actions/run` 让 AI 能执行受控动作，例如查资产、查验证人、查 bridge readiness、创建监控任务、触发受保护的 bridge watcher scan。
 
 AI 健康：
 
@@ -237,6 +238,53 @@ curl -s https://ai.ynxweb4.com/ai/chat \
   -H 'content-type: application/json' \
   --data '{"message":"给 YNX AI 交易助手第一版提三个功能建议，简短。"}' | jq
 ```
+
+AI 动作目录：
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/actions | jq
+```
+
+公开可读动作：
+
+```bash
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"chain.status"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"validators.status"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"assets.list"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"bridge.readiness"}' | jq
+
+curl -s https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"tx.latest"}' | jq
+```
+
+受保护动作必须带 Web4 policy/session。未授权时应拒绝：
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  https://ai.ynxweb4.com/ai/actions/run \
+  -H 'content-type: application/json' \
+  --data '{"action":"ai.monitor.create","target":"validators"}'
+```
+
+期望：`400`、`401` 或 `403`。
+
+已支持的受保护动作：
+
+- `ai.monitor.create`：创建 AI 监控任务；
+- `bridge.watchers.scan`：触发 bridge deposit watcher scan，需要 Web4 session + 服务器 bridge operator token；
+- `bridge.withdrawals.scan`：触发 bridge withdrawal watcher scan，需要 Web4 session + 服务器 bridge operator token。
 
 查看服务器模型原始输出，需要显式 opt-in：
 

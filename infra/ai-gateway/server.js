@@ -215,6 +215,7 @@ const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxwe
 const AI_PUBLIC_INDEXER_URL = (process.env.AI_PUBLIC_INDEXER_URL || "https://indexer.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
 const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
+const AI_BRIDGE_OPERATOR_TOKEN = process.env.AI_BRIDGE_OPERATOR_TOKEN || process.env.BRIDGE_OPERATOR_TOKEN || "";
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -912,6 +913,71 @@ function llmModeLabel() {
   return `llm:${AI_LLM_PROVIDER}`;
 }
 
+function aiActionCatalog() {
+  return [
+    {
+      action: "chain.status",
+      title: "Read YNX chain status",
+      mode: "read",
+      auth: "public",
+      description: "Returns current chain overview, validator summary, bridge route summary, assets, Web4, and AI settlement status.",
+    },
+    {
+      action: "validators.status",
+      title: "Read validator status",
+      mode: "read",
+      auth: "public",
+      description: "Returns latest height, validator count, signing count, and validator voting power.",
+    },
+    {
+      action: "assets.list",
+      title: "Read live assets and AMM pairs",
+      mode: "read",
+      auth: "public",
+      description: "Returns live NYXT/YUSD/wrapped test assets and public AMM pairs from the bridge asset registry.",
+    },
+    {
+      action: "bridge.readiness",
+      title: "Read bridge route readiness",
+      mode: "read",
+      auth: "public",
+      description: "Returns all bridge route phases, blockers, watcher evidence, and full-loop counts.",
+    },
+    {
+      action: "tx.latest",
+      title: "Read latest YNX EVM transaction",
+      mode: "read",
+      auth: "public",
+      description: "Scans recent YNX EVM blocks and returns the latest visible transaction.",
+    },
+    {
+      action: "ai.monitor.create",
+      title: "Create an AI monitoring job",
+      mode: "write",
+      auth: "web4-session",
+      description: "Creates an auditable AI job for monitoring a YNX route, validator set, asset, or service.",
+    },
+    {
+      action: "bridge.watchers.scan",
+      title: "Trigger bridge deposit watcher scan",
+      mode: "operator",
+      auth: "web4-session + bridge-operator-token",
+      description: "Asks bridge service to scan deposit watchers. Requires an authorized Web4 session and server-side bridge operator token.",
+    },
+    {
+      action: "bridge.withdrawals.scan",
+      title: "Trigger bridge withdrawal watcher scan",
+      mode: "operator",
+      auth: "web4-session + bridge-operator-token",
+      description: "Asks bridge service to scan YNX burn events and release queues. Requires an authorized Web4 session and server-side bridge operator token.",
+    },
+  ];
+}
+
+function actionByName(name) {
+  return aiActionCatalog().find((item) => item.action === name);
+}
+
 function withTimeout(promise, timeoutMs, timeoutPayload) {
   let timer = null;
   const timeout = new Promise((resolve) => {
@@ -1277,6 +1343,127 @@ async function authorizeViaWeb4(req, action, options = {}) {
   }
 }
 
+async function requireActionAuthorization(req, action, body, options = {}) {
+  const policyId = body.policy_id || options.policy_id || "";
+  const amount = toNumber(options.amount ?? body.amount, 0);
+  const auth = await authorizeViaWeb4(req, action, {
+    policy_id: policyId,
+    amount,
+    consume: options.consume !== false,
+    request_id: body.request_id || body.job_id || body.action_id || "",
+    resource: options.resource || `ai/action/${action}`,
+    reason: options.reason || action,
+  });
+  if (!auth.ok) return { ok: false, status: auth.status, error: auth.error };
+  return { ok: true, policy_id: policyId, authorization: auth.authorization };
+}
+
+async function runAiAction(req, body, context) {
+  const action = String(body.action || body.intent || "").trim();
+  const catalogItem = actionByName(action);
+  if (!catalogItem) return { status: 400, payload: { ok: false, error: "unsupported_action", actions: aiActionCatalog() } };
+
+  if (action === "chain.status") {
+    return {
+      status: 200,
+      payload: {
+        ok: true,
+        action,
+        result: {
+          chain: context.chain,
+          bridge: {
+            health: context.bridge?.health,
+            route_readiness: context.bridge?.route_readiness,
+            assets: context.bridge?.assets,
+          },
+          web4: context.web4,
+          ai: context.ai,
+        },
+      },
+    };
+  }
+
+  if (action === "validators.status") {
+    return { status: 200, payload: { ok: true, action, result: context.chain?.validators || {} } };
+  }
+
+  if (action === "assets.list") {
+    return { status: 200, payload: { ok: true, action, result: context.bridge?.assets || {} } };
+  }
+
+  if (action === "bridge.readiness") {
+    return { status: 200, payload: { ok: true, action, result: context.bridge?.route_readiness || {} } };
+  }
+
+  if (action === "tx.latest") {
+    const latest = await getLatestEvmTransaction(Math.max(1, Math.min(2000, parseInt(body.scan_depth || "1000", 10) || 1000)));
+    return { status: 200, payload: { ok: true, action, result: latest } };
+  }
+
+  if (action === "ai.monitor.create") {
+    const auth = await requireActionAuthorization(req, "ai.job.create", body, {
+      resource: "ai/action/monitor/create",
+      reason: "ai-monitor-create",
+    });
+    if (!auth.ok) return { status: auth.status, payload: { ok: false, error: auth.error } };
+    const job = createJob({
+      job_id: body.job_id || randomId("job_monitor"),
+      creator: body.creator || "ynx-ai-action",
+      worker: body.worker || "ynx-intelligence",
+      policy_id: auth.policy_id,
+      reward: body.reward || "0",
+      stake: body.stake || "0",
+      input_uri: body.input_uri || `ynx://monitor/${body.target || body.route_id || body.service || "public-testnet"}`,
+      challenge_window_blocks: body.challenge_window_blocks,
+    });
+    job.metadata = {
+      kind: "monitor",
+      target: body.target || "",
+      route_id: body.route_id || "",
+      service: body.service || "",
+      query: body.query || "",
+      created_by_action: action,
+    };
+    state.jobs.unshift(job);
+    addAudit("action.monitor.created", { job_id: job.job_id, policy_id: auth.policy_id, metadata: job.metadata });
+    persist();
+    return { status: 201, payload: { ok: true, action, job } };
+  }
+
+  if (action === "bridge.watchers.scan" || action === "bridge.withdrawals.scan") {
+    const web4Action = action === "bridge.watchers.scan" ? "ai.bridge.watchers.scan" : "ai.bridge.withdrawals.scan";
+    const auth = await requireActionAuthorization(req, web4Action, body, {
+      resource: `ai/action/${action}`,
+      reason: action,
+    });
+    if (!auth.ok) return { status: auth.status, payload: { ok: false, error: auth.error } };
+    if (!AI_BRIDGE_OPERATOR_TOKEN) {
+      return { status: 503, payload: { ok: false, error: "bridge_operator_token_not_configured" } };
+    }
+    const upstreamPath = action === "bridge.watchers.scan" ? "/watchers/scan" : "/withdrawal-watchers/scan";
+    const upstream = await postJson(
+      `${AI_PUBLIC_BRIDGE_URL}${upstreamPath}`,
+      {
+        route_id: body.route_id || body.routeId || "",
+        max_blocks: body.max_blocks,
+      },
+      { "x-ynx-bridge-token": AI_BRIDGE_OPERATOR_TOKEN },
+      { timeout_ms: 30000 },
+    );
+    const ok = upstream.status >= 200 && upstream.status < 300 && upstream.payload?.ok !== false;
+    addAudit("action.bridge.scan", {
+      action,
+      route_id: body.route_id || body.routeId || "",
+      status: upstream.status,
+      ok,
+    });
+    persist();
+    return { status: ok ? 200 : upstream.status || 502, payload: { ok, action, upstream: upstream.payload } };
+  }
+
+  return { status: 400, payload: { ok: false, error: "unsupported_action", action } };
+}
+
 function ensureUnique(collection, key, value) {
   return !value || !collection.some((item) => item[key] === value);
 }
@@ -1379,6 +1566,27 @@ const server = http.createServer(async (req, res) => {
       answer: deterministicIntelligenceAnswer(url.searchParams.get("q") || "status", enrichedContext),
       context: enrichedContext,
     });
+  }
+
+  if (req.method === "GET" && url.pathname === "/ai/actions") {
+    return json(res, 200, {
+      ok: true,
+      actions: aiActionCatalog(),
+      boundary: {
+        public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest"],
+        protected_actions: ["ai.monitor.create", "bridge.watchers.scan", "bridge.withdrawals.scan"],
+        protected_actions_require: "Web4 policy/session; bridge scans also require a server-side bridge operator token.",
+      },
+    });
+  }
+
+  if (req.method === "POST" && url.pathname === "/ai/actions/run") {
+    if (!AI_INTELLIGENCE_ENABLED) return json(res, 503, { ok: false, error: "intelligence_disabled" });
+    const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const context = await collectIntelligenceContext();
+    const result = await runAiAction(req, body, context);
+    return json(res, result.status, result.payload);
   }
 
   if (req.method === "POST" && url.pathname === "/ai/chat") {

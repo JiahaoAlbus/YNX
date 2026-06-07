@@ -218,6 +218,7 @@ fetch_json indexer_health "${INDEXER_URL}/health"
 fetch_json web4_ready "${WEB4_URL}/ready"
 fetch_json ai_health "${AI_URL}/health"
 fetch_json ai_brief "${AI_URL}/ai/intelligence/brief"
+fetch_json ai_actions "${AI_URL}/ai/actions"
 fetch_json bridge_health "${BRIDGE_URL}/health"
 fetch_json bridge_readiness "${BRIDGE_URL}/route-readiness"
 fetch_text website_ai "${WEBSITE_URL}/ai"
@@ -272,6 +273,8 @@ status="$(post_json_status ai_job_requires_policy "${AI_URL}/ai/jobs" '{"job_id"
 assert_status "ai_job_create_requires_policy" "$status" '^(400|401|403)$' "policy/session guard"
 status="$(post_json_status ai_vault_requires_policy "${AI_URL}/ai/vaults" '{"vault_id":"security_probe_vault","owner":"probe","balance":1}')"
 assert_status "ai_vault_create_requires_policy" "$status" '^(400|401|403)$' "policy/session guard"
+status="$(post_json_status ai_action_monitor_requires_policy "${AI_URL}/ai/actions/run" '{"action":"ai.monitor.create","target":"validators"}')"
+assert_status "ai_action_monitor_requires_policy" "$status" '^(400|401|403)$' "AI action policy/session guard"
 
 ai_chat_status="$(post_json_status ai_chat "${AI_URL}/ai/chat" '{"message":"用中文简短总结 YNX 当前 AI 和交易状态。"}')"
 assert_status "ai_chat_public" "$ai_chat_status" '^200$' "/ai/chat"
@@ -309,6 +312,22 @@ if [[ "$asset_answer" == *"NYXT"* && "$asset_answer" == *"YUSD.test"* && "$asset
   record_ai "circulating_assets_live_answer" PASS "asset answer lists live assets and AMM pairs"
 else
   record_ai "circulating_assets_live_answer" FAIL "asset answer did not list live assets and AMM pairs"
+fi
+
+actions_count="$(jq -r '.actions | length' "${OUTPUT_DIR}/responses/ai_actions.json")"
+if [[ "$actions_count" -ge 8 ]] && jq -e '.actions[] | select(.action=="ai.monitor.create")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null; then
+  record_ai "action_catalog_live" PASS "actions=${actions_count}"
+else
+  record_ai "action_catalog_live" FAIL "AI action catalog missing expected actions"
+fi
+
+status="$(post_json_status ai_action_assets "${AI_URL}/ai/actions/run" '{"action":"assets.list"}')"
+assert_status "ai_action_assets_list" "$status" '^200$' "AI action assets.list"
+action_assets="$(jq -r '.result.assets[]?.symbol' "${OUTPUT_DIR}/responses/ai_action_assets.json" | tr '\n' ' ')"
+if [[ "$action_assets" == *"NYXT"* && "$action_assets" == *"YUSD.test"* && "$action_assets" == *"wUSDC.y"* && "$action_assets" == *"wETH.y"* ]]; then
+  record_ai "action_assets_live" PASS "$action_assets"
+else
+  record_ai "action_assets_live" FAIL "assets.list action missing live assets"
 fi
 
 ai_onchain="$(jq -r '.intelligence.mode // .ai.model // empty' "${OUTPUT_DIR}/responses/ai_health.json")"

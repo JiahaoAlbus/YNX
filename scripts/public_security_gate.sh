@@ -283,7 +283,7 @@ ai_model_answer="$(jq -r '.model_answer // empty' "${OUTPUT_DIR}/responses/ai_ch
 [[ "$ai_answer" == *"2/5"* && "$ai_answer" == *"full-loop-tested"* ]] && record_ai "factual_route_boundary" PASS "answer reports exact full-loop route count" || record_ai "factual_route_boundary" FAIL "answer did not report exact 2/5 route count"
 [[ -z "$ai_model_answer" || "$ai_model_answer" == "null" ]] && record_ai "model_answer_hidden_by_default" PASS "raw model text hidden unless requested" || record_ai "model_answer_hidden_by_default" FAIL "model_answer exposed by default"
 
-status="$(post_json_status ai_chat_with_model "${AI_URL}/ai/chat" '{"message":"请用中文给 YNX AI 交易助手第一版提三个功能建议。","include_model_answer":true}')"
+status="$(post_json_status ai_chat_with_model "${AI_URL}/ai/chat" '{"message":"请用中文解释 Intelligence Layer 这个产品定位，三句话。","include_model_answer":true}')"
 assert_status "ai_chat_model_answer_opt_in" "$status" '^200$' "include_model_answer"
 model_answer_opt="$(jq -r '.model_answer // empty' "${OUTPUT_DIR}/responses/ai_chat_with_model.json")"
 health_mode="$(jq -r '.intelligence.mode // ""' "${OUTPUT_DIR}/responses/ai_health.json")"
@@ -300,6 +300,15 @@ if [[ "$validator_answer" == *"验证人"* && "$validator_answer" == *"上一块
   record_ai "validator_status_live_answer" PASS "validator answer includes live signing status"
 else
   record_ai "validator_status_live_answer" FAIL "validator answer did not include live signing status"
+fi
+
+status="$(post_json_status ai_chat_assets "${AI_URL}/ai/chat" '{"message":"给我我们 chain 上面现在能够流通的货币？"}')"
+assert_status "ai_chat_circulating_assets" "$status" '^200$' "circulating asset live status"
+asset_answer="$(jq -r '.answer // ""' "${OUTPUT_DIR}/responses/ai_chat_assets.json")"
+if [[ "$asset_answer" == *"NYXT"* && "$asset_answer" == *"YUSD.test"* && "$asset_answer" == *"wUSDC.y"* && "$asset_answer" == *"wETH.y"* && "$asset_answer" == *"AMM"* ]]; then
+  record_ai "circulating_assets_live_answer" PASS "asset answer lists live assets and AMM pairs"
+else
+  record_ai "circulating_assets_live_answer" FAIL "asset answer did not list live assets and AMM pairs"
 fi
 
 ai_onchain="$(jq -r '.intelligence.mode // .ai.model // empty' "${OUTPUT_DIR}/responses/ai_health.json")"

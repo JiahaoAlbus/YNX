@@ -667,9 +667,19 @@ function summarizeRoutePhases(context) {
   return items.map((item) => `${item.routeId}:${item.phase}`).join(", ");
 }
 
+function bridgeAssets(context) {
+  const payload = context.bridge?.assets || {};
+  return {
+    assets: Array.isArray(payload.assets) ? payload.assets : [],
+    pairs: Array.isArray(payload.pairs) ? payload.pairs : [],
+    riskNotice: payload.riskNotice || "",
+  };
+}
+
 function compactIntelligenceContext(context) {
   const routeReadiness = context.bridge?.route_readiness || {};
   const bridgeHealth = context.bridge?.health || {};
+  const { assets, pairs, riskNotice } = bridgeAssets(context);
   return {
     generated_at: context.generated_at,
     chain_id: context.chain_id,
@@ -687,6 +697,25 @@ function compactIntelligenceContext(context) {
             full_loop_tested: item.full_loop_tested,
           }))
         : [],
+      assets: assets.map((asset) => ({
+        symbol: asset.symbol,
+        kind: asset.kind,
+        decimals: asset.decimals,
+        status: asset.status,
+        contract: asset.contract || asset.evmContract || "",
+        denom: asset.denom || "",
+        routeId: asset.routeId || "",
+        redeemable: asset.redeemable,
+        mainnetValue: asset.mainnetValue,
+      })),
+      pairs: pairs.map((pair) => ({
+        label: pair.label,
+        pair: pair.pair,
+        type: pair.type,
+        feeBps: pair.feeBps,
+        status: pair.status,
+      })),
+      risk_notice: riskNotice,
     },
     web4: {
       status: context.web4?.status || 0,
@@ -751,11 +780,27 @@ function wantsValidatorStatus(message) {
   return /(验证人|验证节点|validator|validators|共识|签名|出块|投票|voting[_ -]?power|staking)/i.test(text);
 }
 
+function wantsCirculatingAssets(message) {
+  const text = String(message || "").toLowerCase();
+  return (
+    /(流通|能够流通|能流通|可流通|可以流通|现在.*(货币|币|币种|资产)|有哪些.*(货币|币|币种|资产)|能用.*(货币|币|币种|资产)|可用.*(货币|币|币种|资产)|交易对|amm|稳定币)/i.test(text) ||
+    /\b(circulating|tradable|listed|available|live)\s+(assets?|tokens?|coins?|pairs?)\b/i.test(text) ||
+    /\b(assets?|tokens?|coins?|pairs?)\s+(circulating|tradable|listed|available|live)\b/i.test(text)
+  );
+}
+
+function wantsFeatureSuggestions(message) {
+  const text = String(message || "").toLowerCase();
+  return /(功能建议|功能规划|第一版|产品建议|做什么功能|feature suggestions?|roadmap|mvp|assistant features?)/i.test(text);
+}
+
 function wantsLiveStatusAnswer(message) {
   const text = String(message || "").toLowerCase();
   return (
     wantsLatestTransaction(text) ||
     wantsValidatorStatus(text) ||
+    wantsCirculatingAssets(text) ||
+    wantsFeatureSuggestions(text) ||
     /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
   );
 }
@@ -879,6 +924,78 @@ function withTimeout(promise, timeoutMs, timeoutPayload) {
 
 function deterministicIntelligenceAnswer(message, context) {
   const zh = hasChinese(message);
+  if (wantsFeatureSuggestions(message)) {
+    const { assets, pairs } = bridgeAssets(context);
+    const assetSymbols = assets.map((asset) => asset.symbol).filter(Boolean).join(", ") || "NYXT/YUSD.test/wrapped assets";
+    const pairLabels = pairs.map((pair) => pair.label).filter(Boolean).join(", ") || "public AMM pairs";
+    const validators = context.chain?.validators || {};
+    const signed = validators.signed_count ?? "-";
+    const total = validators.total ?? "-";
+    const settlement = context.ai?.onchain || {};
+    if (zh) {
+      return [
+        "基于 YNX 当前真实状态，我建议 AI 交易助手第一版先做这 3 个具体功能：",
+        "",
+        `1. 资产与交易对助手：直接识别当前 live 资产 ${assetSymbols}，展示 ${pairLabels} 的可交易状态、合约地址、测试网/不可赎回边界，并提示哪些资产只是 route/manual_loop_ready。`,
+        `2. 交易前风控检查：用户准备换币或跨链前，AI 自动检查 AMM pair 是否 live、bridge route 是否 full-loop-tested、YUSD.test 是否只是测试稳定资产、当前验证人签名是否正常（现在 ${signed}/${total}）。`,
+        `3. AI 结算与任务助手：把 Web4 权限、AI vault/payment/job 和链上 settlement contract=${settlement.settlement_contract || "-"} 串起来，让用户能创建受限额度的 AI 交易/监控任务，并把结果写入审计记录或链上结算。`,
+        "",
+        "这不是泛泛的通用加密项目话术，而是围绕 YNX 现在已经上线的资产、AMM、桥、验证人和 AI 结算能力做第一版闭环。",
+      ].join("\n");
+    }
+    return [
+      "Based on the current live YNX context, the first AI trading assistant should ship these three concrete features:",
+      "",
+      `1. Asset and pair assistant: recognize live assets ${assetSymbols}, show tradable status for ${pairLabels}, contract addresses, and testnet/non-redeemable boundaries.`,
+      `2. Pre-trade risk check: before a swap or bridge action, verify AMM pair status, bridge route phase, YUSD.test test-only status, and validator signing health (${signed}/${total} currently signed).`,
+      `3. AI settlement task assistant: connect Web4 policy, AI vault/payment/job flows, and settlement contract=${settlement.settlement_contract || "-"} so users can create capped AI monitoring/trading tasks with audit and on-chain settlement evidence.`,
+    ].join("\n");
+  }
+
+  if (wantsCirculatingAssets(message)) {
+    const { assets, pairs, riskNotice } = bridgeAssets(context);
+    const liveAssets = assets.filter((asset) => String(asset.status || "").toLowerCase() === "live");
+    const listedAssets = liveAssets.length > 0 ? liveAssets : assets;
+    const assetLines = listedAssets.map((asset, idx) => {
+      const address = asset.contract || asset.evmContract || asset.denom || "-";
+      const route = asset.routeId ? `, route=${asset.routeId}` : "";
+      const redeemable =
+        asset.redeemable === false || asset.mainnetValue === false
+          ? zh
+            ? ", 不可赎回/无主网价值"
+            : ", not redeemable/no mainnet value"
+          : "";
+      return `${idx + 1}. ${asset.symbol || "-"} - ${asset.kind || asset.name || "-"}, decimals=${asset.decimals ?? "-"}, ${address}${route}${redeemable}`;
+    });
+    const pairLines = pairs.map((pair, idx) => (
+      `${idx + 1}. ${pair.label || pair.pair || "-"} - ${pair.type || "pair"}, feeBps=${pair.feeBps ?? "-"}, address=${pair.pair || "-"}, status=${pair.status || "-"}`
+    ));
+    if (zh) {
+      return [
+        "我刚从 YNX Bridge 资产接口实时查询了当前链上可用/可流通的测试网资产：",
+        "",
+        "资产：",
+        ...(assetLines.length ? assetLines : ["- 暂无资产数据，需检查 /bridge/assets。"]),
+        "",
+        "当前有公开 AMM 交易对：",
+        ...(pairLines.length ? pairLines : ["- 暂无公开 AMM 交易对数据。"]),
+        "",
+        `边界说明：${riskNotice || "这些都是公开测试网资产；wrapped asset 是测试网映射，不代表真实主网 BTC/ETH/USDT/USDC 已托管、可赎回或有主网价值。"}`,
+      ].join("\n");
+    }
+    return [
+      "I queried the YNX Bridge asset endpoint live. Current public-testnet assets available on YNX:",
+      "",
+      "Assets:",
+      ...(assetLines.length ? assetLines : ["- No asset data is currently available; check /bridge/assets."]),
+      "",
+      "Public AMM pairs:",
+      ...(pairLines.length ? pairLines : ["- No public AMM pair data is currently available."]),
+      "",
+      `Boundary: ${riskNotice || "These are public-testnet assets. Wrapped assets are testnet representations, not real mainnet custody, redemption, or mainnet value."}`,
+    ].join("\n");
+  }
+
   if (wantsValidatorStatus(message)) {
     const validators = context.chain?.validators || {};
     const rows = Array.isArray(validators.validators) ? validators.validators : [];
@@ -1013,6 +1130,8 @@ async function callConfiguredLlm(message, context) {
     "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
     "Use the provided live context. Be candid about testnet limits.",
     "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
+    "For product or feature suggestions, avoid generic blockchain advice. Ground every suggestion in the current YNX context: live assets, AMM pairs, validators, bridge routes, Web4 policy, and AI settlement.",
+    "When discussing assets, distinguish live public-testnet assets from real mainnet custody, redemption, and liquidity.",
     "Answer concisely in the user's language. Keep the answer complete and under 10 short bullets.",
     "Do not output hidden chain-of-thought or <think> blocks.",
   ].join(" ");

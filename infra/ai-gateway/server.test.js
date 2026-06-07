@@ -33,7 +33,20 @@ function startMockIntelligenceUpstreams(port) {
       }));
     }
     if (url.pathname === "/bridge/assets") {
-      return res.end(JSON.stringify({ ok: true, assets: [{ symbol: "YUSD.test" }] }));
+      return res.end(JSON.stringify({
+        ok: true,
+        assets: [
+          { symbol: "NYXT", kind: "native", decimals: 18, denom: "anyxt", status: "live" },
+          { symbol: "YUSD.test", kind: "synthetic-test-stable-asset", decimals: 6, contract: "0xyusd", redeemable: false, mainnetValue: false, status: "live" },
+          { symbol: "wUSDC.y", kind: "wrapped-testnet-asset", decimals: 6, contract: "0xusdc", routeId: "eth-sepolia-usdc", status: "live" },
+          { symbol: "wETH.y", kind: "wrapped-testnet-asset", decimals: 18, contract: "0xeth", routeId: "eth-sepolia-eth", status: "live" },
+        ],
+        pairs: [
+          { label: "wUSDC.y/YUSD.test", pair: "0xpair1", type: "constant-product-amm", feeBps: 30, status: "live" },
+          { label: "wETH.y/YUSD.test", pair: "0xpair2", type: "constant-product-amm", feeBps: 30, status: "live" },
+        ],
+        riskNotice: "Public-testnet assets only.",
+      }));
     }
     if (url.pathname === "/ready") {
       return res.end(JSON.stringify({ ok: true, checks: { persistence: true } }));
@@ -503,6 +516,86 @@ test("answers validator status questions from live indexer data", async (t) => {
   assert.match(chat.answer, /验证人状态/);
   assert.match(chat.answer, /上一块签名：2\/2/);
   assert.doesNotMatch(chat.answer, /交易\/桥状态/);
+});
+
+test("answers circulating asset questions from live bridge asset data", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-assets-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_API_KEY: "",
+      OPENAI_API_KEY: "",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "给我我们 chain 上面现在能够流通的货币？" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.match(chat.answer, /NYXT/);
+  assert.match(chat.answer, /YUSD\.test/);
+  assert.match(chat.answer, /wUSDC\.y/);
+  assert.match(chat.answer, /wETH\.y/);
+  assert.match(chat.answer, /wUSDC\.y\/YUSD\.test/);
+  assert.doesNotMatch(chat.answer, /产品定位建议/);
+});
+
+test("grounds feature suggestions in live YNX assets and settlement context", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-grounded-features-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_PROVIDER: "ollama",
+      AI_LLM_MODEL: "qwen2.5:1.5b",
+      AI_LLM_BASE_URL: "http://127.0.0.1:1/api/chat",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "给 YNX AI 交易助手第一版提三个功能建议，简短。" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.equal(chat.mode, "live-deterministic");
+  assert.match(chat.answer, /wUSDC\.y\/YUSD\.test/);
+  assert.match(chat.answer, /验证人签名/);
+  assert.match(chat.answer, /AI vault\/payment\/job|AI 结算/);
+  assert.doesNotMatch(chat.answer, /行情预测/);
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {

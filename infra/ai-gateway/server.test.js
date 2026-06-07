@@ -36,14 +36,14 @@ function startMockIntelligenceUpstreams(port) {
       return res.end(JSON.stringify({
         ok: true,
         assets: [
-          { symbol: "NYXT", kind: "native", decimals: 18, denom: "anyxt", status: "live" },
-          { symbol: "YUSD.test", kind: "synthetic-test-stable-asset", decimals: 6, contract: "0xyusd", redeemable: false, mainnetValue: false, status: "live" },
-          { symbol: "wUSDC.y", kind: "wrapped-testnet-asset", decimals: 6, contract: "0xusdc", routeId: "eth-sepolia-usdc", status: "live" },
-          { symbol: "wETH.y", kind: "wrapped-testnet-asset", decimals: 18, contract: "0xeth", routeId: "eth-sepolia-eth", status: "live" },
+          { symbol: "NYXT", kind: "native", decimals: 18, denom: "anyxt", evmContract: "0x0000000000000000000000000000000000000009", status: "live" },
+          { symbol: "YUSD.test", kind: "synthetic-test-stable-asset", decimals: 6, contract: "0x0000000000000000000000000000000000000001", redeemable: false, mainnetValue: false, status: "live" },
+          { symbol: "wUSDC.y", kind: "wrapped-testnet-asset", decimals: 6, contract: "0x0000000000000000000000000000000000000002", routeId: "eth-sepolia-usdc", status: "live" },
+          { symbol: "wETH.y", kind: "wrapped-testnet-asset", decimals: 18, contract: "0x0000000000000000000000000000000000000003", routeId: "eth-sepolia-eth", status: "live" },
         ],
         pairs: [
-          { label: "wUSDC.y/YUSD.test", pair: "0xpair1", type: "constant-product-amm", feeBps: 30, status: "live" },
-          { label: "wETH.y/YUSD.test", pair: "0xpair2", type: "constant-product-amm", feeBps: 30, status: "live" },
+          { label: "wUSDC.y/YUSD.test", pair: "0x0000000000000000000000000000000000000011", type: "constant-product-amm", feeBps: 30, status: "live" },
+          { label: "wETH.y/YUSD.test", pair: "0x0000000000000000000000000000000000000012", type: "constant-product-amm", feeBps: 30, status: "live" },
         ],
         riskNotice: "Public-testnet assets only.",
       }));
@@ -161,6 +161,13 @@ function startMockEvmRpc(port) {
             gasUsed: "0x5208",
             logs: [],
           },
+        }));
+      }
+      if (body.method === "eth_call") {
+        return res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          id: body.id,
+          result: "0x00000000000000000000000000000000000000000000000000000000000186a0",
         }));
       }
       return res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result: null }));
@@ -570,6 +577,84 @@ test("answers circulating asset questions from live bridge asset data", async (t
   assert.match(chat.answer, /wETH\.y/);
   assert.match(chat.answer, /wUSDC\.y\/YUSD\.test/);
   assert.doesNotMatch(chat.answer, /产品定位建议/);
+});
+
+test("answers combined asset layer and trading requests without dropping intent", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-combined-trade-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_API_KEY: "",
+      OPENAI_API_KEY: "",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const chat = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
+      method: "POST",
+      body: { message: "帮我查看我们链现在有哪些货币以及现在的层数和你帮我交易一下" },
+    }),
+    200
+  );
+  assert.equal(chat.ok, true);
+  assert.match(chat.answer, /NYXT/);
+  assert.match(chat.answer, /L1|层级|层/);
+  assert.match(chat.answer, /trade\.quote|报价/);
+  assert.match(chat.answer, /钱包签名|wallet signature/);
+});
+
+test("quotes public AMM trades as an AI action", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const evmPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-trade-quote-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  const evm = await startMockEvmRpc(evmPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+  t.after(() => new Promise((resolve) => evm.server.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_EVM_RPC_URL: `http://127.0.0.1:${evmPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const quote = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      body: { action: "trade.quote", from_symbol: "YUSD.test", to_symbol: "wUSDC.y", amount: "0.1" },
+    }),
+    200
+  );
+  assert.equal(quote.ok, true);
+  assert.equal(quote.result.from_symbol, "YUSD.test");
+  assert.equal(quote.result.to_symbol, "wUSDC.y");
+  assert.equal(quote.result.amount_out, "0.1");
+  assert.match(quote.result.execution_boundary, /quote_only/);
 });
 
 test("grounds feature suggestions in live YNX assets and settlement context", async (t) => {

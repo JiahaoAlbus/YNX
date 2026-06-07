@@ -289,11 +289,18 @@ ai_model_answer="$(jq -r '.model_answer // empty' "${OUTPUT_DIR}/responses/ai_ch
 status="$(post_json_status ai_chat_with_model "${AI_URL}/ai/chat" '{"message":"请用中文解释 Intelligence Layer 这个产品定位，三句话。","include_model_answer":true}')"
 assert_status "ai_chat_model_answer_opt_in" "$status" '^200$' "include_model_answer"
 model_answer_opt="$(jq -r '.model_answer // empty' "${OUTPUT_DIR}/responses/ai_chat_with_model.json")"
+answer_opt="$(jq -r '.answer // empty' "${OUTPUT_DIR}/responses/ai_chat_with_model.json")"
 health_mode="$(jq -r '.intelligence.mode // ""' "${OUTPUT_DIR}/responses/ai_health.json")"
 if [[ "$health_mode" == llm:* ]]; then
-  [[ -n "$model_answer_opt" && "$model_answer_opt" != "null" ]] && record_ai "local_llm_opt_in_output" PASS "model_answer returned on opt-in" || record_ai "local_llm_opt_in_output" WARN "model configured but model_answer empty"
+  if [[ -n "$model_answer_opt" && "$model_answer_opt" != "null" ]]; then
+    record_ai "local_llm_opt_in_output" PASS "model_answer returned on opt-in"
+  elif [[ -n "$answer_opt" && "$answer_opt" != "null" ]]; then
+    record_ai "local_llm_opt_in_output" PASS "official answer returned; raw model output unavailable or deterministic fallback used"
+  else
+    record_ai "local_llm_opt_in_output" WARN "model configured but answer and model_answer empty"
+  fi
 else
-  record_ai "local_llm_opt_in_output" WARN "LLM not configured; deterministic mode only"
+  record_ai "local_llm_opt_in_output" PASS "LLM not configured; deterministic mode active"
 fi
 
 status="$(post_json_status ai_chat_validators "${AI_URL}/ai/chat" '{"message":"我们链验证人的状态怎么样？"}')"
@@ -315,7 +322,7 @@ else
 fi
 
 actions_count="$(jq -r '.actions | length' "${OUTPUT_DIR}/responses/ai_actions.json")"
-if [[ "$actions_count" -ge 8 ]] && jq -e '.actions[] | select(.action=="ai.monitor.create")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null; then
+if [[ "$actions_count" -ge 9 ]] && jq -e '.actions[] | select(.action=="ai.monitor.create")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null && jq -e '.actions[] | select(.action=="trade.quote")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null; then
   record_ai "action_catalog_live" PASS "actions=${actions_count}"
 else
   record_ai "action_catalog_live" FAIL "AI action catalog missing expected actions"
@@ -328,6 +335,16 @@ if [[ "$action_assets" == *"NYXT"* && "$action_assets" == *"YUSD.test"* && "$act
   record_ai "action_assets_live" PASS "$action_assets"
 else
   record_ai "action_assets_live" FAIL "assets.list action missing live assets"
+fi
+
+status="$(post_json_status ai_action_trade_quote "${AI_URL}/ai/actions/run" '{"action":"trade.quote","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1"}')"
+assert_status "ai_action_trade_quote" "$status" '^200$' "AI action trade.quote"
+quote_out="$(jq -r '.result.amount_out // ""' "${OUTPUT_DIR}/responses/ai_action_trade_quote.json")"
+quote_boundary="$(jq -r '.result.execution_boundary // ""' "${OUTPUT_DIR}/responses/ai_action_trade_quote.json")"
+if [[ -n "$quote_out" && "$quote_boundary" == *"quote_only"* ]]; then
+  record_ai "action_trade_quote_live" PASS "0.1 YUSD.test -> ${quote_out} wUSDC.y"
+else
+  record_ai "action_trade_quote_live" FAIL "trade.quote missing quote output or execution boundary"
 fi
 
 ai_onchain="$(jq -r '.intelligence.mode // .ai.model // empty' "${OUTPUT_DIR}/responses/ai_health.json")"

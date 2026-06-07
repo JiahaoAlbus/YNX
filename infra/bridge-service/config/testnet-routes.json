@@ -19,7 +19,11 @@
       "decimals": 8,
       "minConfirmations": 1,
       "rpc": "https://blockstream.info/testnet/api",
-      "depositAddress": ""
+      "depositAddress": "",
+      "autoMintRecipient": "",
+      "watcherStartCursor": 0,
+      "releaseAdapter": "bitcoin-testnet-release",
+      "maxAutoReleaseBaseUnits": "100000"
     },
     {
       "routeId": "eth-sepolia-eth",
@@ -37,7 +41,10 @@
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
       "lockboxAddress": "0x9b9913Ee3F99147856A19D7359A9fe5B7c8318C6",
       "lockboxStartBlock": 10958995,
-      "depositAddress": ""
+      "depositAddress": "",
+      "watcherStartCursor": 10958995,
+      "releaseAdapter": "evm-lockbox",
+      "maxAutoReleaseBaseUnits": "10000000000000000"
     },
     {
       "routeId": "bnb-testnet-bnb",
@@ -55,7 +62,10 @@
       "rpc": "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
       "lockboxAddress": "",
       "lockboxStartBlock": 0,
-      "depositAddress": ""
+      "depositAddress": "",
+      "watcherStartCursor": 0,
+      "releaseAdapter": "evm-lockbox",
+      "maxAutoReleaseBaseUnits": "10000000000000000"
     },
     {
       "routeId": "tron-shasta-usdt",
@@ -71,7 +81,12 @@
       "decimals": 6,
       "minConfirmations": 1,
       "rpc": "https://api.shasta.trongrid.io",
-      "depositAddress": ""
+      "sourceContract": "",
+      "depositAddress": "",
+      "autoMintRecipient": "",
+      "watcherStartCursor": 0,
+      "releaseAdapter": "tron-shasta-release",
+      "maxAutoReleaseBaseUnits": "10000000"
     },
     {
       "routeId": "eth-sepolia-usdc",
@@ -90,7 +105,10 @@
       "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
       "lockboxAddress": "0x9b9913Ee3F99147856A19D7359A9fe5B7c8318C6",
       "lockboxStartBlock": 10958996,
-      "depositAddress": ""
+      "depositAddress": "",
+      "watcherStartCursor": 10958996,
+      "releaseAdapter": "evm-lockbox",
+      "maxAutoReleaseBaseUnits": "10000000"
     }
   ]
 }

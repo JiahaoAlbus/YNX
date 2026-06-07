@@ -38,6 +38,53 @@ paths:
       responses:
         "200":
           description: OK
+  /ai/actions:
+    get:
+      summary: List supported AI actions
+      description: Returns public read actions and protected Web4 actions. trade.execute is protected and requires a Web4 session plus a configured public-testnet agent signer.
+      responses:
+        "200":
+          description: OK
+  /ai/actions/run:
+    post:
+      summary: Run an AI action
+      description: Runs public read/preparation actions or Web4-protected actions. trade.prepare returns wallet transaction parameters; trade.execute submits only after Web4 policy/session authorization, limits, and a configured testnet agent signer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunActionRequest"
+            examples:
+              tradePreflight:
+                value:
+                  action: trade.preflight
+                  from_symbol: YUSD.test
+                  to_symbol: wUSDC.y
+                  amount: "0.1"
+              tradePrepare:
+                value:
+                  action: trade.prepare
+                  from_symbol: YUSD.test
+                  to_symbol: wUSDC.y
+                  amount: "0.1"
+                  recipient: "0x00000000000000000000000000000000000000aa"
+              tradeExecute:
+                value:
+                  action: trade.execute
+                  policy_id: pol_example
+                  from_symbol: YUSD.test
+                  to_symbol: wUSDC.y
+                  amount: "0.1"
+                  recipient: "0x00000000000000000000000000000000000000aa"
+                  slippage_bps: 100
+      responses:
+        "200":
+          description: Action completed
+        "400":
+          description: Invalid action input
+        "403":
+          description: Action disabled or unauthorized
   /ai/jobs:
     get:
       summary: List jobs
@@ -214,3 +261,43 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
+    RunActionRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - chain.status
+            - validators.status
+            - assets.list
+            - bridge.readiness
+            - tx.latest
+            - trade.quote
+            - trade.preflight
+            - trade.prepare
+            - trade.execute
+            - ai.monitor.create
+            - bridge.watchers.scan
+            - bridge.withdrawals.scan
+        from_symbol:
+          type: string
+          examples: [YUSD.test]
+        to_symbol:
+          type: string
+          examples: [wUSDC.y]
+        amount:
+          type: string
+          examples: ["0.1"]
+        recipient:
+          type: string
+          description: EVM recipient address required by trade.prepare and trade.execute.
+        slippage_bps:
+          type: integer
+          minimum: 0
+          maximum: 5000
+          default: 100
+        policy_id:
+          type: string
+          description: Required for Web4-protected write/operator actions.

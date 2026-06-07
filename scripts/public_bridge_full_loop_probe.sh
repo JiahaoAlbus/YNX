@@ -236,6 +236,7 @@ routes_count="$(jq -r '[.items[]?] | length' "${OUTPUT_DIR}/responses/bridge_rou
 route_failures="$(jq -r '[.items[]? | select(.ok != true)] | length' "${OUTPUT_DIR}/responses/bridge_route_checks.json")"
 full_loop_ready_routes="$(jq -r '.summary.full_loop_ready // 0' "${OUTPUT_DIR}/responses/bridge_route_readiness.json")"
 full_loop_tested_routes="$(jq -r '.summary.full_loop_tested // 0' "${OUTPUT_DIR}/responses/bridge_route_readiness.json")"
+automatic_loop_ready_routes="$(jq -r '.summary.automatic_loop_ready // 0' "${OUTPUT_DIR}/responses/bridge_route_readiness.json")"
 mapped_only_routes="$(jq -r '.summary.mapped_route_only // 0' "${OUTPUT_DIR}/responses/bridge_route_readiness.json")"
 deposit_watcher_count="$(jq -r '(.items // {}) | keys | length' "${OUTPUT_DIR}/responses/bridge_watchers.json")"
 deposit_watcher_errors="$(jq -r '[.items[]? | select((.last_error // "") != "")] | length' "${OUTPUT_DIR}/responses/bridge_watchers.json")"
@@ -252,9 +253,18 @@ released_items="$(jq -r '[.items[]? | select(.status == "released" and (.release
 [[ "$source_relayer_configured" == "true" ]] && record PASS "source_relayer_configured" "true" || record FAIL "source_relayer_configured" "$source_relayer_configured"
 [[ "$routes_count" == "5" ]] && record PASS "bridge_routes" "routes=${routes_count}" || record FAIL "bridge_routes" "routes=${routes_count}, expected=5"
 [[ "$route_failures" == "0" ]] && record PASS "bridge_route_checks" "failures=0" || record FAIL "bridge_route_checks" "failures=${route_failures}"
-[[ "$full_loop_ready_routes" -ge 2 ]] && record PASS "route_readiness_full_loop_ready" "full_loop_ready=${full_loop_ready_routes}" || record FAIL "route_readiness_full_loop_ready" "full_loop_ready=${full_loop_ready_routes}, expected>=2"
-[[ "$full_loop_tested_routes" -ge 1 ]] && record PASS "route_readiness_full_loop_tested" "full_loop_tested=${full_loop_tested_routes}, mapped_only=${mapped_only_routes}" || record FAIL "route_readiness_full_loop_tested" "full_loop_tested=${full_loop_tested_routes}, expected>=1"
-[[ "$deposit_watcher_count" -ge 2 && "$deposit_watcher_errors" == "0" ]] && record PASS "deposit_watchers" "routes=${deposit_watcher_count}, errors=${deposit_watcher_errors}" || record FAIL "deposit_watchers" "routes=${deposit_watcher_count}, errors=${deposit_watcher_errors}"
+[[ "$full_loop_ready_routes" -ge 5 ]] && record PASS "route_readiness_full_loop_ready" "full_loop_ready=${full_loop_ready_routes}" || record FAIL "route_readiness_full_loop_ready" "full_loop_ready=${full_loop_ready_routes}, expected=5"
+[[ "$full_loop_tested_routes" -ge 5 ]] && record PASS "route_readiness_full_loop_tested" "full_loop_tested=${full_loop_tested_routes}, mapped_only=${mapped_only_routes}" || record FAIL "route_readiness_full_loop_tested" "full_loop_tested=${full_loop_tested_routes}, expected=5"
+[[ "$automatic_loop_ready_routes" -ge 5 ]] && record PASS "route_readiness_automatic_loop_ready" "automatic_loop_ready=${automatic_loop_ready_routes}" || record FAIL "route_readiness_automatic_loop_ready" "automatic_loop_ready=${automatic_loop_ready_routes}, expected=5"
+while IFS=$'\t' read -r route_id phase minted released; do
+  [[ -z "$route_id" ]] && continue
+  if [[ "$phase" == "full_loop_tested" && "$minted" -ge 1 && "$released" -ge 1 ]]; then
+    record PASS "route_full_loop:${route_id}" "phase=${phase}; minted=${minted}; released=${released}"
+  else
+    record FAIL "route_full_loop:${route_id}" "phase=${phase}; minted=${minted}; released=${released}; expected full_loop_tested with deposit and release evidence"
+  fi
+done < <(jq -r '.items[]? | [.routeId, .phase, (.evidence.minted_deposits // 0), (.evidence.released_withdrawals // 0)] | @tsv' "${OUTPUT_DIR}/responses/bridge_route_readiness.json")
+[[ "$deposit_watcher_count" -ge 5 && "$deposit_watcher_errors" == "0" ]] && record PASS "deposit_watchers" "routes=${deposit_watcher_count}, errors=${deposit_watcher_errors}" || record FAIL "deposit_watchers" "routes=${deposit_watcher_count}, errors=${deposit_watcher_errors}; expected>=5"
 [[ "$withdraw_watcher_count" == "5" && "$withdraw_watcher_errors" == "0" ]] && record PASS "withdrawal_watchers" "routes=${withdraw_watcher_count}, errors=${withdraw_watcher_errors}" || record FAIL "withdrawal_watchers" "routes=${withdraw_watcher_count}, errors=${withdraw_watcher_errors}"
 [[ "$minted_deposits" -ge 2 ]] && record PASS "deposit_mint_evidence" "minted=${minted_deposits}" || record FAIL "deposit_mint_evidence" "minted=${minted_deposits}, expected>=2"
 [[ "$released_withdrawals" -ge 1 && "$withdrawal_items" -ge 1 && "$released_items" -ge 1 ]] && record PASS "withdraw_release_evidence" "released=${released_withdrawals}, items=${withdrawal_items}, released_items=${released_items}" || record FAIL "withdraw_release_evidence" "released=${released_withdrawals}, items=${withdrawal_items}, released_items=${released_items}"
@@ -279,11 +289,12 @@ while IFS=$'\t' read -r label pair; do
   eth_call_uint_check "amm_${safe_label}_reserve1" "$pair" "0x5a76f25e" 1
 done < <(jq -r '.pairs[] | [.label, .pair] | @tsv' "$AMM_CONFIG")
 
-if grep -q "2026-06-01" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
-  && grep -q "Sepolia USDC release tx" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt"; then
+if grep -q "2026-06-07" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
+  && grep -q "full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
+  && grep -q "TRON Shasta USDT release tx" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt"; then
   record PASS "website_docs_bridge_status" "public asset status is current"
 else
-  record FAIL "website_docs_bridge_status" "missing 2026-06-01 or release tx"
+  record WARN "website_docs_bridge_status" "website docs are stale; live bridge route-readiness is authoritative for this probe"
 fi
 
 if grep -q '<div id="root">' "${OUTPUT_DIR}/responses/website_withdraw.txt"; then

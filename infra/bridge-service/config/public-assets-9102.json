@@ -39,6 +39,39 @@
       "contract": "0x5715Bb5a7B050234A225fC88FF74885eF55E9339",
       "routeId": "eth-sepolia-eth",
       "status": "live"
+    },
+    {
+      "symbol": "wBTC.y",
+      "name": "Wrapped Bitcoin Testnet BTC on YNX",
+      "kind": "wrapped-testnet-asset",
+      "decimals": 8,
+      "contract": "0x1887Eb24feefB6538CBc2140B148ba831f313991",
+      "routeId": "btc-testnet-btc",
+      "status": "live",
+      "tradablePair": false,
+      "tradablePairStatus": "seed_with_deploy_testnet_amm"
+    },
+    {
+      "symbol": "wBNB.y",
+      "name": "Wrapped BSC Testnet BNB on YNX",
+      "kind": "wrapped-testnet-asset",
+      "decimals": 18,
+      "contract": "0x1A4DC3435b6A090824765970521cb782262523Ef",
+      "routeId": "bnb-testnet-bnb",
+      "status": "live",
+      "tradablePair": false,
+      "tradablePairStatus": "seed_with_deploy_testnet_amm"
+    },
+    {
+      "symbol": "wUSDT.y",
+      "name": "Wrapped TRON Shasta USDT on YNX",
+      "kind": "wrapped-testnet-asset",
+      "decimals": 6,
+      "contract": "0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1",
+      "routeId": "tron-shasta-usdt",
+      "status": "live",
+      "tradablePair": false,
+      "tradablePairStatus": "seed_with_deploy_testnet_amm"
     }
   ],
   "pairs": [
@@ -57,5 +90,5 @@
       "status": "live"
     }
   ],
-  "riskNotice": "Public-testnet assets and AMM pairs are for testing only. YUSD.test is not redeemable and has no mainnet value."
+  "riskNotice": "Public-testnet assets and AMM pairs are for testing only. YUSD.test is not redeemable and has no mainnet value. Wrapped BTC/BNB/TRON/ETH/USDC assets are testnet representations, not real mainnet asset custody or redemption claims."
 }

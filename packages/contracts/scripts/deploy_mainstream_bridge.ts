@@ -85,7 +85,7 @@ async function main() {
   const Gateway = await ethers.getContractFactory("YNXBridgeGateway", deployer);
   const existingGateway = process.env.BRIDGE_GATEWAY_ADDRESS?.trim();
   let gateway;
-  let gatewayAddress = "";
+  let gatewayAddress: string;
   let gatewayAction: "deployed" | "attached" = "deployed";
 
   if (existingGateway && existingGateway.startsWith("0x")) {

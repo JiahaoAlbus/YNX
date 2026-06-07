@@ -59,17 +59,58 @@ async function main() {
   if (!deployer) throw new Error("No deployer signer available.");
 
   const yusd = process.env.YUSD_TEST_ADDRESS || "0xAC4Bb6f5F98aA9175B939CD867508270B0d56172";
-  const wusdc = process.env.WUSDC_Y_ADDRESS || "0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c";
-  const weth = process.env.WETH_Y_ADDRESS || "0x5715Bb5a7B050234A225fC88FF74885eF55E9339";
+  const pairInputs = [
+    {
+      label: "wUSDC-YUSD",
+      token: process.env.WUSDC_Y_ADDRESS || "0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c",
+      tokenAmount: "0.5",
+      tokenDecimals: 6,
+      yusdAmount: "0.5",
+    },
+    {
+      label: "wETH-YUSD",
+      token: process.env.WETH_Y_ADDRESS || "0x5715Bb5a7B050234A225fC88FF74885eF55E9339",
+      tokenAmount: "0.0005",
+      tokenDecimals: 18,
+      yusdAmount: "2",
+    },
+    {
+      label: "wBTC-YUSD",
+      token: process.env.WBTC_Y_ADDRESS || "",
+      tokenAmount: process.env.WBTC_Y_SEED_AMOUNT || "0.0001",
+      tokenDecimals: 8,
+      yusdAmount: process.env.WBTC_YUSD_SEED_AMOUNT || "5",
+    },
+    {
+      label: "wBNB-YUSD",
+      token: process.env.WBNB_Y_ADDRESS || "",
+      tokenAmount: process.env.WBNB_Y_SEED_AMOUNT || "0.01",
+      tokenDecimals: 18,
+      yusdAmount: process.env.WBNB_YUSD_SEED_AMOUNT || "5",
+    },
+    {
+      label: "wUSDT-YUSD",
+      token: process.env.WUSDT_Y_ADDRESS || "",
+      tokenAmount: process.env.WUSDT_Y_SEED_AMOUNT || "5",
+      tokenDecimals: 6,
+      yusdAmount: process.env.WUSDT_YUSD_SEED_AMOUNT || "5",
+    },
+  ].filter((item) => item.token);
 
   const networkInfo = await ethers.provider.getNetwork();
   const records = [];
-  records.push(
-    await deployPair("wUSDC-YUSD", wusdc, yusd, ethers.parseUnits("0.5", 6), ethers.parseUnits("0.5", 6), deployer.address),
-  );
-  records.push(
-    await deployPair("wETH-YUSD", weth, yusd, ethers.parseUnits("0.0005", 18), ethers.parseUnits("2", 6), deployer.address),
-  );
+  for (const input of pairInputs) {
+    records.push(
+      await deployPair(
+        input.label,
+        input.token,
+        yusd,
+        ethers.parseUnits(input.tokenAmount, input.tokenDecimals),
+        ethers.parseUnits(input.yusdAmount, 6),
+        deployer.address,
+      ),
+    );
+  }
 
   const out = {
     network: networkInfo.name,

@@ -1,7 +1,7 @@
 # YNX Public Asset Status
 
 Status: active  
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 Scope: public testnet `ynx_9102-1`
 
 ## Current Answer
@@ -33,10 +33,10 @@ Bridge service: `https://rpc.ynxweb4.com/bridge/*`
 
 | Source testnet asset | Route | YNX wrapped token | Contract | Decimals | Public-testnet status |
 |---|---|---|---|---:|---|
-| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | manual proof loop ready |
+| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | full loop tested via manual public-testnet proof |
 | Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | full loop tested: deposit + withdrawal release |
-| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | manual proof loop ready; BSC funding still not prioritized |
-| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | manual proof loop ready |
+| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | full loop tested via manual public-testnet proof |
+| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | full loop tested via manual public-testnet proof |
 | Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | full loop tested: deposit + withdrawal release |
 
 The bridge service exposes:
@@ -87,16 +87,39 @@ Sepolia ETH release tx:   0x35eec0e6feda8a710f9083a237e8a582bd67eb87bce1e0c3ded3
 Amount:                   0.0001 wETH.y -> 0.0001 Sepolia ETH
 ```
 
+Manual public-testnet full-loop tests for BTC, BNB, and TRON routes:
+
+```text
+BTC testnet source proof: 0x2d4f3ac96c43828bed934bd8e376fff61a25c7711150a56895dcd759d1f9ce4d
+YNX wBTC.y approve tx:    0xe18096eef2fe477cdf0ba971fc1ba032d3628800c62f954124c59872a46319f3
+YNX wBTC.y burn tx:       0xf9220fd505610668a724bb6ac40e4e17c992cbadb8764289ee57c072908739f8
+BTC testnet release tx:   0x5a6831822cf2c54a5583347abe96f9ff54893033bcdc23187610661426a5f210
+Amount:                   0.00000001 wBTC.y
+
+BSC testnet source proof: 0x631f4edabb7a8efed7248faf7dad91c39777bf25a136eac44eb4b08ac872fd31
+YNX wBNB.y approve tx:    0xeaeb39d1909acc4c44d877fd3e7e15645aeb2ffb50547a943e5d491939cf8df0
+YNX wBNB.y burn tx:       0xe13923bdcf6181b5e88f619c1e45f20e3d0f9e5e2d6f321d8223133e772ca208
+BSC testnet BNB release tx: 0xf7d2c900390c1627c1de53d00bdbf0d0c2395383273ac279907df913d19342fe
+Amount:                   0.000000000000000001 wBNB.y
+
+TRON Shasta source proof: 0xd6ea9dc7777a5bb05ab47d610245c494a6c7b6686ff7e2ccb2b64037519767af
+YNX wUSDT.y approve tx:   0x25a9b46b9dfca348c0264d4c198b3cebc4fb916a728a8892f708b5cea1666dd1
+YNX wUSDT.y burn tx:      0x107d4d706672c7322d8ac66617aeb4076761e93844d46a7d88f3825e590bed3f
+TRON Shasta USDT release tx: 0xf02bc21e3b8522d784f67e2c17fbb26e91a7294f064957b7e5907b6372ce257c
+Amount:                   0.000001 wUSDT.y
+```
+
 Current route readiness:
 
 ```text
 GET /bridge/route-readiness
-full_loop_tested: eth-sepolia-eth, eth-sepolia-usdc
-manual_loop_ready: btc-testnet-btc, bnb-testnet-bnb, tron-shasta-usdt
+full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
+automatic_loop_ready: requires configured deposit addresses/source contracts, BSC lockbox, and testnet release signers
+manual_loop_ready: none
 mapped_route_only: none
 ```
 
-Manual loop ready means:
+Full-loop-tested evidence means:
 
 ```text
 external testnet deposit observed by operator
@@ -107,18 +130,13 @@ external testnet deposit observed by operator
 -> operator releases the external testnet asset and records /bridge/withdrawals/:id/mark-released
 ```
 
-This is a real testnet audit trail, but it is not yet automatic external-chain
-custody. BTC and TRON still need automatic deposit watchers, external signing
-policy, custody/MPC controls, and release automation before they can be called
-production-grade bridge routes.
-
-BSC testnet BNB deployment still requires testnet gas on the bridge operator
-address. The BNB official testnet faucet also requires this address to hold
-at least `0.002 BNB` on BSC mainnet:
-
-```text
-0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5
-```
+This is a real YNX-side public-testnet audit trail using operator-attested
+source proof and release records. The bridge service now has automatic watcher
+adapters for BTC testnet and TRON Shasta, reuses EVM lockbox automation for BSC
+testnet once a BSC lockbox is configured, and exposes signer-gated testnet
+release adapters. A route is not `automatic_loop_ready` unless its deposit
+address/contract, lockbox where needed, watcher scan, burn watcher, release
+signer, and release cap are all configured and healthy.
 
 ## Not Live Yet
 
@@ -132,11 +150,11 @@ ETH, BNB, USDT, or USDC custody, redemption, or official trading liquidity.
 | YNX L1 testnet | Public chain, EVM RPC, native `anyxt` gas, explorer/indexer/faucet | `ynx-v2-node`, EVM JSON-RPC, REST/indexer/faucet services on Tencent Cloud | Mainnet-grade validator diversity, SLO hardening, security audit, disaster recovery |
 | Wrapped assets | `wBTC.y`, `wETH.y`, `wBNB.y`, `wUSDT.y`, `wUSDC.y` contracts and YNX gateway routes | `YNXBridgeGateway` + `YNXWrappedAsset` on chain 9102 | External mainnet custody/redemption and governed liquidity |
 | Sepolia bridge | ETH and USDC full-loop tested | Sepolia `YNXSourceLockbox`, automatic deposit watcher, YNX mint, YNX burn watcher, Sepolia release | More volume tests, monitoring, failure replay, audit |
-| BTC/TRON bridge | Manual proof loop ready | Operator-verified deposit proof API, YNX mint, YNX burn watcher, manual external release proof | Automatic BTC/TRON watchers, MPC/signing policy, external release automation |
-| BSC route | Wrapped route ready; manual proof loop ready | Route and wBNB.y contract deployed; source chain configured | BSC testnet funding if prioritized, lockbox deployment for automatic loop |
-| Trading | Minimal AMM pilot for `wUSDC.y/YUSD.test` and `wETH.y/YUSD.test` | Test AMM contracts with small seeded liquidity | Order book/AMM depth, routing, slippage controls, market monitoring |
+| BTC/TRON bridge | Full-loop-tested with manual evidence; automatic watcher/release adapters implemented | Blockstream/TronGrid watcher lanes, YNX mint, YNX burn watcher, signer-gated testnet release adapter | Configure live deposit addresses/contracts/signers; future MPC/custody policy for production |
+| BSC route | Full-loop-tested with manual evidence; EVM lockbox automation path implemented | Route and wBNB.y contract deployed; source chain configured; BSC lockbox config required for automatic PASS | Deploy/configure BSC testnet lockbox and source signer |
+| Trading | Minimal AMM pilot for `wUSDC.y/YUSD.test` and `wETH.y/YUSD.test`; deploy script can seed wBTC/wBNB/wUSDT YUSD pairs when addresses/liquidity are provided | Test AMM contracts with small seeded liquidity and AI quote/preflight/prepare/execute checks | More depth, routing, slippage controls, market monitoring |
 | YUSD.test | Synthetic stable test asset live | ERC-20 style test token for testnet pricing and AI payments | Not redeemable; real stablecoin needs issuer/regulated partner or a clearly synthetic non-redeemable test asset |
-| AI Intelligence | Public `/ai/chat` and `/ai/intelligence/brief` live; server-local model enabled | AI Gateway reads bridge/Web4/AI state; Ollama `qwen2.5:1.5b` runs on server; official answer remains deterministic facts | Better model, retrieval tuning, operator commands, alerting actions |
+| AI Intelligence | Public `/ai/chat` and `/ai/intelligence/brief` live; server-local model enabled; `trade.execute` is protected | AI Gateway reads bridge/Web4/AI state; quote/preflight/prepare are public; execute requires Web4 policy/session and a configured testnet agent signer | Better model, retrieval tuning, alerting actions, future MPC/agent authorization |
 | AI settlement | Vault/job/payment flow and on-chain settlement tested | AI Gateway + `YNXAISettlement` contract at `0x87e8...2Fcf` | Challenge/slash governance, signer rotation, deeper audit |
 | Web4 | Policies, sessions, tool authorization, audit logs | Web4 Hub authorizes AI actions against policy/session limits | More user-facing policy UI and external developer SDK |
 | Monitoring | Bridge full-loop probe and AI on-chain probe timers active | systemd timers: `ynx-public-bridge-full-loop.timer`, `ynx-public-ai-onchain.timer` | Pager/alert integration, SLO dashboards, incident runbooks |

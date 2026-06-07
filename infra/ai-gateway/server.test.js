@@ -244,7 +244,7 @@ test("enforces web4-backed policy authorization for vault creation", async (t) =
     {
       AI_GATEWAY_PORT: String(aiPort),
       AI_DATA_DIR: dataDir,
-      AI_ENFORCE_POLICY: "1",
+      AI_ENFORCE_POLICY: "0",
       AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
       AI_WEB4_INTERNAL_TOKEN: internalToken,
       AI_CHAIN_ID: "ynx_9102-1",
@@ -478,6 +478,7 @@ test("answers intelligence chat from live context without an LLM key", async (t)
       AI_LLM_API_KEY: "",
       OPENAI_API_KEY: "",
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
     },
@@ -613,11 +614,12 @@ test("answers combined asset layer and trading requests without dropping intent"
   assert.equal(chat.ok, true);
   assert.match(chat.answer, /NYXT/);
   assert.match(chat.answer, /L1|层级|层/);
-  assert.match(chat.answer, /trade\.quote|报价/);
+  assert.match(chat.answer, /trade\.preflight|交易前检查/);
+  assert.match(chat.answer, /trade\.prepare|交易参数/);
   assert.match(chat.answer, /钱包签名|wallet signature/);
 });
 
-test("quotes public AMM trades as an AI action", async (t) => {
+test("quotes, preflights, and prepares public AMM trades as AI actions", async (t) => {
   const aiPort = await getFreePort();
   const mockPort = await getFreePort();
   const evmPort = await getFreePort();
@@ -632,9 +634,10 @@ test("quotes public AMM trades as an AI action", async (t) => {
     {
       AI_GATEWAY_PORT: String(aiPort),
       AI_DATA_DIR: dataDir,
-      AI_ENFORCE_POLICY: "0",
+      AI_ENFORCE_POLICY: "1",
       AI_CHAIN_ID: "ynx_9102-1",
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_EVM_RPC_URL: `http://127.0.0.1:${evmPort}`,
@@ -655,6 +658,56 @@ test("quotes public AMM trades as an AI action", async (t) => {
   assert.equal(quote.result.to_symbol, "wUSDC.y");
   assert.equal(quote.result.amount_out, "0.1");
   assert.match(quote.result.execution_boundary, /quote_only/);
+
+  const preflight = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      body: { action: "trade.preflight", from_symbol: "YUSD.test", to_symbol: "wUSDC.y", amount: "0.1" },
+    }),
+    200
+  );
+  assert.equal(preflight.ok, true);
+  assert.equal(preflight.result.pair.label, "wUSDC.y/YUSD.test");
+  assert.equal(preflight.result.validators.all_signed_last_block, true);
+  assert.match(preflight.result.risk_notice, /Public-testnet/);
+  assert.match(preflight.result.execution_boundary, /preflight_only/);
+
+  const prepared = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      body: {
+        action: "trade.prepare",
+        from_symbol: "YUSD.test",
+        to_symbol: "wUSDC.y",
+        amount: "0.1",
+        recipient: "0x00000000000000000000000000000000000000aa",
+      },
+    }),
+    200
+  );
+  assert.equal(prepared.ok, true);
+  assert.equal(prepared.result.approve.to, "0x0000000000000000000000000000000000000001");
+  assert.equal(prepared.result.swap.to, "0x0000000000000000000000000000000000000011");
+  assert.match(prepared.result.approve.data, /^0x095ea7b3/);
+  assert.match(prepared.result.swap.data, /^0xf3e6ea8a/);
+  assert.match(prepared.result.risk.boundary, /wallet_signature_required/);
+  const serialized = JSON.stringify(prepared);
+  assert.doesNotMatch(serialized, /private[_-]?key|mnemonic|seed phrase/i);
+  assert.doesNotMatch(serialized, /server signer/i);
+
+  const execute = await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+    method: "POST",
+    body: {
+      action: "trade.execute",
+      from_symbol: "YUSD.test",
+      to_symbol: "wUSDC.y",
+      amount: "0.1",
+      recipient: "0x00000000000000000000000000000000000000aa",
+    },
+  });
+  assert.equal(execute.status, 400);
+  assert.equal(execute.body.ok, false);
+  assert.equal(execute.body.error, "policy_required");
 });
 
 test("grounds feature suggestions in live YNX assets and settlement context", async (t) => {
@@ -722,6 +775,9 @@ test("exposes AI actions and runs public read actions", async (t) => {
   const actions = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/actions`), 200);
   assert.equal(actions.ok, true);
   assert.ok(actions.actions.some((item) => item.action === "assets.list"));
+  assert.ok(actions.actions.some((item) => item.action === "trade.preflight"));
+  assert.ok(actions.actions.some((item) => item.action === "trade.prepare"));
+  assert.ok(actions.actions.some((item) => item.action === "trade.execute" && /web4-session/.test(item.auth)));
   assert.ok(actions.actions.some((item) => item.action === "ai.monitor.create"));
 
   const assets = assertJson(
@@ -740,12 +796,15 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();
   const mockPort = await getFreePort();
+  const evmPort = await getFreePort();
   const dataDir = await makeTempDir("ynx-ai-actions-write-");
   const web4Dir = await makeTempDir("ynx-web4-actions-write-");
   const internalToken = "test-internal-token-actions";
   const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
   const mock = await startMockIntelligenceUpstreams(mockPort);
+  const evm = await startMockEvmRpc(evmPort);
   t.after(() => new Promise((resolve) => mock.close(resolve)));
+  t.after(() => new Promise((resolve) => evm.server.close(resolve)));
 
   const web4 = await startNodeServer(
     web4ServerPath,
@@ -772,7 +831,9 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
       AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
       AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
       AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_EVM_RPC_URL: `http://127.0.0.1:${evmPort}`,
       AI_BRIDGE_OPERATOR_TOKEN: "bridge-token-test",
+      AI_TRADE_AGENT_MOCK: "1",
     },
     `http://127.0.0.1:${aiPort}/ready`
   );
@@ -790,7 +851,7 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
       method: "POST",
       body: {
         owner: "owner-ai-actions",
-        allowed_actions: ["ai.job.create", "ai.bridge.watchers.scan"],
+        allowed_actions: ["ai.job.create", "ai.bridge.watchers.scan", "ai.trade.execute"],
         allowed_service_hosts: ["127.0.0.1"],
       },
     }),
@@ -801,7 +862,7 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
       method: "POST",
       headers: { "x-ynx-owner": policy.owner_secret },
       body: {
-        capabilities: ["ai.job.create", "ai.bridge.watchers.scan"],
+        capabilities: ["ai.job.create", "ai.bridge.watchers.scan", "ai.trade.execute"],
         ttl_sec: 600,
         max_ops: 4,
       },
@@ -839,6 +900,26 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
   );
   assert.equal(scan.ok, true);
   assert.equal(scan.upstream.ok, true);
+
+  const trade = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "trade.execute",
+        policy_id: policy.policy.policy_id,
+        from_symbol: "YUSD.test",
+        to_symbol: "wUSDC.y",
+        amount: "0.1",
+        recipient: "0x00000000000000000000000000000000000000aa",
+      },
+    }),
+    200
+  );
+  assert.equal(trade.ok, true);
+  assert.equal(trade.result.mode, "testnet-agent-mock");
+  assert.match(trade.result.swap_tx_hash, /^0x[0-9a-f]{64}$/);
+  assert.doesNotMatch(JSON.stringify(trade), /private[_-]?key|mnemonic|seed phrase|raw signer/i);
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {

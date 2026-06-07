@@ -216,6 +216,10 @@ const AI_PUBLIC_INDEXER_URL = (process.env.AI_PUBLIC_INDEXER_URL || "https://ind
 const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
 const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
 const AI_BRIDGE_OPERATOR_TOKEN = process.env.AI_BRIDGE_OPERATOR_TOKEN || process.env.BRIDGE_OPERATOR_TOKEN || "";
+const AI_TRADE_AGENT_PRIVATE_KEY = process.env.AI_TRADE_AGENT_PRIVATE_KEY || "";
+const AI_TRADE_AGENT_MOCK = process.env.AI_TRADE_AGENT_MOCK === "1";
+const AI_TRADE_MAX_AMOUNT = Number(process.env.AI_TRADE_MAX_AMOUNT || "1");
+const AI_TRADE_MAX_SLIPPAGE_BPS = Math.max(0, Math.min(5000, parseInt(process.env.AI_TRADE_MAX_SLIPPAGE_BPS || "300", 10) || 300));
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -701,6 +705,40 @@ function pairForSymbols(context, fromSymbol, toSymbol) {
   }) || null;
 }
 
+function routeReadinessById(context, routeId) {
+  const wanted = String(routeId || "").trim();
+  const items = context.bridge?.route_readiness?.items || [];
+  if (!wanted || !Array.isArray(items)) return null;
+  return items.find((item) => String(item.routeId || "") === wanted) || null;
+}
+
+function assetTradeWarnings(asset, route) {
+  const warnings = [];
+  if (!asset) return warnings;
+  if (asset.redeemable === false || asset.mainnetValue === false) {
+    warnings.push(`${asset.symbol} is test-only, non-redeemable, and has no mainnet value.`);
+  }
+  if (asset.kind && /wrapped/i.test(asset.kind)) {
+    warnings.push(`${asset.symbol} is a wrapped public-testnet representation, not the real mainnet asset.`);
+  }
+  if (asset.routeId && route && route.phase !== "full_loop_tested") {
+    warnings.push(`${asset.routeId} is ${route.phase}; treat this route as not fully loop-tested yet.`);
+  }
+  return warnings;
+}
+
+function validatorSignatureSummary(context) {
+  const validators = context.chain?.validators || {};
+  const total = Number(validators.total ?? 0);
+  const signed = Number(validators.signed_count ?? 0);
+  return {
+    latest_height: validators.latest_height ?? null,
+    total,
+    signed_count: signed,
+    all_signed_last_block: total > 0 && signed === total,
+  };
+}
+
 function compactIntelligenceContext(context) {
   const routeReadiness = context.bridge?.route_readiness || {};
   const bridgeHealth = context.bridge?.health || {};
@@ -939,9 +977,27 @@ async function getTradeQuote(context, body = {}) {
   try {
     const amountIn = ethers.parseUnits(amount, Number(fromAsset.decimals ?? 18));
     const iface = new ethers.Interface(["function quote(address tokenIn,uint256 amountIn) view returns (uint256 amountOut)"]);
+    const reservesIface = new ethers.Interface(["function reservesFor(address tokenIn) view returns (uint112 reserveIn,uint112 reserveOut)"]);
     const result = await evmRpc("eth_call", [{ to: pair.pair, data: iface.encodeFunctionData("quote", [tokenIn, amountIn]) }, "latest"]);
     if (!result.ok || !result.result) return { ok: false, error: result.error || "quote_rpc_failed" };
     const [amountOut] = iface.decodeFunctionResult("quote", result.result);
+    const reservesResult = await evmRpc("eth_call", [{ to: pair.pair, data: reservesIface.encodeFunctionData("reservesFor", [tokenIn]) }, "latest"]);
+    let liquidity = null;
+    if (reservesResult.ok && reservesResult.result) {
+      try {
+        const [reserveIn, reserveOut] = reservesIface.decodeFunctionResult("reservesFor", reservesResult.result);
+        const reserveInBig = BigInt(reserveIn);
+        liquidity = {
+          reserve_in_base_units: reserveInBig.toString(),
+          reserve_out_base_units: BigInt(reserveOut).toString(),
+          reserve_in: ethers.formatUnits(reserveInBig, Number(fromAsset.decimals ?? 18)),
+          reserve_out: ethers.formatUnits(reserveOut, Number(toAsset.decimals ?? 18)),
+          price_impact_bps: reserveInBig > 0n ? Number((amountIn * 10000n) / (reserveInBig + amountIn)) : null,
+        };
+      } catch {
+        liquidity = null;
+      }
+    }
     return {
       ok: true,
       from_symbol: fromAsset.symbol,
@@ -953,11 +1009,231 @@ async function getTradeQuote(context, body = {}) {
       pair: pair.label || "",
       pair_address: pair.pair,
       fee_bps: pair.feeBps ?? null,
+      liquidity,
       execution_boundary: "quote_only; swap requires wallet signature on https://www.ynxweb4.com/trading or a future Web4-authorized trading agent",
     };
   } catch (error) {
     return { ok: false, error: error.message || "quote_failed", from_symbol: fromAsset.symbol, to_symbol: toAsset.symbol };
   }
+}
+
+async function getTradePreflight(context, body = {}) {
+  const quote = await getTradeQuote(context, body);
+  const fromSymbol = quote.from_symbol || body.from_symbol || body.from || "YUSD.test";
+  const toSymbol = quote.to_symbol || body.to_symbol || body.to || "wUSDC.y";
+  const fromAsset = assetBySymbol(context, fromSymbol);
+  const toAsset = assetBySymbol(context, toSymbol);
+  const pair = fromAsset && toAsset ? pairForSymbols(context, fromAsset.symbol, toAsset.symbol) : null;
+  const fromRoute = routeReadinessById(context, fromAsset?.routeId);
+  const toRoute = routeReadinessById(context, toAsset?.routeId);
+  const validators = validatorSignatureSummary(context);
+  const routeStatuses = [fromRoute, toRoute].filter(Boolean);
+  const warnings = [
+    ...assetTradeWarnings(fromAsset, fromRoute),
+    ...assetTradeWarnings(toAsset, toRoute),
+  ];
+  if (!validators.all_signed_last_block) warnings.push("Validator signing data is incomplete or not all validators signed the last indexed block.");
+  if (!quote.ok) warnings.push(`Quote failed: ${quote.error || "unknown_error"}.`);
+  if (quote.liquidity?.price_impact_bps !== null && quote.liquidity?.price_impact_bps > 500) {
+    warnings.push(`Estimated price impact is ${quote.liquidity.price_impact_bps} bps; reduce size or increase liquidity before execution.`);
+  }
+
+  return {
+    ok: Boolean(quote.ok && fromAsset && toAsset && pair && String(pair.status || "").toLowerCase() === "live"),
+    from_symbol: fromAsset?.symbol || fromSymbol,
+    to_symbol: toAsset?.symbol || toSymbol,
+    amount: String(body.amount || "0.1"),
+    assets: {
+      from: fromAsset
+        ? {
+            symbol: fromAsset.symbol,
+            status: fromAsset.status || "",
+            kind: fromAsset.kind || "",
+            contract: assetAddress(fromAsset),
+            routeId: fromAsset.routeId || "",
+          }
+        : null,
+      to: toAsset
+        ? {
+            symbol: toAsset.symbol,
+            status: toAsset.status || "",
+            kind: toAsset.kind || "",
+            contract: assetAddress(toAsset),
+            routeId: toAsset.routeId || "",
+          }
+        : null,
+    },
+    pair: pair
+      ? {
+          label: pair.label || "",
+          address: pair.pair || "",
+          status: pair.status || "",
+          fee_bps: pair.feeBps ?? null,
+        }
+      : null,
+    routes: routeStatuses.map((route) => ({
+      routeId: route.routeId,
+      phase: route.phase,
+      full_loop_tested: Boolean(route.full_loop_tested),
+      blockers: route.blockers || [],
+    })),
+    validators,
+    quote,
+    risk_notice: bridgeAssets(context).riskNotice || "Public-testnet assets only; no mainnet custody, redemption, or value is represented.",
+    warnings,
+    execution_boundary: "preflight_only; prepare can build wallet transaction parameters, or trade.execute can submit only with Web4 policy/session and an explicitly configured testnet agent signer.",
+  };
+}
+
+async function prepareTrade(context, body = {}) {
+  const recipient = String(body.recipient || body.wallet || "").trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(recipient)) {
+    return { ok: false, error: "recipient_required", detail: "recipient must be an EVM address for wallet-signed swap calldata" };
+  }
+  const slippageBps = Math.max(0, Math.min(5000, parseInt(body.slippage_bps || "100", 10) || 100));
+  const preflight = await getTradePreflight(context, body);
+  if (!preflight.ok) return { ok: false, error: "preflight_failed", preflight };
+  const fromAsset = assetBySymbol(context, preflight.from_symbol);
+  const toAsset = assetBySymbol(context, preflight.to_symbol);
+  const tokenIn = assetAddress(fromAsset);
+  const amountIn = BigInt(preflight.quote.amount_in_base_units);
+  const quotedOut = BigInt(preflight.quote.amount_out_base_units);
+  const minOut = (quotedOut * BigInt(10000 - slippageBps)) / 10000n;
+  const erc20 = new ethers.Interface(["function approve(address spender,uint256 amount)"]);
+  const amm = new ethers.Interface(["function swap(address tokenIn,uint256 amountIn,uint256 minAmountOut,address recipient)"]);
+  const pairAddress = preflight.pair.address;
+  return {
+    ok: true,
+    from_symbol: preflight.from_symbol,
+    to_symbol: preflight.to_symbol,
+    amount_in: preflight.quote.amount_in,
+    amount_in_base_units: amountIn.toString(),
+    quoted_amount_out: preflight.quote.amount_out,
+    quoted_amount_out_base_units: quotedOut.toString(),
+    min_out: ethers.formatUnits(minOut, Number(toAsset?.decimals ?? 18)),
+    min_out_base_units: minOut.toString(),
+    slippage_bps: slippageBps,
+    pair_address: pairAddress,
+    recipient,
+    approve: {
+      to: tokenIn,
+      value: "0",
+      data: erc20.encodeFunctionData("approve", [pairAddress, amountIn]),
+      spender: pairAddress,
+      token: tokenIn,
+      amount: amountIn.toString(),
+    },
+    swap: {
+      to: pairAddress,
+      value: "0",
+      data: amm.encodeFunctionData("swap", [tokenIn, amountIn, minOut, recipient]),
+      tokenIn,
+      amountIn: amountIn.toString(),
+      minAmountOut: minOut.toString(),
+      recipient,
+    },
+    risk: {
+      boundary: "wallet_signature_required; the AI Gateway does not submit, sign, custody keys, expose private keys, or hold a server-side signing authority.",
+      warnings: preflight.warnings,
+      risk_notice: preflight.risk_notice,
+    },
+    preflight,
+  };
+}
+
+async function executeTrade(req, context, body = {}) {
+  const amountNumber = Number(body.amount || "0");
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0) return { ok: false, status: 400, error: "invalid_amount" };
+  if (AI_TRADE_MAX_AMOUNT > 0 && amountNumber > AI_TRADE_MAX_AMOUNT) {
+    return { ok: false, status: 403, error: "trade_amount_limit_exceeded", max_amount: AI_TRADE_MAX_AMOUNT };
+  }
+  const slippageBps = Math.max(0, parseInt(body.slippage_bps || "100", 10) || 100);
+  if (slippageBps > AI_TRADE_MAX_SLIPPAGE_BPS) {
+    return { ok: false, status: 403, error: "trade_slippage_limit_exceeded", max_slippage_bps: AI_TRADE_MAX_SLIPPAGE_BPS };
+  }
+  const prepared = await prepareTrade(context, body);
+  if (!prepared.ok) return { ok: false, status: 400, error: prepared.error || "trade_prepare_failed", prepared };
+  const auth = await requireActionAuthorization(req, "ai.trade.execute", body, {
+    amount: amountNumber,
+    resource: `ai/action/trade.execute/${prepared.from_symbol}/${prepared.to_symbol}`,
+    reason: "ai-trade-execute",
+  });
+  if (!auth.ok) return { ok: false, status: auth.status, error: auth.error, prepared };
+  if (!AI_TRADE_AGENT_PRIVATE_KEY && !AI_TRADE_AGENT_MOCK) {
+    return { ok: false, status: 503, error: "trade_agent_signer_not_configured", prepared };
+  }
+
+  const auditId = randomId("audit_trade");
+  if (AI_TRADE_AGENT_MOCK) {
+    const approveHash = ethers.id(`${auditId}:approve`);
+    const swapHash = ethers.id(`${auditId}:swap`);
+    addAudit("action.trade.executed", {
+      audit_id: auditId,
+      policy_id: auth.policy_id,
+      mock: true,
+      from_symbol: prepared.from_symbol,
+      to_symbol: prepared.to_symbol,
+      amount: prepared.amount_in,
+      approve_tx_hash: approveHash,
+      swap_tx_hash: swapHash,
+    });
+    persist();
+    return {
+      ok: true,
+      status: 200,
+      result: {
+        audit_id: auditId,
+        policy_id: auth.policy_id,
+        mode: "testnet-agent-mock",
+        approve_tx_hash: approveHash,
+        swap_tx_hash: swapHash,
+        prepared,
+        boundary: "Web4-authorized public-testnet agent execution; no private key or signer material is returned.",
+      },
+    };
+  }
+
+  const provider = new ethers.JsonRpcProvider(AI_PUBLIC_EVM_RPC_URL);
+  const wallet = new ethers.Wallet(AI_TRADE_AGENT_PRIVATE_KEY, provider);
+  const approveTx = await wallet.sendTransaction({
+    to: prepared.approve.to,
+    value: 0,
+    data: prepared.approve.data,
+  });
+  const approveReceipt = await approveTx.wait(1);
+  const swapTx = await wallet.sendTransaction({
+    to: prepared.swap.to,
+    value: 0,
+    data: prepared.swap.data,
+  });
+  const swapReceipt = await swapTx.wait(1);
+  addAudit("action.trade.executed", {
+    audit_id: auditId,
+    policy_id: auth.policy_id,
+    agent: wallet.address,
+    from_symbol: prepared.from_symbol,
+    to_symbol: prepared.to_symbol,
+    amount: prepared.amount_in,
+    approve_tx_hash: approveTx.hash,
+    swap_tx_hash: swapTx.hash,
+  });
+  persist();
+  return {
+    ok: true,
+    status: 200,
+    result: {
+      audit_id: auditId,
+      policy_id: auth.policy_id,
+      mode: "testnet-agent",
+      agent_address: wallet.address,
+      approve_tx_hash: approveTx.hash,
+      approve_block_number: approveReceipt?.blockNumber || null,
+      swap_tx_hash: swapTx.hash,
+      swap_block_number: swapReceipt?.blockNumber || null,
+      prepared,
+      boundary: "Web4-authorized public-testnet agent execution; no private key or signer material is returned.",
+    },
+  };
 }
 
 async function enrichContextForQuestion(message, context) {
@@ -1029,6 +1305,27 @@ function aiActionCatalog() {
       description: "Returns a live quote for a YNX public-testnet AMM pair. It does not execute the swap; wallet signature is required.",
     },
     {
+      action: "trade.preflight",
+      title: "Run pre-trade checks",
+      mode: "read",
+      auth: "public",
+      description: "Checks live assets, pair status, route readiness, validator signing, quote, and public-testnet risk boundaries before a swap.",
+    },
+    {
+      action: "trade.prepare",
+      title: "Prepare wallet-signed swap transactions",
+      mode: "prepare",
+      auth: "public",
+      description: "Builds ERC20 approve and AMM swap transaction parameters for the user's wallet. It does not sign or submit transactions.",
+    },
+    {
+      action: "trade.execute",
+      title: "Execute a swap",
+      mode: "write",
+      auth: "web4-session + testnet-agent-signer",
+      description: "Submits a public-testnet AMM swap only after Web4 policy/session authorization, preflight, limits, and an explicitly configured testnet agent signer.",
+    },
+    {
       action: "ai.monitor.create",
       title: "Create an AI monitoring job",
       mode: "write",
@@ -1085,9 +1382,13 @@ function deterministicIntelligenceAnswer(message, context) {
         `2. 当前公开 AMM 交易对：${pairLabels.join(", ") || "-"}。`,
         `3. 当前网络层级：YNX 本身是 L1 公共测试网，EVM chainId=9102；对 BTC/BNB/TRON/ETH 等外部链，YNX 现在扮演的是高速 EVM 执行层 + wrapped asset/bridge settlement layer，不是把真实主网 BTC/BNB/TRON 本体直接搬到 YNX 上。`,
         `4. 跨链/交易闭环：bridge route 当前 full-loop-tested=${routeSummary.full_loop_tested ?? 0}/${routeSummary.routes ?? 0}；验证人上一块签名=${validators.signed_count ?? "-"}/${validators.total ?? "-"}。`,
-        `5. 交易边界：我可以帮你查资产、查交易对、做报价和交易前检查；真正 swap 必须你用钱包签名，入口是 https://www.ynxweb4.com/trading。`,
+        `5. 交易边界：我可以帮你查资产、查交易对、做 quote/preflight，并用 trade.prepare 生成 approve + swap 交易参数；真正 swap 必须你用钱包签名，入口是 https://www.ynxweb4.com/trading。`,
         "",
-        "你可以让我先报价，例如调用：",
+        "你可以让我先做交易前检查，例如调用：",
+        `curl -s https://ai.ynxweb4.com/ai/actions/run -H 'content-type: application/json' --data '{"action":"trade.preflight","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1"}' | jq`,
+        "准备钱包签名参数时调用：",
+        `curl -s https://ai.ynxweb4.com/ai/actions/run -H 'content-type: application/json' --data '{"action":"trade.prepare","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1","recipient":"0xYourWallet"}' | jq`,
+        "只看报价也可以调用：",
         `curl -s https://ai.ynxweb4.com/ai/actions/run -H 'content-type: application/json' --data '{"action":"trade.quote","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1"}' | jq`,
         "",
         `风险说明：${riskNotice || "这些都是公开测试网资产，没有主网价值。"}`,
@@ -1100,7 +1401,7 @@ function deterministicIntelligenceAnswer(message, context) {
       `2. Public AMM pairs: ${pairLabels.join(", ") || "-"}.`,
       "3. Network layer: YNX is an L1 public testnet with EVM chainId 9102. For BTC/BNB/TRON/ETH routes, YNX currently acts as a fast EVM execution plus wrapped-asset/bridge settlement layer, not native mainnet asset custody.",
       `4. Bridge/trading loop: full-loop-tested=${routeSummary.full_loop_tested ?? 0}/${routeSummary.routes ?? 0}; validators signed last block=${validators.signed_count ?? "-"}/${validators.total ?? "-"}.`,
-      "5. Trading boundary: I can read assets, inspect pairs, quote swaps, and run pre-trade checks. The actual swap requires your wallet signature at https://www.ynxweb4.com/trading.",
+      "5. Trading boundary: I can read assets, inspect pairs, run quote/preflight, and use trade.prepare to generate approve + swap transaction parameters. The actual swap requires your wallet signature at https://www.ynxweb4.com/trading.",
     ].join("\n");
   }
 
@@ -1519,6 +1820,21 @@ async function runAiAction(req, body, context) {
     return { status: quote.ok ? 200 : 400, payload: { ok: quote.ok, action, result: quote, error: quote.ok ? undefined : quote.error } };
   }
 
+  if (action === "trade.preflight") {
+    const preflight = await getTradePreflight(context, body);
+    return { status: preflight.ok ? 200 : 400, payload: { ok: preflight.ok, action, result: preflight, error: preflight.ok ? undefined : "preflight_failed" } };
+  }
+
+  if (action === "trade.prepare") {
+    const prepared = await prepareTrade(context, body);
+    return { status: prepared.ok ? 200 : 400, payload: { ok: prepared.ok, action, result: prepared, error: prepared.ok ? undefined : prepared.error } };
+  }
+
+  if (action === "trade.execute") {
+    const executed = await executeTrade(req, context, body);
+    return { status: executed.status || (executed.ok ? 200 : 400), payload: { ok: executed.ok, action, result: executed.result, error: executed.error, ...(executed.prepared ? { prepared: executed.prepared } : {}) } };
+  }
+
   if (action === "ai.monitor.create") {
     const auth = await requireActionAuthorization(req, "ai.job.create", body, {
       resource: "ai/action/monitor/create",
@@ -1692,9 +2008,11 @@ const server = http.createServer(async (req, res) => {
       ok: true,
       actions: aiActionCatalog(),
       boundary: {
-        public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest"],
-        protected_actions: ["ai.monitor.create", "bridge.watchers.scan", "bridge.withdrawals.scan"],
-        protected_actions_require: "Web4 policy/session; bridge scans also require a server-side bridge operator token.",
+        public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest", "trade.quote", "trade.preflight", "trade.prepare"],
+        protected_actions: ["ai.monitor.create", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
+        protected_actions_require: "Web4 policy/session; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
+        disabled_actions: [],
+        trade_execution_boundary: "trade.prepare returns wallet transaction parameters. trade.execute can submit only with Web4 policy/session and a configured testnet agent signer; it never returns private key, mnemonic, or signer material.",
       },
     });
   }

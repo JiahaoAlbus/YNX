@@ -15,7 +15,7 @@ Live surfaces:
 - wrapped mainstream assets: `wBTC.y`, `wETH.y`, `wBNB.y`, `wUSDT.y`, `wUSDC.y`;
 - synthetic test stable asset: `YUSD.test`, not redeemable and no mainnet value;
 - test AMM pairs: `wUSDC.y/YUSD.test`, `wETH.y/YUSD.test`;
-- Bridge Service with Sepolia full-loop testing and BTC/BSC/TRON manual-proof routes;
+- Bridge Service with 5/5 full-loop-tested routes, BTC/TRON automatic watcher adapters, BSC lockbox automation path, and signer-gated public-testnet release adapters;
 - Web4 Hub policy, session, agent, tool, intent, and audit controls;
 - AI Gateway intelligence, jobs, vaults, payments, x402, and on-chain settlement;
 - server-local Ollama, real-time model `qwen3:1.7b`, with `qwen3:4b/8b/14b` retained for background analysis; official factual answers remain grounded in live chain/RPC queries;
@@ -169,7 +169,7 @@ YNX AI is broader than “AI agent permissions and settlement”:
 - factual answer guardrails: official answers are generated from live facts, raw model text is hidden by default;
 - operations assistant for route, trading, bridge, and settlement status;
 - website AI console at `/ai`;
-- AI action layer through `/ai/actions` and `/ai/actions/run`, so the AI can run controlled actions such as reading assets, validators, bridge readiness, creating monitoring jobs, and triggering protected bridge watcher scans.
+- AI action layer through `/ai/actions` and `/ai/actions/run`, so the AI can run controlled actions such as reading assets, validators, bridge readiness, creating monitoring jobs, triggering protected bridge watcher scans, and submitting `trade.execute` only when Web4 policy/session plus a configured testnet agent signer are present.
 
 ```bash
 curl -s https://ai.ynxweb4.com/health | jq

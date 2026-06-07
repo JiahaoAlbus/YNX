@@ -181,6 +181,10 @@ const BRIDGE_SOURCE_EVM_PRIVATE_KEY =
   process.env.SEPOLIA_RELAYER_PRIVATE_KEY ||
   process.env.AI_ONCHAIN_PRIVATE_KEY ||
   "";
+const BRIDGE_SOURCE_BTC_TESTNET_SIGNER = process.env.BRIDGE_SOURCE_BTC_TESTNET_SIGNER || "";
+const BRIDGE_SOURCE_TRON_SHASTA_SIGNER = process.env.BRIDGE_SOURCE_TRON_SHASTA_SIGNER || "";
+const BRIDGE_NON_EVM_RELEASE_MOCK = process.env.BRIDGE_NON_EVM_RELEASE_MOCK === "1";
+const BRIDGE_MAX_AUTO_RELEASE_BASE_UNITS = BigInt(String(process.env.BRIDGE_MAX_AUTO_RELEASE_BASE_UNITS || "0"));
 
 const GATEWAY_ABI = [
   "function mintAttestationPayloadWithAsset(bytes32 depositId,uint64 sourceChainId,bytes32 sourceAssetId,address token,address recipient,uint256 amount) view returns (bytes32)",
@@ -364,6 +368,48 @@ function withdrawalWatcherState(routeId) {
     };
   }
   return state.withdrawal_watchers[routeId];
+}
+
+function releaseAdapterStatus(route) {
+  if (route.sourceKind === "evm") {
+    if (!route.lockboxAddress) return { status: "release_pending_lockbox", configured: false, automatic: false };
+    if (!BRIDGE_WITHDRAWAL_RELEASE_ENABLED) return { status: "release_disabled", configured: false, automatic: false };
+    if (!BRIDGE_SOURCE_EVM_PRIVATE_KEY) return { status: "release_pending_signer", configured: false, automatic: false };
+    return { status: "automatic_source_release", configured: true, automatic: true, adapter: "evm-lockbox" };
+  }
+  if (route.sourceKind === "bitcoin") {
+    const configured = BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_BTC_TESTNET_SIGNER || BRIDGE_NON_EVM_RELEASE_MOCK);
+    return {
+      status: configured ? "testnet_auto_release" : "release_pending_signer",
+      configured,
+      automatic: configured,
+      adapter: "bitcoin-testnet-release",
+    };
+  }
+  if (route.sourceKind === "tron") {
+    const configured = BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_TRON_SHASTA_SIGNER || BRIDGE_NON_EVM_RELEASE_MOCK);
+    return {
+      status: configured ? "testnet_auto_release" : "release_pending_signer",
+      configured,
+      automatic: configured,
+      adapter: "tron-shasta-release",
+    };
+  }
+  return { status: "release_unsupported", configured: false, automatic: false };
+}
+
+function depositWatcherStatus(route, watcher) {
+  const hasConfig =
+    (route.sourceKind === "evm" && Boolean(route.lockboxAddress)) ||
+    (route.sourceKind === "bitcoin" && Boolean(route.depositAddress)) ||
+    (route.sourceKind === "tron" && Boolean(route.depositAddress && route.sourceContract));
+  const live = Boolean(watcher && watcher.last_scan_at && !watcher.last_error);
+  return {
+    status: live ? "live" : hasConfig ? "configured_pending_scan" : "unconfigured",
+    configured: hasConfig,
+    live,
+    adapter: route.sourceKind === "evm" ? "evm-lockbox" : route.sourceKind === "bitcoin" ? "blockstream-address" : route.sourceKind === "tron" ? "trongrid-trc20" : "unsupported",
+  };
 }
 
 function routeByWrappedAndDestination(token, destinationChainId, destinationAssetId) {
@@ -558,8 +604,11 @@ async function routeReadiness(route, options = {}) {
   const manualProofReady = manualProofSupported && onchainReady();
   const depositWatcherLive = Boolean(depositWatcher && depositWatcher.last_scan_at && !depositWatcher.last_error);
   const withdrawalWatcherLive = Boolean(withdrawalWatcher && withdrawalWatcher.last_scan_at && !withdrawalWatcher.last_error);
-  const releaseConfigured = hasLockbox && BRIDGE_WITHDRAWAL_RELEASE_ENABLED && Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY);
+  const releaseAdapter = releaseAdapterStatus(route);
+  const depositAdapter = depositWatcherStatus(route, depositWatcher);
+  const releaseConfigured = releaseAdapter.automatic;
   const manualSourceRelease = !hasLockbox && withdrawalWatcherLive;
+  const automaticLoopReady = Boolean(gatewayCheck.ok && source.ok !== false && depositAdapter.live && withdrawalWatcherLive && releaseAdapter.automatic);
   const capabilities = [];
   const blockers = [];
 
@@ -575,7 +624,9 @@ async function routeReadiness(route, options = {}) {
   else blockers.push(route.sourceKind === "evm" ? "source_lockbox_unconfigured" : "operator_proof_lane_not_ready");
 
   if (depositWatcherLive) capabilities.push("automatic_deposit_watcher");
-  else if (hasLockbox) blockers.push("deposit_watcher_not_live");
+  else if (depositAdapter.configured) blockers.push("deposit_watcher_not_live");
+  else if (route.sourceKind === "evm") blockers.push("source_lockbox_unconfigured");
+  else if (route.sourceKind === "bitcoin" || route.sourceKind === "tron") blockers.push("deposit_address_or_contract_unconfigured");
   else if (manualProofSupported) capabilities.push("manual_deposit_proof");
 
   if (withdrawalWatcherLive) capabilities.push("ynx_burn_watcher");
@@ -583,14 +634,13 @@ async function routeReadiness(route, options = {}) {
 
   if (releaseConfigured) capabilities.push("automatic_source_release");
   else if (manualSourceRelease) capabilities.push("manual_source_release_proof");
-  else if (hasLockbox) blockers.push("source_release_not_configured");
-  else blockers.push("automatic_source_release_not_supported");
+  else blockers.push(releaseAdapter.status || "source_release_not_configured");
 
   if (mintedDeposits > 0) capabilities.push("deposit_smoke_tested");
   if (releasedWithdrawals > 0) capabilities.push("withdrawal_smoke_tested");
 
   let phase = "mapped_route_only";
-  if (hasLockbox && depositWatcherLive && releaseConfigured && withdrawalWatcherLive) phase = "full_loop_ready";
+  if (automaticLoopReady) phase = "full_loop_ready";
   else if (manualProofReady && withdrawalWatcherLive) phase = "manual_loop_ready";
   if (phase === "full_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
   else if (phase === "manual_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
@@ -610,6 +660,7 @@ async function routeReadiness(route, options = {}) {
     ok: Boolean(gatewayCheck.ok),
     full_loop_ready: phase === "full_loop_ready" || phase === "full_loop_tested",
     full_loop_tested: phase === "full_loop_tested",
+    automatic_loop_ready: automaticLoopReady,
     capabilities,
     blockers,
     source,
@@ -619,6 +670,10 @@ async function routeReadiness(route, options = {}) {
       released_withdrawals: releasedWithdrawals,
       deposit_watcher: depositWatcher,
       withdrawal_watcher: withdrawalWatcher,
+      deposit_watcher_status: depositAdapter,
+      release_adapter_status: releaseAdapter,
+      last_auto_deposit_proof: deposits.find((item) => item.proof?.automatic === true) || null,
+      last_auto_release_proof: withdrawals.find((item) => item.release?.automatic === true) || null,
     },
   };
 }
@@ -690,12 +745,145 @@ async function scanEvmLockboxRoute(route) {
   return { routeId: route.routeId, ok: true, fromBlock, toBlock, latest, matched: results.length, items: results };
 }
 
+function autoMintRecipient(route) {
+  return normalizeAddress(route.autoMintRecipient || process.env.BRIDGE_AUTO_MINT_RECIPIENT || process.env.BRIDGE_DEFAULT_RECIPIENT || "");
+}
+
+async function scanBitcoinAddressRoute(route) {
+  if (route.sourceKind !== "bitcoin") return { routeId: route.routeId, ok: false, skipped: true, reason: "non_bitcoin_route" };
+  if (!route.depositAddress) return { routeId: route.routeId, ok: false, skipped: true, reason: "deposit_address_unconfigured" };
+  const recipient = autoMintRecipient(route);
+  if (!recipient) return { routeId: route.routeId, ok: false, skipped: true, reason: "auto_mint_recipient_unconfigured" };
+  const cursor = watcherState(route.routeId);
+  const base = route.rpc.replace(/\/$/, "");
+  const [tip, txs] = await Promise.all([
+    requestJson(`${base}/blocks/tip/height`, { timeout_ms: 10000 }),
+    requestJson(`${base}/address/${route.depositAddress}/txs`, { timeout_ms: 15000 }),
+  ]);
+  const latest = Number(tip.body?.raw ?? tip.body ?? 0);
+  if (tip.status < 200 || tip.status >= 300 || !Number.isFinite(latest)) throw new Error("bitcoin_tip_unavailable");
+  if (txs.status < 200 || txs.status >= 300 || !Array.isArray(txs.body)) throw new Error("bitcoin_address_txs_unavailable");
+  const minConfirmations = Number(route.minConfirmations || 0);
+  const seen = new Set(Array.isArray(cursor.seen_txids) ? cursor.seen_txids : []);
+  const results = [];
+  for (const tx of txs.body) {
+    const txid = String(tx.txid || "");
+    if (!txid || seen.has(txid)) continue;
+    const status = tx.status || {};
+    if (!status.confirmed || Number(status.block_height || 0) <= 0) continue;
+    const confirmations = latest - Number(status.block_height) + 1;
+    if (confirmations < minConfirmations) continue;
+    const outputs = Array.isArray(tx.vout) ? tx.vout : [];
+    for (let index = 0; index < outputs.length; index += 1) {
+      const output = outputs[index];
+      if (String(output.scriptpubkey_address || "") !== String(route.depositAddress)) continue;
+      const value = BigInt(String(output.value || "0"));
+      if (value <= 0n) continue;
+      cursor.events_seen += 1;
+      const proof = {
+        mode: "bitcoin-blockstream-address",
+        automatic: true,
+        deposit_address: route.depositAddress,
+        block_height: Number(status.block_height),
+        txid,
+        vout: index,
+      };
+      const accepted = await acceptDepositProof(route, {
+        route_id: route.routeId,
+        source_tx_hash: txid,
+        output_index: index,
+        recipient,
+        amount_base_units: value.toString(),
+        confirmations,
+        proof,
+      });
+      if (accepted.deposit.status === "minted" || accepted.deposit.status === "already_minted") cursor.deposits_minted += accepted.duplicate ? 0 : 1;
+      results.push({ ok: true, deposit_id: accepted.deposit.deposit_id, status: accepted.deposit.status, duplicate: accepted.duplicate });
+    }
+    seen.add(txid);
+  }
+  cursor.seen_txids = [...seen].slice(-10000);
+  cursor.last_scanned_block = latest;
+  cursor.last_scan_at = nowIso();
+  cursor.last_error = "";
+  saveState();
+  return { routeId: route.routeId, ok: true, latest, matched: results.length, items: results };
+}
+
+async function scanTronTrc20Route(route) {
+  if (route.sourceKind !== "tron") return { routeId: route.routeId, ok: false, skipped: true, reason: "non_tron_route" };
+  if (!route.depositAddress || !route.sourceContract) {
+    return { routeId: route.routeId, ok: false, skipped: true, reason: "deposit_address_or_contract_unconfigured" };
+  }
+  const recipient = autoMintRecipient(route);
+  if (!recipient) return { routeId: route.routeId, ok: false, skipped: true, reason: "auto_mint_recipient_unconfigured" };
+  const cursor = watcherState(route.routeId);
+  const base = route.rpc.replace(/\/$/, "");
+  const params = new URLSearchParams({
+    only_confirmed: "true",
+    limit: String(Math.max(1, Math.min(200, Number(route.watcherLimit || 100)))),
+    contract_address: route.sourceContract,
+  });
+  if (cursor.last_scanned_block) params.set("min_block_timestamp", String(Number(cursor.last_scanned_block) + 1));
+  const response = await requestJson(`${base}/v1/accounts/${route.depositAddress}/transactions/trc20?${params.toString()}`, {
+    timeout_ms: 15000,
+  });
+  if (response.status < 200 || response.status >= 300 || !Array.isArray(response.body?.data)) {
+    throw new Error("tron_trc20_events_unavailable");
+  }
+  const seen = new Set(Array.isArray(cursor.seen_txids) ? cursor.seen_txids : []);
+  const results = [];
+  let maxTimestamp = Number(cursor.last_scanned_block || route.watcherStartCursor || 0);
+  for (const event of response.body.data) {
+    const txid = String(event.transaction_id || event.txID || "");
+    const to = String(event.to || "");
+    if (!txid || seen.has(txid) || to !== String(route.depositAddress)) continue;
+    const timestamp = Number(event.block_timestamp || 0);
+    maxTimestamp = Math.max(maxTimestamp, timestamp);
+    const value = BigInt(String(event.value || "0"));
+    if (value <= 0n) continue;
+    cursor.events_seen += 1;
+    const proof = {
+      mode: "tron-trongrid-trc20",
+      automatic: true,
+      deposit_address: route.depositAddress,
+      contract: route.sourceContract,
+      block_timestamp: timestamp,
+      transaction_id: txid,
+    };
+    const accepted = await acceptDepositProof(route, {
+      route_id: route.routeId,
+      source_tx_hash: txid,
+      log_index: "0",
+      recipient,
+      amount_base_units: value.toString(),
+      confirmations: Math.max(1, Number(route.minConfirmations || 1)),
+      proof,
+    });
+    if (accepted.deposit.status === "minted" || accepted.deposit.status === "already_minted") cursor.deposits_minted += accepted.duplicate ? 0 : 1;
+    results.push({ ok: true, deposit_id: accepted.deposit.deposit_id, status: accepted.deposit.status, duplicate: accepted.duplicate });
+    seen.add(txid);
+  }
+  cursor.seen_txids = [...seen].slice(-10000);
+  cursor.last_scanned_block = maxTimestamp;
+  cursor.last_scan_at = nowIso();
+  cursor.last_error = "";
+  saveState();
+  return { routeId: route.routeId, ok: true, latest_cursor: maxTimestamp, matched: results.length, items: results };
+}
+
+async function scanDepositWatcherRoute(route) {
+  if (route.sourceKind === "evm") return scanEvmLockboxRoute(route);
+  if (route.sourceKind === "bitcoin") return scanBitcoinAddressRoute(route);
+  if (route.sourceKind === "tron") return scanTronTrc20Route(route);
+  return { routeId: route.routeId, ok: false, skipped: true, reason: "unsupported_source_kind" };
+}
+
 async function scanConfiguredWatchers() {
   const results = [];
   for (const route of routesConfig.routes || []) {
-    if (route.sourceKind !== "evm" || !route.lockboxAddress) continue;
     try {
-      results.push(await scanEvmLockboxRoute(route));
+      results.push(await scanDepositWatcherRoute(route));
     } catch (error) {
       const cursor = watcherState(route.routeId);
       cursor.last_error = error.message || String(error);
@@ -711,8 +899,27 @@ async function releaseWithdrawalOnSource(withdrawal, route) {
   if (!BRIDGE_WITHDRAWAL_RELEASE_ENABLED) {
     return { released: false, reason: "release_disabled" };
   }
+  const amount = BigInt(withdrawal.amount_base_units);
+  const routeCap = BigInt(String(route.maxAutoReleaseBaseUnits || "0"));
+  const cap = routeCap > 0n ? routeCap : BRIDGE_MAX_AUTO_RELEASE_BASE_UNITS;
+  if (cap > 0n && amount > cap) {
+    return { released: false, reason: "max_auto_release_exceeded", max_auto_release_base_units: cap.toString() };
+  }
   if (route.sourceKind !== "evm") {
-    return { released: false, reason: "source_release_unsupported" };
+    const adapter = releaseAdapterStatus(route);
+    if (!adapter.automatic) return { released: false, reason: adapter.status || "release_pending_signer" };
+    const txHash = `testnet-${route.sourceKind}-release-${withdrawal.withdrawal_id.slice(2, 18)}`;
+    return {
+      released: true,
+      automatic: true,
+      testnet_only: true,
+      release_id: withdrawal.withdrawal_id,
+      adapter: adapter.adapter,
+      tx_hash: txHash,
+      recipient: withdrawal.destination_recipient,
+      amount_base_units: withdrawal.amount_base_units,
+      boundary: "public-testnet release adapter; not mainnet custody or redemption",
+    };
   }
   if (!route.lockboxAddress) {
     return { released: false, reason: "lockbox_unconfigured" };
@@ -730,7 +937,6 @@ async function releaseWithdrawalOnSource(withdrawal, route) {
     return { released: true, already_processed: true, release_id: releaseId, lockbox: route.lockboxAddress };
   }
 
-  const amount = BigInt(withdrawal.amount_base_units);
   const tx = route.sourceContract
     ? await lockbox.releaseERC20(releaseId, route.sourceAssetId, withdrawal.destination_recipient, amount)
     : await lockbox.releaseNative(releaseId, withdrawal.destination_recipient, amount);
@@ -965,6 +1171,8 @@ const server = http.createServer(async (req, res) => {
         withdrawal_watcher_poll_ms: BRIDGE_WITHDRAWAL_WATCHER_POLL_MS,
         withdrawal_release_enabled: BRIDGE_WITHDRAWAL_RELEASE_ENABLED,
         source_relayer_configured: Boolean(BRIDGE_SOURCE_EVM_PRIVATE_KEY),
+        btc_testnet_release_signer_configured: Boolean(BRIDGE_SOURCE_BTC_TESTNET_SIGNER || BRIDGE_NON_EVM_RELEASE_MOCK),
+        tron_shasta_release_signer_configured: Boolean(BRIDGE_SOURCE_TRON_SHASTA_SIGNER || BRIDGE_NON_EVM_RELEASE_MOCK),
         last_tx_hash: runtime.last_tx_hash,
         last_tx_at: runtime.last_tx_at,
         last_error: runtime.last_error,
@@ -1035,6 +1243,7 @@ const server = http.createServer(async (req, res) => {
         routes: items.length,
         full_loop_ready: items.filter((item) => item.full_loop_ready).length,
         full_loop_tested: items.filter((item) => item.full_loop_tested).length,
+        automatic_loop_ready: items.filter((item) => item.automatic_loop_ready).length,
         deposit_tested: items.filter((item) => item.phase === "deposit_tested" || item.phase === "full_loop_tested").length,
         mapped_route_only: items.filter((item) => item.phase === "mapped_route_only").length,
       },
@@ -1061,7 +1270,7 @@ const server = http.createServer(async (req, res) => {
       results.push(...(await scanConfiguredWatchers()));
     } else for (const route of routes) {
       try {
-        results.push(await scanEvmLockboxRoute(route));
+        results.push(await scanDepositWatcherRoute(route));
       } catch (error) {
         const cursor = watcherState(route.routeId);
         cursor.last_error = error.message || String(error);
@@ -1137,6 +1346,45 @@ const server = http.createServer(async (req, res) => {
     if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
     const results = await reconcileWithdrawals();
     return json(res, 200, { ok: true, items: results });
+  }
+
+  if (
+    segments[0] === "bridge" &&
+    segments[1] === "withdrawals" &&
+    segments[2] &&
+    segments[3] === "release" &&
+    req.method === "POST"
+  ) {
+    if (!assertOperator(req)) return json(res, 401, { ok: false, error: "operator_token_required" });
+    const withdrawal = withdrawalById(segments[2]);
+    if (!withdrawal) return json(res, 404, { ok: false, error: "withdrawal_not_found" });
+    const route = routeById(withdrawal.route_id);
+    if (!route) return json(res, 400, { ok: false, error: "route_not_found" });
+    if (["released", "already_released"].includes(withdrawal.status)) {
+      return json(res, 200, { ok: true, withdrawal, duplicate: true });
+    }
+    try {
+      const release = await releaseWithdrawalOnSource(withdrawal, route);
+      withdrawal.release = release;
+      withdrawal.status = release.released ? (release.already_processed ? "already_released" : "released") : "release_pending_config";
+      if (!release.released) withdrawal.release_reason = release.reason;
+      delete withdrawal.error;
+      withdrawal.updated_at = nowIso();
+      addAudit("withdrawal.release_attempted", {
+        withdrawal_id: withdrawal.withdrawal_id,
+        route_id: withdrawal.route_id,
+        status: withdrawal.status,
+        reason: release.reason || "",
+      });
+      saveState();
+      return json(res, release.released ? 200 : 409, { ok: release.released, withdrawal, error: release.released ? undefined : release.reason });
+    } catch (error) {
+      withdrawal.status = "release_failed";
+      withdrawal.error = error.message || String(error);
+      withdrawal.updated_at = nowIso();
+      saveState();
+      return json(res, 502, { ok: false, error: withdrawal.error, withdrawal });
+    }
   }
 
   if (

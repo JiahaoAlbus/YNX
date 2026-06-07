@@ -283,7 +283,10 @@ ai_model="$(jq -r '.model // ""' "${OUTPUT_DIR}/responses/ai_chat.json")"
 ai_answer="$(jq -r '.answer // ""' "${OUTPUT_DIR}/responses/ai_chat.json")"
 ai_model_answer="$(jq -r '.model_answer // empty' "${OUTPUT_DIR}/responses/ai_chat.json")"
 [[ "$ai_mode" == llm:* || "$ai_mode" == "live-deterministic" ]] && record_ai "server_model_or_live_mode" PASS "mode=${ai_mode}, model=${ai_model}" || record_ai "server_model_or_live_mode" FAIL "mode=${ai_mode}"
-[[ "$ai_answer" == *"2/5"* && "$ai_answer" == *"full-loop-tested"* ]] && record_ai "factual_route_boundary" PASS "answer reports exact full-loop route count" || record_ai "factual_route_boundary" FAIL "answer did not report exact 2/5 route count"
+expected_route_full="$(jq -r '.summary.full_loop_tested // 0' "${OUTPUT_DIR}/responses/bridge_readiness.json")"
+expected_route_total="$(jq -r '.summary.routes // 0' "${OUTPUT_DIR}/responses/bridge_readiness.json")"
+expected_route_fraction="${expected_route_full}/${expected_route_total}"
+[[ "$ai_answer" == *"$expected_route_fraction"* && "$ai_answer" == *"full-loop-tested"* ]] && record_ai "factual_route_boundary" PASS "answer reports exact full-loop route count ${expected_route_fraction}" || record_ai "factual_route_boundary" FAIL "answer did not report exact route count ${expected_route_fraction}"
 [[ -z "$ai_model_answer" || "$ai_model_answer" == "null" ]] && record_ai "model_answer_hidden_by_default" PASS "raw model text hidden unless requested" || record_ai "model_answer_hidden_by_default" FAIL "model_answer exposed by default"
 
 status="$(post_json_status ai_chat_with_model "${AI_URL}/ai/chat" '{"message":"请用中文解释 Intelligence Layer 这个产品定位，三句话。","include_model_answer":true}')"
@@ -322,7 +325,12 @@ else
 fi
 
 actions_count="$(jq -r '.actions | length' "${OUTPUT_DIR}/responses/ai_actions.json")"
-if [[ "$actions_count" -ge 9 ]] && jq -e '.actions[] | select(.action=="ai.monitor.create")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null && jq -e '.actions[] | select(.action=="trade.quote")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null; then
+if [[ "$actions_count" -ge 12 ]] \
+  && jq -e '.actions[] | select(.action=="ai.monitor.create")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null \
+  && jq -e '.actions[] | select(.action=="trade.quote")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null \
+  && jq -e '.actions[] | select(.action=="trade.preflight")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null \
+  && jq -e '.actions[] | select(.action=="trade.prepare")' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null \
+  && jq -e '.actions[] | select(.action=="trade.execute" and (.auth | test("web4-session")))' "${OUTPUT_DIR}/responses/ai_actions.json" >/dev/null; then
   record_ai "action_catalog_live" PASS "actions=${actions_count}"
 else
   record_ai "action_catalog_live" FAIL "AI action catalog missing expected actions"
@@ -347,6 +355,43 @@ else
   record_ai "action_trade_quote_live" FAIL "trade.quote missing quote output or execution boundary"
 fi
 
+status="$(post_json_status ai_action_trade_preflight "${AI_URL}/ai/actions/run" '{"action":"trade.preflight","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1"}')"
+assert_status "ai_action_trade_preflight" "$status" '^200$' "AI action trade.preflight"
+preflight_pair="$(jq -r '.result.pair.label // ""' "${OUTPUT_DIR}/responses/ai_action_trade_preflight.json")"
+preflight_quote="$(jq -r '.result.quote.amount_out // ""' "${OUTPUT_DIR}/responses/ai_action_trade_preflight.json")"
+preflight_boundary="$(jq -r '.result.execution_boundary // ""' "${OUTPUT_DIR}/responses/ai_action_trade_preflight.json")"
+if [[ "$preflight_pair" == *"wUSDC.y"* && -n "$preflight_quote" && "$preflight_boundary" == *"preflight_only"* ]]; then
+  record_ai "action_trade_preflight_live" PASS "pair=${preflight_pair}; quote=${preflight_quote}"
+else
+  record_ai "action_trade_preflight_live" FAIL "trade.preflight missing pair, quote, or boundary"
+fi
+
+status="$(post_json_status ai_action_trade_prepare "${AI_URL}/ai/actions/run" '{"action":"trade.prepare","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1","recipient":"0x00000000000000000000000000000000000000aa"}')"
+assert_status "ai_action_trade_prepare" "$status" '^200$' "AI action trade.prepare"
+approve_to="$(jq -r '.result.approve.to // ""' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json")"
+approve_data="$(jq -r '.result.approve.data // ""' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json")"
+swap_to="$(jq -r '.result.swap.to // ""' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json")"
+swap_data="$(jq -r '.result.swap.data // ""' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json")"
+wallet_boundary="$(jq -r '.result.risk.boundary // ""' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json")"
+if [[ "$approve_to" =~ ^0x[0-9a-fA-F]{40}$ && "$approve_data" == 0x095ea7b3* && "$swap_to" =~ ^0x[0-9a-fA-F]{40}$ && "$swap_data" == 0xf3e6ea8a* && "$wallet_boundary" == *"wallet_signature_required"* ]]; then
+  record_ai "action_trade_prepare_params" PASS "approve=${approve_to}; swap=${swap_to}"
+else
+  record_ai "action_trade_prepare_params" FAIL "trade.prepare missing approve/swap calldata or wallet boundary"
+fi
+if grep -Eiq '(private[_-]?key|mnemonic|seed phrase|server signer)' "${OUTPUT_DIR}/responses/ai_action_trade_prepare.json"; then
+  record_ai "action_trade_prepare_no_signer_secret" FAIL "trade.prepare response contains signer/private key language"
+else
+  record_ai "action_trade_prepare_no_signer_secret" PASS "no private key, mnemonic, or server signer language"
+fi
+
+status="$(post_json_status ai_action_trade_execute "${AI_URL}/ai/actions/run" '{"action":"trade.execute","from_symbol":"YUSD.test","to_symbol":"wUSDC.y","amount":"0.1","recipient":"0x00000000000000000000000000000000000000aa"}')"
+assert_status "ai_action_trade_execute_requires_web4" "$status" '^(400|401|403|503)$' "trade.execute must reject public or unconfigured execution"
+if grep -Eiq '(private[_-]?key|mnemonic|seed phrase|raw signer)' "${OUTPUT_DIR}/responses/ai_action_trade_execute.json"; then
+  record_ai "action_trade_execute_no_signer_secret" FAIL "trade.execute response contains signer/private key language"
+else
+  record_ai "action_trade_execute_no_signer_secret" PASS "no private key, mnemonic, or raw signer material"
+fi
+
 ai_onchain="$(jq -r '.intelligence.mode // .ai.model // empty' "${OUTPUT_DIR}/responses/ai_health.json")"
 settlement_ready="$(jq -r '.onchain.ready // false' "${OUTPUT_DIR}/responses/ai_health.json")"
 stats_jobs="$(jq -r '.stats.total_jobs // 0' "${OUTPUT_DIR}/responses/ai_health.json")"
@@ -356,7 +401,9 @@ stats_payments="$(jq -r '.stats.total_payments // 0' "${OUTPUT_DIR}/responses/ai
 
 route_full="$(jq -r '.summary.full_loop_tested // 0' "${OUTPUT_DIR}/responses/bridge_readiness.json")"
 route_total="$(jq -r '.summary.routes // 0' "${OUTPUT_DIR}/responses/bridge_readiness.json")"
-[[ "$route_total" -ge 5 && "$route_full" -ge 2 ]] && record PASS "bridge_route_readiness" "full_loop=${route_full}/${route_total}" || record FAIL "bridge_route_readiness" "full_loop=${route_full}/${route_total}"
+route_auto="$(jq -r '.summary.automatic_loop_ready // 0' "${OUTPUT_DIR}/responses/bridge_readiness.json")"
+[[ "$route_total" -ge 5 && "$route_full" -ge 5 ]] && record PASS "bridge_route_readiness" "full_loop=${route_full}/${route_total}" || record FAIL "bridge_route_readiness" "full_loop=${route_full}/${route_total}; expected=5/5"
+[[ "$route_total" -ge 5 && "$route_auto" -ge 5 ]] && record PASS "bridge_route_automatic_readiness" "automatic_loop=${route_auto}/${route_total}" || record FAIL "bridge_route_automatic_readiness" "automatic_loop=${route_auto}/${route_total}; expected=5/5"
 
 if grep -q '<div id="root"' "${OUTPUT_DIR}/responses/website_ai.txt"; then
   record_ai "website_ai_console" PASS "${WEBSITE_URL}/ai renders SPA root"

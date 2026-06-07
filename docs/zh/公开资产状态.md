@@ -1,7 +1,7 @@
 # YNX 公开资产状态
 
 状态：active  
-最后更新：2026-06-06
+最后更新：2026-06-07
 范围：公开测试网 `ynx_9102-1`
 
 ## 当前答案
@@ -30,10 +30,10 @@ Bridge service：`https://rpc.ynxweb4.com/bridge/*`
 
 | 来源测试网资产 | Route | YNX wrapped token | 合约 | 小数位 | 公开测试网状态 |
 |---|---|---|---|---:|---|
-| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | manual proof 闭环 ready |
+| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | 已通过 manual proof 完整闭环实测 |
 | Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | 已完成完整闭环实测：充值 + 提现释放 |
-| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | manual proof 闭环 ready；当前不优先补 BSC 资金 |
-| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | manual proof 闭环 ready |
+| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | 已通过 manual proof 完整闭环实测 |
+| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | 已通过 manual proof 完整闭环实测 |
 | Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | 已完成完整闭环实测：充值 + 提现释放 |
 
 Bridge service 暴露：
@@ -82,16 +82,33 @@ Sepolia ETH release tx:   0x35eec0e6feda8a710f9083a237e8a582bd67eb87bce1e0c3ded3
 金额：                    0.0001 wETH.y -> 0.0001 Sepolia ETH
 ```
 
+BTC、BNB、TRON route 的 manual public-testnet full-loop 证据：
+
+```text
+BTC source proof:         0x2d4f3ac96c43828bed934bd8e376fff61a25c7711150a56895dcd759d1f9ce4d
+YNX wBTC.y burn tx:       0xf9220fd505610668a724bb6ac40e4e17c992cbadb8764289ee57c072908739f8
+BTC release proof:        0x5a6831822cf2c54a5583347abe96f9ff54893033bcdc23187610661426a5f210
+
+BSC source proof:         0x631f4edabb7a8efed7248faf7dad91c39777bf25a136eac44eb4b08ac872fd31
+YNX wBNB.y burn tx:       0xe13923bdcf6181b5e88f619c1e45f20e3d0f9e5e2d6f321d8223133e772ca208
+BSC release proof:        0xf7d2c900390c1627c1de53d00bdbf0d0c2395383273ac279907df913d19342fe
+
+TRON source proof:        0xd6ea9dc7777a5bb05ab47d610245c494a6c7b6686ff7e2ccb2b64037519767af
+YNX wUSDT.y burn tx:      0x107d4d706672c7322d8ac66617aeb4076761e93844d46a7d88f3825e590bed3f
+TRON release proof:       0xf02bc21e3b8522d784f67e2c17fbb26e91a7294f064957b7e5907b6372ce257c
+```
+
 当前 route readiness：
 
 ```text
 GET /bridge/route-readiness
-full_loop_tested: eth-sepolia-eth, eth-sepolia-usdc
-manual_loop_ready: btc-testnet-btc, bnb-testnet-bnb, tron-shasta-usdt
+full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
+automatic_loop_ready: 需要 deposit address/source contract、BSC lockbox、测试网 release signer 全部配置
+manual_loop_ready: none
 mapped_route_only: none
 ```
 
-manual_loop_ready 的意思是：
+full-loop-tested 证据链的意思是：
 
 ```text
 外部测试网充值由 operator 验真
@@ -102,16 +119,12 @@ manual_loop_ready 的意思是：
 -> operator 在外部测试网释放资产，并用 /bridge/withdrawals/:id/mark-released 记录 release proof
 ```
 
-这是真实测试网审计链路，但还不是自动外链托管。BTC / TRON 还需要自动
-deposit watcher、外部签名策略、MPC/custody 控制和自动 release，才能称为
-生产级 bridge route。
-
-BSC testnet BNB 部署还需要给 bridge operator 地址补测试网 gas。
-BNB 官方测试网水龙头还要求该地址在 BSC 主网持有至少 `0.002 BNB`：
-
-```text
-0xDAab5F0C6A2d89F7b669ac56025c92D8c0cC69c5
-```
+这是 YNX 侧真实测试网审计链路，使用 operator-attested source proof 和
+release 记录。Bridge service 现在已经实现 BTC testnet Blockstream watcher、
+TRON Shasta TronGrid watcher、BSC testnet EVM lockbox 自动化路径，以及
+测试网 signer-gated release adapter。某条 route 只有在 deposit address/contract、
+必要的 lockbox、watcher scan、burn watcher、release signer 和 release cap 都
+配置并健康时，才会被标记为 `automatic_loop_ready`。
 
 ## 还没正式上线的能力
 
@@ -124,11 +137,11 @@ BNB 官方测试网水龙头还要求该地址在 BSC 主网持有至少 `0.002 
 | YNX L1 测试网 | 公链出块、EVM RPC、原生 `anyxt` gas、explorer/indexer/faucet | 腾讯云上的 `ynx-v2-node`、EVM JSON-RPC、REST/indexer/faucet 服务 | 主网级验证人多样性、SLO、灾备、安全审计 |
 | wrapped 资产 | `wBTC.y`、`wETH.y`、`wBNB.y`、`wUSDT.y`、`wUSDC.y` 合约和 route | 9102 上的 `YNXBridgeGateway` + `YNXWrappedAsset` | 真实主网外部资产托管/赎回、治理和流动性 |
 | Sepolia bridge | ETH/USDC 已完整闭环 | Sepolia `YNXSourceLockbox`、自动 deposit watcher、YNX mint、YNX burn watcher、Sepolia release | 更大金额测试、失败重放、监控、审计 |
-| BTC/TRON bridge | manual proof 闭环 ready | operator 验证外链 tx 后提交 proof，YNX 铸币；burn 后 operator 记录外链 release proof | 自动 BTC/TRON watcher、MPC/签名策略、自动 release |
-| BSC route | wrapped route ready；manual proof 闭环 ready | wBNB.y route 已部署，source chain 已配置 | 如果重新优先 BSC，需要 tBNB/BNB 资金和 source lockbox |
-| 交易 | `wUSDC.y/YUSD.test`、`wETH.y/YUSD.test` 最小 AMM pilot | 测试 AMM 合约 + 小额初始流动性 | 深度、滑点、路由、风控、做市监控 |
+| BTC/TRON bridge | manual evidence 已 full-loop-tested；自动 watcher/release adapter 已实现 | Blockstream/TronGrid watcher、YNX mint、YNX burn watcher、测试网 signer-gated release adapter | 配置线上 deposit address/contract/signer；生产级仍需 MPC/custody 策略 |
+| BSC route | manual evidence 已 full-loop-tested；EVM lockbox 自动化路径已实现 | wBNB.y route 已部署，source chain 已配置；automatic PASS 需要 BSC testnet lockbox | 部署/配置 BSC testnet lockbox 和 source signer |
+| 交易 | `wUSDC.y/YUSD.test`、`wETH.y/YUSD.test` 最小 AMM pilot；脚本支持继续 seed wBTC/wBNB/wUSDT 的 YUSD pair | 测试 AMM 合约 + 小额初始流动性 + AI quote/preflight/prepare/execute 检查 | 更深流动性、滑点、路由、风控、做市监控 |
 | YUSD.test | 合成测试稳定资产可用 | 6 位 ERC-20 测试资产，用于交易、AI 支付、UX | 不可赎回；真实稳定币需要发行方/合规合作或明确保持测试资产 |
-| AI Intelligence | `/ai/chat`、`/ai/intelligence/brief` 线上可用，服务器本地模型已接入 | AI Gateway 读取 bridge/Web4/AI 状态；服务器 Ollama `qwen2.5:1.5b`；官方 answer 用确定性事实生成 | 更强模型、检索增强、operator action、告警自动化 |
+| AI Intelligence | `/ai/chat`、`/ai/intelligence/brief` 线上可用；`trade.execute` 是 protected action | AI Gateway 读取 bridge/Web4/AI 状态；quote/preflight/prepare 公开；execute 必须 Web4 policy/session + 测试网 agent signer | 更强模型、检索增强、告警自动化、未来 MPC/agent 授权 |
 | AI settlement | vault/job/payment 和链上结算已实测 | AI Gateway + `YNXAISettlement` 合约 `0x87e8...2Fcf` | challenge/slash 治理、签名轮换、审计 |
 | Web4 | policy、session、tool 授权、audit logs | Web4 Hub 根据 policy/session 限制授权 AI action | 用户级策略 UI、外部 SDK |
 | 监控 | bridge full-loop 和 AI on-chain 定时探针 active | systemd timers：`ynx-public-bridge-full-loop.timer`、`ynx-public-ai-onchain.timer` | Pager/告警、SLO dashboard、事故 runbook |

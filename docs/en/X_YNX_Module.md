@@ -70,11 +70,11 @@ Current v0 system contracts include:
 
 The module enforces the fee split by moving coins out of the fee collector module account after fee deduction, on every successful DeliverTx.
 
-Default v0 parameters:
+Current safer default parameters for future networks:
 
 - `fee_burn_bps = 4000`
 - `fee_treasury_bps = 1000`
-- `fee_founder_bps = 1000`
+- `fee_founder_bps = 0`
 - The remainder is left for validator/delegator distribution.
 
 If `treasury_address` or `founder_address` is unset, the corresponding share defaults to validators.
@@ -97,7 +97,7 @@ on-chain (see `docs/en/Protocol_Precompile_v0.md`).
 
 Core params:
 
-- `founder_address` (bech32; optional but RECOMMENDED for mainnet)
+- `founder_address` (bech32; optional and not required for financing-safe defaults)
 - `treasury_address` (bech32; if unset and system contracts are enabled, it defaults to the deployed treasury contract address)
 - `fee_burn_bps`, `fee_treasury_bps`, `fee_founder_bps`
 - `inflation_treasury_bps`

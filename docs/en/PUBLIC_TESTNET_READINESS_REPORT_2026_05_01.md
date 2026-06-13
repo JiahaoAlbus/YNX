@@ -107,7 +107,8 @@ Operational notes:
 - Documentation readiness: PASS.
 - Local code tests: PASS.
 - P2P redundancy: PASS.
-- Validator decentralization: PASS.
+- Validator topology redundancy: PASS.
+- Validator independence claim: NOT CLAIMED.
 
 Overall: public testnet passes the current strict readiness gate.
 

@@ -20,6 +20,7 @@ This file is the investor and grant-reviewer entry point for YNX.
 - `docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md`
 - `docs/en/PUBLIC_TESTNET_STATUS_2026_05_02.md`
 - `docs/en/PUBLIC_ASSET_STATUS.md`
+- `docs/en/DILIGENCE_CONSISTENCY_AUDIT_2026_06_14.md`
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md`
 - `docs/en/TESTNET_LAUNCH_GRADE_RUNBOOK.md`
 
@@ -35,6 +36,8 @@ This file is the investor and grant-reviewer entry point for YNX.
 
 - `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
 - `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`
+- `docs/en/TOKEN_POLICY_POSITION_2026_06_14.md`
+- `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md`
 - `docs/en/TERMS_OF_USE_DRAFT_2026_06_13.md`
 - `docs/en/PRIVACY_POLICY_DRAFT_2026_06_13.md`
 - `docs/en/RISK_DISCLOSURES_DRAFT_2026_06_13.md`

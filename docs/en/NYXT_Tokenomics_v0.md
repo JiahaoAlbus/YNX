@@ -1,6 +1,6 @@
 # NYXT Tokenomics (v0)
 
-Status: Draft  
+Status: historical draft; not canonical for fundraising or final mainnet economics  
 Version: v0.1  
 Last updated: 2026-02-12  
 Canonical language: English
@@ -8,6 +8,13 @@ Canonical language: English
 ## 0. Normative Language
 
 Normative keywords are per RFC 2119.
+
+Important diligence note:
+
+- this file is a historical v0 economics draft;
+- it should not be treated as the current fundraising term sheet;
+- current investor-facing materials should instead use
+  `docs/en/TOKEN_POLICY_POSITION_2026_06_14.md`.
 
 ## 1. Token Utility
 
@@ -45,12 +52,19 @@ On the base-chain implementation, the treasury share is enforced via `x/ynx`:
 
 ## 3. Transaction Fee Split
 
-For every transaction fee paid (gas fees), the protocol MUST apply the following split:
+Historical v0 draft described the following fee split:
 
 - **40%** burned (permanently removed from supply)
 - **40%** to validators (and their delegators per delegation rules)
 - **10%** to the on-chain treasury
 - **10%** to the protocol founder (protocol revenue)
+
+Current financing-safe direction:
+
+- future default founder fee SHOULD be `0 bps` unless separately approved and
+  publicly justified;
+- investor and sponsor outreach should not present founder-fee extraction as a
+  fixed production policy.
 
 ### 3.1 Fee Split Parameters (v0 defaults)
 
@@ -67,16 +81,22 @@ If `treasury_address` or `founder_address` is unset, the corresponding share MUS
 
 ### 4.1 Team / Founder Allocation
 
+Historical placeholder:
+
 - **15%** (15,000,000,000 NYXT)
 - Vesting MUST be **1 year cliff + 4 year linear vesting**.
 - Tokens MUST be held in an on-chain vesting contract and the contract addresses MUST be publicly disclosed.
 
 ### 4.2 Treasury Reserve (Genesis)
 
+Historical placeholder:
+
 - **40%** (40,000,000,000 NYXT)
 - Treasury spending MUST be governed on-chain (see governance spec).
 
 ### 4.3 Community & Ecosystem
+
+Historical placeholder:
 
 - **45%** (45,000,000,000 NYXT)
 - Distribution SHOULD prioritize real users, developers, and infrastructure contributors, using auditable programs.

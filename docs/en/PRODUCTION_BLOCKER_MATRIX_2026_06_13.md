@@ -7,12 +7,16 @@ Status date: 2026-06-13
 - validators bonded: `4/4`
 - public readiness gate: `PASS`
 - bridge full-loop-tested: `5/5`
-- automatic-loop-live: `2/5`
+- automatic-loop-ready: `4/5`
+- automatic-loop-observed: `2/5`
 
 Important interpretation:
 
 - `4/4 bonded` does not by itself prove strong validator independence;
 - `5/5 full-loop-tested` does not mean `5/5 production-safe`;
+- `automatic_loop_ready` means the route configuration and adapters are present;
+- `automatic_loop_observed` means YNX has already observed automation through
+  live watcher/release evidence rather than only configuration;
 - this matrix should be read as testnet operational evidence, not as proof that
   YNX is already institution-grade infrastructure.
 
@@ -20,9 +24,9 @@ Important interpretation:
 
 | Route | Current status | Missing production input | Why it is blocked |
 |---|---|---|---|
-| `btc-testnet-btc` | full-loop-tested, not automatic | `depositAddress`, `BRIDGE_SOURCE_BTC_TESTNET_SIGNER` | BTC watcher and release adapter are implemented, but live deposit and signer config are still absent |
+| `btc-testnet-btc` | full-loop-tested, automatic-ready, limited observed automation evidence | repeated live automatic deposit/release evidence | BTC watcher and release adapter are configured, but the public evidence packet is still thinner than the Sepolia routes |
 | `bnb-testnet-bnb` | full-loop-tested, not automatic | BSC lockbox deployment, testnet BNB funding for deployer | EVM lockbox automation path exists, but the deploy signer has zero BSC testnet gas and no lockbox is configured |
-| `tron-shasta-usdt` | full-loop-tested, not automatic | `depositAddress`, `sourceContract`, `BRIDGE_SOURCE_TRON_SHASTA_SIGNER` | TRON watcher/release adapter exists, but live contract/address and signer config are still absent |
+| `tron-shasta-usdt` | full-loop-tested, automatic-ready, limited observed automation evidence | repeated live automatic deposit/release evidence | TRON watcher/release adapter is configured, but the public evidence packet is still thinner than the Sepolia routes |
 
 ## What Was Completed
 
@@ -45,4 +49,4 @@ Important interpretation:
 
 Use this wording:
 
-`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, protected AI trade execution through Web4 session policy, and 2/5 routes already running automatic deposit/release loops. The remaining BTC, TRON, and BSC routes are adapter-level configuration blockers, but the bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`
+`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, 4/5 routes automatic-loop-ready by current route configuration, and the strongest observed automatic public evidence today on the Sepolia ETH and USDC routes. The bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`

@@ -137,6 +137,8 @@ assumption of the company.
 - The business should stay non-custodial by default.
 - Wrapped testnet routes are evidence of architecture, not proof of licensed
   production custody.
+- Historical tokenomics drafts exist, but they are not the current financing
+  term sheet or a founder-fee commitment.
 - The best financing use case is infrastructure expansion and hardening, not
   speculative liquidity theater.
 

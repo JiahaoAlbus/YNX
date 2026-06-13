@@ -1,6 +1,6 @@
 # YNX v0 Parameter Registry (Canonical)
 
-Status: Draft  
+Status: historical draft; not canonical for fundraising or mainnet economics  
 Version: v0.1  
 Last updated: 2026-02-12  
 Canonical language: English
@@ -58,14 +58,24 @@ Node operators SHOULD tune CometBFT consensus timeouts accordingly for productio
 
 ### 4.3 Transaction Fee Split
 
-For every fee paid:
+Historical v0 draft described:
 
 - **40%** burn
 - **40%** validators (+ delegators via distribution)
 - **10%** treasury
 - **10%** founder
 
+Current financing-safe direction:
+
+- future default founder fee SHOULD be `0 bps` unless separately approved,
+  disclosed, and justified;
+- investors should not treat the historical founder-fee draft as the current
+  commercial policy.
+
 ### 4.4 Genesis Allocation
+
+The percentages below are historical design placeholders, not a finalized
+fundraising or mainnet commitment:
 
 - Team: **15%** via on-chain vesting (**1y cliff + 4y linear**)
 - Treasury reserve: **40%** (governance-controlled)

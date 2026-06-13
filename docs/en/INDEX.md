@@ -33,6 +33,9 @@ Last updated: 2026-04-30
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy
+- `docs/en/TOKEN_POLICY_POSITION_2026_06_14.md` — financing-safe token policy and boundary against old drafts
+- `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md` — website legal-page publication blocker and publish source packet
+- `docs/en/DILIGENCE_CONSISTENCY_AUDIT_2026_06_14.md` — alignment check across live endpoints, docs, and website disclosures
 - `docs/en/TERMS_OF_USE_DRAFT_2026_06_13.md` — draft website/API terms of use
 - `docs/en/PRIVACY_POLICY_DRAFT_2026_06_13.md` — draft privacy notice for hosted services
 - `docs/en/RISK_DISCLOSURES_DRAFT_2026_06_13.md` — draft public risk disclosure language
@@ -67,6 +70,8 @@ Last updated: 2026-04-30
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — moat definition and what YNX should not overclaim
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — hard-question answer bank for investor and grant diligence
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — practical security-response workflow and current maturity limits
+- `docs/en/TOKEN_POLICY_POSITION_2026_06_14.md` — how to talk about token policy without overcommitting to old drafts
+- `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md` — current website legal publication gap and publish packet
 
 ## Core Specs
 

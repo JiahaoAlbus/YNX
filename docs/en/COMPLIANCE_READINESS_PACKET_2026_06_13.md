@@ -153,8 +153,8 @@ The following should exist before broad investor or ecosystem outreach:
 
 - no final legal memo from external counsel is included yet;
 - no production audit opinion is included yet;
-- no finalized public terms/privacy pages appear to be shipped to the website in
-  this repository;
+- as of June 14, 2026, `https://www.ynxweb4.com/privacy` and `/terms` still
+  return the website shell rather than standalone legal disclosure pages;
 - bridge narratives must remain carefully testnet-scoped;
 - BSC/BNB route work should not drive regulatory or fundraising positioning.
 

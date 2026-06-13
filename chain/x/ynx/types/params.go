@@ -16,7 +16,7 @@ func DefaultParams() Params {
 		TreasuryAddress:       "",
 		FeeBurnBps:            4_000,
 		FeeTreasuryBps:        1_000,
-		FeeFounderBps:         1_000,
+		FeeFounderBps:         0,
 		InflationTreasuryBps:  3_000,
 	}
 }
@@ -53,4 +53,3 @@ func (p Params) Validate() error {
 
 	return nil
 }
-

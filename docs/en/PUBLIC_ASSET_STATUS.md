@@ -118,6 +118,7 @@ Current route readiness:
 GET /bridge/route-readiness
 full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
 automatic_loop_ready: requires configured deposit addresses/source contracts, BSC lockbox, and testnet release signers
+automatic_loop_observed: strongest live public evidence currently concentrated on Sepolia ETH and USDC
 manual_loop_ready: none
 mapped_route_only: none
 ```
@@ -126,10 +127,11 @@ As of 2026-06-13, the live bridge readiness posture is:
 
 - `5/5` routes `full_loop_tested`
 - `4/5` routes `automatic_loop_ready`
-- `btc-testnet-btc`: automatic live
-- `eth-sepolia-eth`: automatic live
-- `tron-shasta-usdt`: automatic live
-- `eth-sepolia-usdc`: automatic live
+- `2/5` routes with the strongest observed automatic public evidence: Sepolia ETH and Sepolia USDC
+- `btc-testnet-btc`: automatic-ready, but public observed automation evidence is still thinner
+- `eth-sepolia-eth`: automatic-ready and observed
+- `tron-shasta-usdt`: automatic-ready, but public observed automation evidence is still thinner
+- `eth-sepolia-usdc`: automatic-ready and observed
 - `bnb-testnet-bnb`: waiting on BSC lockbox deployment and testnet BNB funding
 
 Full-loop-tested evidence means:
@@ -150,6 +152,14 @@ testnet once a BSC lockbox is configured, and exposes signer-gated testnet
 release adapters. A route is not `automatic_loop_ready` unless its deposit
 address/contract, lockbox where needed, watcher scan, burn watcher, release
 signer, and release cap are all configured and healthy.
+
+Important diligence note:
+
+- `automatic_loop_ready` is a configuration and adapter-readiness state;
+- it is stronger than manual-only support, but weaker than repeated public
+  observed automation evidence;
+- investors should not collapse `automatic_loop_ready` into "production-safe"
+  or "fully proven at scale".
 
 ## Not Live Yet
 

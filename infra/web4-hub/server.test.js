@@ -60,6 +60,38 @@ test("reports ready when policy enforcement and internal authorization are confi
   assert.equal(ready.checks.internal_authorizer, true);
 });
 
+test("honors configured CORS allowlist for preflight requests", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-cors-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+      WEB4_CORS_ALLOWED_ORIGINS: "https://app.ynxweb4.com,https://ops.ynxweb4.com",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const response = await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+    method: "OPTIONS",
+    headers: { origin: "https://ops.ynxweb4.com" },
+  });
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://ops.ynxweb4.com");
+  assert.equal(response.headers.get("vary"), "origin");
+
+  const ready = await requestJson(`http://127.0.0.1:${port}/ready`, {
+    headers: { origin: "https://ops.ynxweb4.com" },
+  });
+  assert.equal(ready.headers.get("access-control-allow-origin"), "https://ops.ynxweb4.com");
+});
+
 test("internal authorization consumes session ops and spend for AI actions", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-web4-authz-");

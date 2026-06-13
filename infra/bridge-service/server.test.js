@@ -81,6 +81,36 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.equal(assets.pairs.some((item) => item.label === "wUSDC.y/YUSD.test"), true);
 });
 
+test("honors configured CORS allowlist for preflight requests", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-bridge-cors-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      BRIDGE_PORT: String(port),
+      BRIDGE_DATA_DIR: dataDir,
+      BRIDGE_ROUTES_FILE: routesFile,
+      BRIDGE_ONCHAIN_ENABLED: "0",
+      BRIDGE_CORS_ALLOWED_ORIGINS: "https://app.ynxweb4.com,https://ops.ynxweb4.com",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const response = await requestJson(`http://127.0.0.1:${port}/bridge/routes`, {
+    method: "OPTIONS",
+    headers: { origin: "https://ops.ynxweb4.com" },
+  });
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://ops.ynxweb4.com");
+  assert.equal(response.headers.get("vary"), "origin");
+
+  const ready = await requestJson(`http://127.0.0.1:${port}/ready`, {
+    headers: { origin: "https://ops.ynxweb4.com" },
+  });
+  assert.equal(ready.headers.get("access-control-allow-origin"), "https://ops.ynxweb4.com");
+});
+
 test("accepts a deposit proof once and preserves idempotency", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-bridge-deposit-");

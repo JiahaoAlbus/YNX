@@ -10,10 +10,36 @@ function json(res, status, payload, extraHeaders = {}) {
   res.writeHead(status, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body),
-    "access-control-allow-origin": "*",
     ...extraHeaders,
   });
   res.end(body);
+}
+
+function parseAllowedOrigins(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function resolveCorsOrigin(origin, allowedOrigins) {
+  if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
+    return "*";
+  }
+  if (origin && allowedOrigins.includes(origin)) {
+    return origin;
+  }
+  return allowedOrigins[0];
+}
+
+function corsHeaders(req = null) {
+  const origin = req?.headers?.origin || "";
+  const allowOrigin = resolveCorsOrigin(origin, AI_CORS_ALLOWED_ORIGINS);
+  const headers = {
+    "access-control-allow-origin": allowOrigin,
+  };
+  if (allowOrigin !== "*") headers.vary = "origin";
+  return headers;
 }
 
 function parseBody(req, limitBytes) {
@@ -184,6 +210,27 @@ const AI_DEFAULT_CHALLENGE_BLOCKS = parseInt(process.env.AI_DEFAULT_CHALLENGE_BL
 const AI_X402_UNIT_PRICE = Number(process.env.AI_X402_UNIT_PRICE || "1");
 const AI_X402_DENOM = process.env.AI_X402_DENOM || "usdc";
 const AI_BODY_LIMIT_BYTES = parseInt(process.env.AI_BODY_LIMIT_BYTES || "1048576", 10);
+const AI_SERVER_HEADERS_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.AI_SERVER_HEADERS_TIMEOUT_MS || "15000", 10) || 15000,
+);
+const AI_SERVER_REQUEST_TIMEOUT_MS = Math.max(
+  AI_SERVER_HEADERS_TIMEOUT_MS,
+  parseInt(process.env.AI_SERVER_REQUEST_TIMEOUT_MS || "30000", 10) || 30000,
+);
+const AI_SERVER_KEEP_ALIVE_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.AI_SERVER_KEEP_ALIVE_TIMEOUT_MS || "5000", 10) || 5000,
+);
+const AI_SERVER_MAX_REQUESTS_PER_SOCKET = Math.max(
+  1,
+  parseInt(process.env.AI_SERVER_MAX_REQUESTS_PER_SOCKET || "100", 10) || 100,
+);
+const AI_SERVER_MAX_HEADERS_COUNT = Math.max(
+  1,
+  parseInt(process.env.AI_SERVER_MAX_HEADERS_COUNT || "100", 10) || 100,
+);
+const AI_CORS_ALLOWED_ORIGINS = parseAllowedOrigins(process.env.AI_CORS_ALLOWED_ORIGINS || "*");
 const AI_ENFORCE_POLICY = process.env.AI_ENFORCE_POLICY !== "0";
 const AI_WEB4_HUB_URL = (process.env.AI_WEB4_HUB_URL || process.env.YNX_PUBLIC_WEB4_HUB || "").replace(/\/$/, "");
 const AI_WEB4_INTERNAL_TOKEN = process.env.AI_WEB4_INTERNAL_TOKEN || process.env.WEB4_INTERNAL_TOKEN || "";
@@ -1904,9 +1951,12 @@ function ensureUnique(collection, key, value) {
 }
 
 const server = http.createServer(async (req, res) => {
+  for (const [key, value] of Object.entries(corsHeaders(req))) {
+    res.setHeader(key, value);
+  }
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
-      "access-control-allow-origin": "*",
+      ...corsHeaders(req),
       "access-control-allow-methods": "GET,POST,OPTIONS",
       "access-control-allow-headers": "content-type,x-ynx-payment,x-ynx-session,x-request-id",
     });
@@ -2446,6 +2496,12 @@ const server = http.createServer(async (req, res) => {
 
   return json(res, 404, { ok: false, error: "not_found" });
 });
+
+server.headersTimeout = AI_SERVER_HEADERS_TIMEOUT_MS;
+server.requestTimeout = AI_SERVER_REQUEST_TIMEOUT_MS;
+server.keepAliveTimeout = AI_SERVER_KEEP_ALIVE_TIMEOUT_MS;
+server.maxRequestsPerSocket = AI_SERVER_MAX_REQUESTS_PER_SOCKET;
+server.maxHeadersCount = AI_SERVER_MAX_HEADERS_COUNT;
 
 server.listen(AI_GATEWAY_PORT, () => {
   console.log(`YNX AI gateway listening on :${AI_GATEWAY_PORT}`);

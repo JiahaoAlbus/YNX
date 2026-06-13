@@ -6,11 +6,28 @@ Canonical language: English
 
 ## One-line positioning
 
-YNX is a **speed-first Web4 execution and trading layer** with **EVM-compatible developer access**, machine-payment workflows, and owner-policy-session controls for human and agent execution.
+YNX is a **Web4 and AI-execution layer** with **EVM-compatible developer
+access**, machine-payment workflows, and owner-policy-session controls for
+human and agent execution.
 
 Current public-testnet wording:
 
 `YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt is the fully usable public-testnet asset. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations; production-grade external deposit/withdraw and official trading liquidity are not live yet.`
+
+## What YNX Is And Is Not
+
+YNX should currently be presented as:
+
+- a live public-testnet execution layer;
+- a policy-bounded AI/Web4 execution stack;
+- a non-custodial infrastructure project that is still hardening.
+
+YNX should not currently be presented as:
+
+- a novel-consensus breakthrough;
+- a fully decentralized validator network;
+- a production bridge or production asset-custody stack;
+- a mainnet-grade financial infrastructure network.
 
 ## Why users choose YNX
 
@@ -25,14 +42,20 @@ Current public-testnet wording:
 YNX does not compete by claiming the largest liquidity today.  
 YNX competes on:
 
-- extreme execution speed and low-latency UX,
+- execution controls for humans and agents,
+- session-scoped policy enforcement,
+- AI/Web4 settlement rails,
 - practical developer velocity,
-- curated mainstream-asset onboarding through wrapped BTC/ETH/BNB/stablecoin targets,
 - AI/Web4 workload readiness,
 - observability of governance and operations,
 - scalable validator onboarding when the product needs more decentralization.
 
-YNX should not claim BTC/ETH/BNB/USDT/USDC trading, mainnet-candidate readiness, or decentralized-validator readiness until the relevant gates pass.
+YNX should not claim BTC/ETH/BNB/USDT/USDC production trading, mainnet-candidate
+readiness, or decentralized-validator readiness until the relevant gates pass.
+
+The strongest moat today is not generic chain assembly. The strongest moat today
+is the policy/session execution model and the settlement/operator stack around
+it.
 
 ## AI positioning
 
@@ -64,6 +87,7 @@ References:
 - `docs/en/PUBLIC_ASSET_STATUS.md`
 - `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md`
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md`
+- `docs/en/FUNDRAISING_MEMO_2026_06_13.md`
 
 ## Machine-readable positioning endpoint
 

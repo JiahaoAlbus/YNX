@@ -26,7 +26,10 @@ Live surfaces:
 Run the acceptance set on the Tencent Cloud server first:
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+export SSH_KEY_PATH=/path/to/key.pem
+export YNX_SERVER=ubuntu@<SERVER_IP>
+
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'cd /home/ubuntu/YNX && scripts/public_security_gate.sh && scripts/public_testnet_extreme_readiness.sh && scripts/public_bridge_full_loop_probe.sh && scripts/public_ai_onchain_settlement_probe.sh && scripts/public_uptime_slo_probe.sh --once'
 ```
 
@@ -40,7 +43,7 @@ scripts/server_public_acceptance.sh
 Individual server commands:
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER"
 cd /home/ubuntu/YNX
 
 scripts/public_security_gate.sh
@@ -86,16 +89,16 @@ curl -s https://rpc.ynxweb4.com/bridge/health | jq
 ## All Service Commands
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'systemctl list-units --type=service --no-pager | grep -i ynx'
 
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'systemctl is-active ynx-v2-node.service ynx-v2-indexer.service ynx-v2-explorer.service ynx-v2-faucet.service ynx-v2-bridge-service.service ynx-v2-web4-hub.service ynx-v2-ai-gateway.service'
 
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'journalctl -u ynx-v2-node.service -u ynx-v2-indexer.service -u ynx-v2-bridge-service.service -u ynx-v2-web4-hub.service -u ynx-v2-ai-gateway.service -n 160 --no-pager'
 
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'cd /home/ubuntu/YNX && scripts/public_security_gate.sh && scripts/public_testnet_extreme_readiness.sh && scripts/public_bridge_full_loop_probe.sh && scripts/public_ai_onchain_settlement_probe.sh && scripts/public_uptime_slo_probe.sh --once'
 ```
 
@@ -142,7 +145,7 @@ NODE
 ## Bridge Security
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'cd /home/ubuntu/YNX && scripts/public_bridge_full_loop_probe.sh'
 curl -s https://rpc.ynxweb4.com/bridge/route-readiness | jq
 ```
@@ -236,7 +239,7 @@ Supported protected actions:
 - `bridge.withdrawals.scan` triggers YNX burn/withdrawal watcher scanning and requires Web4 session plus a server-side bridge operator token.
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'cd /home/ubuntu/YNX && scripts/public_ai_onchain_settlement_probe.sh'
 ```
 
@@ -268,7 +271,7 @@ curl -s https://www.ynxweb4.com/ai | grep '<div id="root"'
 ## Server Service Check
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@43.153.202.237 \
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
   'systemctl list-units --type=service --no-pager | grep -i ynx'
 ```
 

@@ -5,6 +5,7 @@ coverage
 .env
 .env.*
 !.env*.example
+.vscode
 packages/contracts/artifacts
 packages/contracts/cache
 packages/contracts/deployments
@@ -21,11 +22,14 @@ chain/.release-v2
 chain/.company-v2
 chain/.artifacts
 chain/build
+chain/data/
 chain/ynxd
 chain/ynxd-*
 infra/**/data
+data/
 ops-logs
 .idea
 ops/social/.sessions
 ops/
 output/
+pkill -f /

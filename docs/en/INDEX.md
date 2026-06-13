@@ -27,6 +27,15 @@ Last updated: 2026-04-30
 - `docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md` — mainnet-candidate and industry-grade launch gates
 - `docs/en/PRODUCTION_HARDENING_ROADMAP.md` — executable hardening roadmap for reliability, validators, persistence, audit, and legal gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
+- `docs/en/INVESTOR_DATA_ROOM_2026_06_13.md` — investor / grant diligence landing page
+- `docs/en/FUNDRAISING_MEMO_2026_06_13.md` — financing narrative, use of funds, and scope discipline
+- `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md` — company, privacy, and regulatory readiness packet
+- `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
+- `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
+- `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy
+- `docs/en/TERMS_OF_USE_DRAFT_2026_06_13.md` — draft website/API terms of use
+- `docs/en/PRIVACY_POLICY_DRAFT_2026_06_13.md` — draft privacy notice for hosted services
+- `docs/en/RISK_DISCLOSURES_DRAFT_2026_06_13.md` — draft public risk disclosure language
 - `infra/openapi/ynx-v2-ai.yaml` — OpenAPI for AI surface
 - `infra/openapi/ynx-v2-web4.yaml` — OpenAPI for Web4 surface
 
@@ -55,6 +64,9 @@ Last updated: 2026-04-30
 - `docs/en/PUBLIC_ASSET_STATUS.md` — current live asset list and not-yet-live mainstream asset targets
 - `docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md` — speed-first multi-asset trading execution plan
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — non-technical launch paperwork and answer bank
+- `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — moat definition and what YNX should not overclaim
+- `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — hard-question answer bank for investor and grant diligence
+- `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — practical security-response workflow and current maturity limits
 
 ## Core Specs
 

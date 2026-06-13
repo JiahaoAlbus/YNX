@@ -37,17 +37,15 @@ YUSD.test -> wUSDC.y: 0x97662fd10fac494102180a5dbc2f26214a95aa003bf1be490d8edb05
 ## Swap Command
 
 ```bash
-cd /Users/huangjiahao/Desktop/YNX
+cd ~/YNX
 set +x
 
-export SSH_KEY=/Users/huangjiahao/Downloads/Huang.pem
 export YNX_RPC=https://evm.ynxweb4.com
 export YUSD_TEST=0xAC4Bb6f5F98aA9175B939CD867508270B0d56172
 export WUSDC_Y=0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c
 export WUSDC_YUSD_PAIR=0x0DC3bF2f9AA273E16d4BEc38C967C0392a75286E
 export SWAP_AMOUNT_YUSD=0.1
-
-export YNX_EVM_PRIVATE_KEY="$(ssh -i "$SSH_KEY" -o ConnectTimeout=10 ubuntu@43.153.202.237 "sudo awk -F= '/^AI_ONCHAIN_PRIVATE_KEY=/{print \\$2}' /etc/ynx-v2/env")"
+export YNX_EVM_PRIVATE_KEY="<TESTNET_SIGNER_PRIVATE_KEY>"
 
 node <<'NODE'
 const { Wallet, JsonRpcProvider, Contract, parseUnits, formatUnits } = require("ethers");
@@ -69,6 +67,10 @@ const { Wallet, JsonRpcProvider, Contract, parseUnits, formatUnits } = require("
 })();
 NODE
 ```
+
+Do not fetch runtime signer secrets from a remote server over SSH for this flow.
+Use a dedicated testnet signer loaded from your local shell, secret manager, or
+isolated operator environment.
 
 ## Risk Boundary
 

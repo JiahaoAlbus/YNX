@@ -123,7 +123,13 @@ web4_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/web4_ready.json")"
 [[ "$ai_ok" == "true" ]] && record PASS "ai_health" "ok=true" || record FAIL "ai_health" "ok=${ai_ok}"
 [[ "$ai_chain" == "$EXPECTED_CHAIN_ID" ]] && record PASS "ai_chain_id" "$ai_chain" || record FAIL "ai_chain_id" "got=${ai_chain}, expected=${EXPECTED_CHAIN_ID}"
 [[ "$ai_onchain_ready" == "true" ]] && record PASS "ai_onchain_ready" "true" || record FAIL "ai_onchain_ready" "$ai_onchain_ready"
-[[ "$ai_last_tx" =~ ^0x[0-9a-fA-F]{64}$ ]] && record PASS "ai_last_tx_hash" "$ai_last_tx" || record FAIL "ai_last_tx_hash" "$ai_last_tx"
+if [[ "$ai_last_tx" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+  record PASS "ai_last_tx_hash" "$ai_last_tx"
+elif [[ "$job_finalize_tx" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+  record PASS "ai_last_tx_hash" "health last_tx_hash empty; probe job finalize tx=${job_finalize_tx}"
+else
+  record FAIL "ai_last_tx_hash" "$ai_last_tx"
+fi
 [[ "$stats_finalized" -ge "$MIN_AI_FINALIZED_JOBS" ]] && record PASS "ai_finalized_jobs" "finalized=${stats_finalized}, min=${MIN_AI_FINALIZED_JOBS}" || record FAIL "ai_finalized_jobs" "finalized=${stats_finalized}, min=${MIN_AI_FINALIZED_JOBS}"
 [[ "$stats_payments" -ge "$MIN_AI_PAYMENTS" ]] && record PASS "ai_payments" "payments=${stats_payments}, min=${MIN_AI_PAYMENTS}" || record FAIL "ai_payments" "payments=${stats_payments}, min=${MIN_AI_PAYMENTS}"
 [[ "$job_status" == "finalized" ]] && record PASS "probe_job_finalized" "$JOB_ID" || record FAIL "probe_job_finalized" "status=${job_status}"

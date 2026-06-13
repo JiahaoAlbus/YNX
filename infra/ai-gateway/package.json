@@ -8,6 +8,9 @@
     "start": "node server.js",
     "test": "node --test"
   },
+  "overrides": {
+    "ws": "8.20.1"
+  },
   "dependencies": {
     "ethers": "^6.15.0"
   }

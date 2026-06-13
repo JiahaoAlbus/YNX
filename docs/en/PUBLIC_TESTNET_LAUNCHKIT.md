@@ -28,7 +28,11 @@ Canonical language: English
 Run this from your local machine:
 
 ```bash
-ssh -i /Users/huangjiahao/Downloads/Huang.pem ubuntu@<SERVER_IP> 'cd ~/YNX && YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/v2_public_testnet_verify.sh'
+export SSH_KEY_PATH=/path/to/key.pem
+export YNX_SERVER=ubuntu@<SERVER_IP>
+
+ssh -i "$SSH_KEY_PATH" "$YNX_SERVER" \
+  'cd ~/YNX && YNX_PUBLIC_HOST=127.0.0.1 ./chain/scripts/v2_public_testnet_verify.sh'
 ```
 
 If output includes `PASS`, the public testnet stack is healthy on the host.

@@ -218,6 +218,36 @@ test("loads legacy array-backed jobs data", async (t) => {
   assert.equal(body.items[0].job_id, "job_legacy");
 });
 
+test("honors configured CORS allowlist for preflight requests", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-cors-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(port),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_CORS_ALLOWED_ORIGINS: "https://app.ynxweb4.com,https://ops.ynxweb4.com",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const response = await requestJson(`http://127.0.0.1:${port}/ai/jobs`, {
+    method: "OPTIONS",
+    headers: { origin: "https://app.ynxweb4.com" },
+  });
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://app.ynxweb4.com");
+  assert.equal(response.headers.get("vary"), "origin");
+
+  const ready = await requestJson(`http://127.0.0.1:${port}/ready`, {
+    headers: { origin: "https://app.ynxweb4.com" },
+  });
+  assert.equal(ready.headers.get("access-control-allow-origin"), "https://app.ynxweb4.com");
+});
+
 test("enforces web4-backed policy authorization for vault creation", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();

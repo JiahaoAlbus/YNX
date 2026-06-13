@@ -34,10 +34,36 @@ function json(res, status, payload, extraHeaders = {}) {
   res.writeHead(status, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body),
-    "access-control-allow-origin": "*",
     ...extraHeaders,
   });
   res.end(body);
+}
+
+function parseAllowedOrigins(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function resolveCorsOrigin(origin, allowedOrigins) {
+  if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
+    return "*";
+  }
+  if (origin && allowedOrigins.includes(origin)) {
+    return origin;
+  }
+  return allowedOrigins[0];
+}
+
+function corsHeaders(req = null) {
+  const origin = req?.headers?.origin || "";
+  const allowOrigin = resolveCorsOrigin(origin, BRIDGE_CORS_ALLOWED_ORIGINS);
+  const headers = {
+    "access-control-allow-origin": allowOrigin,
+  };
+  if (allowOrigin !== "*") headers.vary = "origin";
+  return headers;
 }
 
 function parseBody(req, limitBytes) {
@@ -156,6 +182,27 @@ const BRIDGE_DATA_FILE = path.join(BRIDGE_DATA_DIR, "state.json");
 const BRIDGE_ROUTES_FILE = process.env.BRIDGE_ROUTES_FILE || path.resolve(__dirname, "config/testnet-routes.json");
 const BRIDGE_ASSETS_FILE = process.env.BRIDGE_ASSETS_FILE || path.resolve(__dirname, "config/public-assets-9102.json");
 const BRIDGE_BODY_LIMIT_BYTES = parseInt(process.env.BRIDGE_BODY_LIMIT_BYTES || "1048576", 10);
+const BRIDGE_SERVER_HEADERS_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.BRIDGE_SERVER_HEADERS_TIMEOUT_MS || "15000", 10) || 15000,
+);
+const BRIDGE_SERVER_REQUEST_TIMEOUT_MS = Math.max(
+  BRIDGE_SERVER_HEADERS_TIMEOUT_MS,
+  parseInt(process.env.BRIDGE_SERVER_REQUEST_TIMEOUT_MS || "30000", 10) || 30000,
+);
+const BRIDGE_SERVER_KEEP_ALIVE_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.BRIDGE_SERVER_KEEP_ALIVE_TIMEOUT_MS || "5000", 10) || 5000,
+);
+const BRIDGE_SERVER_MAX_REQUESTS_PER_SOCKET = Math.max(
+  1,
+  parseInt(process.env.BRIDGE_SERVER_MAX_REQUESTS_PER_SOCKET || "100", 10) || 100,
+);
+const BRIDGE_SERVER_MAX_HEADERS_COUNT = Math.max(
+  1,
+  parseInt(process.env.BRIDGE_SERVER_MAX_HEADERS_COUNT || "100", 10) || 100,
+);
+const BRIDGE_CORS_ALLOWED_ORIGINS = parseAllowedOrigins(process.env.BRIDGE_CORS_ALLOWED_ORIGINS || "*");
 const BRIDGE_YNX_RPC_URL = process.env.BRIDGE_YNX_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com";
 const BRIDGE_GATEWAY_ADDRESS = process.env.BRIDGE_GATEWAY_ADDRESS || "";
 const BRIDGE_RELAYER_PRIVATE_KEY = process.env.BRIDGE_RELAYER_PRIVATE_KEY || process.env.YNX_EVM_PRIVATE_KEY || "";
@@ -1136,9 +1183,12 @@ async function reconcileWithdrawals() {
 }
 
 const server = http.createServer(async (req, res) => {
+  for (const [key, value] of Object.entries(corsHeaders(req))) {
+    res.setHeader(key, value);
+  }
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
-      "access-control-allow-origin": "*",
+      ...corsHeaders(req),
       "access-control-allow-methods": "GET,POST,OPTIONS",
       "access-control-allow-headers": "content-type,x-ynx-bridge-token",
     });
@@ -1480,6 +1530,12 @@ const server = http.createServer(async (req, res) => {
 
   return json(res, 404, { ok: false, error: "not_found" });
 });
+
+server.headersTimeout = BRIDGE_SERVER_HEADERS_TIMEOUT_MS;
+server.requestTimeout = BRIDGE_SERVER_REQUEST_TIMEOUT_MS;
+server.keepAliveTimeout = BRIDGE_SERVER_KEEP_ALIVE_TIMEOUT_MS;
+server.maxRequestsPerSocket = BRIDGE_SERVER_MAX_REQUESTS_PER_SOCKET;
+server.maxHeadersCount = BRIDGE_SERVER_MAX_HEADERS_COUNT;
 
 server.listen(BRIDGE_PORT, () => {
   console.log(`YNX bridge service listening on :${BRIDGE_PORT}`);

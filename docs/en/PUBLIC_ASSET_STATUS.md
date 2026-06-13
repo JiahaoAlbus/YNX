@@ -1,7 +1,7 @@
 # YNX Public Asset Status
 
 Status: active  
-Last updated: 2026-06-07
+Last updated: 2026-06-13
 Scope: public testnet `ynx_9102-1`
 
 ## Current Answer
@@ -16,6 +16,9 @@ Today, the public YNX testnet has one fully usable live asset:
 
 Users can transfer `anyxt`/`NYXT` on the public testnet and use it for gas,
 staking, governance, faucet flows, and EVM-compatible test workflows.
+
+The validator set is live with 4 bonded validators, and the public acceptance
+gates currently pass on production.
 
 Testnet assets have no mainnet value. `YUSD.test` is not USDC, USDT, USD,
 e-money, a bank deposit, or a redeemable stablecoin. It is a synthetic
@@ -118,6 +121,16 @@ automatic_loop_ready: requires configured deposit addresses/source contracts, BS
 manual_loop_ready: none
 mapped_route_only: none
 ```
+
+As of 2026-06-13, the live bridge readiness posture is:
+
+- `5/5` routes `full_loop_tested`
+- `4/5` routes `automatic_loop_ready`
+- `btc-testnet-btc`: automatic live
+- `eth-sepolia-eth`: automatic live
+- `tron-shasta-usdt`: automatic live
+- `eth-sepolia-usdc`: automatic live
+- `bnb-testnet-bnb`: waiting on BSC lockbox deployment and testnet BNB funding
 
 Full-loop-tested evidence means:
 

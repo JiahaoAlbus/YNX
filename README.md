@@ -1,11 +1,19 @@
 # YNX Web4 (v2)
 
-YNX is a speed-first Web4 execution and trading layer for **humans + AI agents**.
+YNX is a Web4 and AI-execution layer for **humans + AI agents**.
 
-- Positioning: **Speed-first Web4 Execution Layer**
+- Positioning: **Web4 And AI-Execution Layer**
 - Active track: `v2-web4`
 - Sovereignty order: `owner > policy > session key > agent action`
 - Native asset: `NYXT` (gas / staking / governance)
+
+Important boundary:
+
+- YNX is strongest today as a policy-bounded execution and settlement stack.
+- YNX should not be described as a novel-consensus moat or a mainnet-grade
+  production network yet.
+- Public bridge routes are testnet architecture evidence, not production
+  custody claims.
 
 ---
 
@@ -78,6 +86,15 @@ Docs:
 - EN: [`docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md`](docs/en/SPEED_FIRST_MULTI_ASSET_TRADING_PLAN.md)
 - ZH: [`docs/zh/公开资产状态.md`](docs/zh/公开资产状态.md)
 - ZH: [`docs/zh/极速优先多资产交易计划.md`](docs/zh/极速优先多资产交易计划.md)
+
+### 4.5) Investor / grant / compliance packet
+
+- EN: [`docs/en/INVESTOR_DATA_ROOM_2026_06_13.md`](docs/en/INVESTOR_DATA_ROOM_2026_06_13.md)
+- EN: [`docs/en/FUNDRAISING_MEMO_2026_06_13.md`](docs/en/FUNDRAISING_MEMO_2026_06_13.md)
+- EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
+- ZH: [`docs/zh/投资人与尽调资料室_2026_06_13.md`](docs/zh/投资人与尽调资料室_2026_06_13.md)
+- ZH: [`docs/zh/融资备忘录_2026_06_13.md`](docs/zh/融资备忘录_2026_06_13.md)
+- ZH: [`docs/zh/合规就绪包_2026_06_13.md`](docs/zh/合规就绪包_2026_06_13.md)
 
 ### 5) Builders
 

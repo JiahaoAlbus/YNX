@@ -34,10 +34,36 @@ function json(res, status, payload, extraHeaders = {}) {
   res.writeHead(status, {
     "content-type": "application/json",
     "content-length": Buffer.byteLength(body),
-    "access-control-allow-origin": "*",
     ...extraHeaders,
   });
   res.end(body);
+}
+
+function parseAllowedOrigins(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function resolveCorsOrigin(origin, allowedOrigins) {
+  if (allowedOrigins.length === 0 || allowedOrigins.includes("*")) {
+    return "*";
+  }
+  if (origin && allowedOrigins.includes(origin)) {
+    return origin;
+  }
+  return allowedOrigins[0];
+}
+
+function corsHeaders(req = null) {
+  const origin = req?.headers?.origin || "";
+  const allowOrigin = resolveCorsOrigin(origin, WEB4_CORS_ALLOWED_ORIGINS);
+  const headers = {
+    "access-control-allow-origin": allowOrigin,
+  };
+  if (allowOrigin !== "*") headers.vary = "origin";
+  return headers;
 }
 
 function parseBody(req, limitBytes) {
@@ -230,6 +256,27 @@ const WEB4_DEFAULT_MAX_OPS = parseInt(process.env.WEB4_DEFAULT_MAX_OPS || "50", 
 const WEB4_DEFAULT_MAX_SPEND = Number(process.env.WEB4_DEFAULT_MAX_SPEND || "10000");
 const WEB4_AUDIT_LIMIT = parseInt(process.env.WEB4_AUDIT_LIMIT || "5000", 10);
 const WEB4_BODY_LIMIT_BYTES = parseInt(process.env.WEB4_BODY_LIMIT_BYTES || "1048576", 10);
+const WEB4_SERVER_HEADERS_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.WEB4_SERVER_HEADERS_TIMEOUT_MS || "15000", 10) || 15000,
+);
+const WEB4_SERVER_REQUEST_TIMEOUT_MS = Math.max(
+  WEB4_SERVER_HEADERS_TIMEOUT_MS,
+  parseInt(process.env.WEB4_SERVER_REQUEST_TIMEOUT_MS || "30000", 10) || 30000,
+);
+const WEB4_SERVER_KEEP_ALIVE_TIMEOUT_MS = Math.max(
+  1000,
+  parseInt(process.env.WEB4_SERVER_KEEP_ALIVE_TIMEOUT_MS || "5000", 10) || 5000,
+);
+const WEB4_SERVER_MAX_REQUESTS_PER_SOCKET = Math.max(
+  1,
+  parseInt(process.env.WEB4_SERVER_MAX_REQUESTS_PER_SOCKET || "100", 10) || 100,
+);
+const WEB4_SERVER_MAX_HEADERS_COUNT = Math.max(
+  1,
+  parseInt(process.env.WEB4_SERVER_MAX_HEADERS_COUNT || "100", 10) || 100,
+);
+const WEB4_CORS_ALLOWED_ORIGINS = parseAllowedOrigins(process.env.WEB4_CORS_ALLOWED_ORIGINS || "*");
 const WEB4_INTERNAL_TOKEN = process.env.WEB4_INTERNAL_TOKEN || "";
 const WEB4_MAX_IDENTITIES = parseInt(process.env.WEB4_MAX_IDENTITIES || "200000", 10);
 const WEB4_MAX_AGENTS = parseInt(process.env.WEB4_MAX_AGENTS || "200000", 10);
@@ -703,9 +750,12 @@ function ensureUnique(collection, key, value) {
 }
 
 const server = http.createServer(async (req, res) => {
+  for (const [key, value] of Object.entries(corsHeaders(req))) {
+    res.setHeader(key, value);
+  }
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
-      "access-control-allow-origin": "*",
+      ...corsHeaders(req),
       "access-control-allow-methods": "GET,POST,OPTIONS",
       "access-control-allow-headers": "content-type,x-ynx-owner,x-ynx-session,x-ynx-internal-token",
     });
@@ -1357,6 +1407,12 @@ const server = http.createServer(async (req, res) => {
 
   return json(res, 404, { ok: false, error: "not_found" });
 });
+
+server.headersTimeout = WEB4_SERVER_HEADERS_TIMEOUT_MS;
+server.requestTimeout = WEB4_SERVER_REQUEST_TIMEOUT_MS;
+server.keepAliveTimeout = WEB4_SERVER_KEEP_ALIVE_TIMEOUT_MS;
+server.maxRequestsPerSocket = WEB4_SERVER_MAX_REQUESTS_PER_SOCKET;
+server.maxHeadersCount = WEB4_SERVER_MAX_HEADERS_COUNT;
 
 server.listen(WEB4_PORT, () => {
   console.log(`YNX Web4 hub listening on :${WEB4_PORT}`);

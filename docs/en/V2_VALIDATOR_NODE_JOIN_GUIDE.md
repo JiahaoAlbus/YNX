@@ -38,9 +38,9 @@ Install Go (required only if you will build `ynxd` locally):
 
 ```bash
 if ! command -v go >/dev/null 2>&1; then
-  curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go1.23.6.tar.gz
+  curl -fsSL https://go.dev/dl/go1.25.7.linux-amd64.tar.gz -o /tmp/go1.25.7.tar.gz
   sudo rm -rf /usr/local/go
-  sudo tar -C /usr/local -xzf /tmp/go1.23.6.tar.gz
+  sudo tar -C /usr/local -xzf /tmp/go1.25.7.tar.gz
   echo 'export PATH=/usr/local/go/bin:$PATH' >> ~/.bashrc
   export PATH=/usr/local/go/bin:$PATH
 fi

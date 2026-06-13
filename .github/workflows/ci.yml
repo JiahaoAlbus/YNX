@@ -23,10 +23,13 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: npm run ci:install
 
       - name: Lint
         run: npm run lint
+
+      - name: Docs readiness
+        run: npm run verify:docs
 
       - name: Test
         run: npm test

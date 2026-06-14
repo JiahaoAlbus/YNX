@@ -6,7 +6,8 @@ If you believe you have found a security vulnerability, report it privately.
 
 - Preferred: open a GitHub Security Advisory
   (`Security -> Advisories -> Report a vulnerability`)
-- Alternative: email `jiahao15345932820@gmail.com`
+- Current fallback if GitHub Advisories are unavailable: open a private contact
+  request through the official website and ask for a security-reporting channel
 
 Please include:
 
@@ -36,7 +37,8 @@ Current reality:
   being formalized into a broader company-grade operating model
 
 That means researchers should expect honest coordination, but should not infer
-that a 24/7 staffed SOC or institutional bug-bounty program already exists.
+that a 24/7 staffed SOC, institutional bug-bounty program, or dedicated
+company-managed security inbox already exists.
 
 ## Scope And Boundaries
 

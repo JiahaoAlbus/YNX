@@ -33,7 +33,7 @@ YNX combines:
   - AI gateway
   - Web4 hub
 - validator set restored to 4 bonded validators on the live public testnet
-- public acceptance gates green on production:
+- public acceptance gates green on the current public-testnet environment:
   - `public_security_gate`: `PASS=66 WARN=0 FAIL=0`
   - `public_testnet_extreme_readiness`: `PASS=41 WARN=0 FAIL=0`
   - `public_bridge_full_loop_probe`: `PASS=58 WARN=2 FAIL=0`
@@ -44,11 +44,13 @@ YNX combines:
 
 Use this wording consistently:
 
-`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, protected AI trade execution through Web4 session policy, and 2/5 routes already running automatic deposit/release loops. The remaining BTC, TRON, and BSC routes are adapter-level configuration blockers, not missing architecture.`
+`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, protected AI trade execution through Web4 session policy, and 2/5 routes with the strongest publicly observed automatic deposit/release evidence. The remaining routes should still be described as testnet-scope readiness work, not production-safe bridge capacity.`
 
 ## Why Funding Helps Now
 
-The architecture is already live. The next bottlenecks are operational hardening and adapter completion, not concept validation.
+The architecture is already live on public testnet. The next bottlenecks are
+operational hardening, documentation publication, and adapter completion, not
+concept validation.
 
 Funding would accelerate:
 

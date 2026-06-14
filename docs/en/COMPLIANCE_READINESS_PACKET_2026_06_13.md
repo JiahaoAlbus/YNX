@@ -1,7 +1,7 @@
 # YNX Compliance Readiness Packet
 
 Status: working compliance packet  
-Last updated: 2026-06-13  
+Last updated: 2026-06-14  
 Canonical language: English
 
 ## Purpose
@@ -83,6 +83,9 @@ These are the minimum commercial-compliance actions that should be completed:
 7. Keep a sanctions / KYB process for enterprise counterparties if needed.
 8. Keep consumer-facing KYC out of protocol scope unless counsel approves it.
 
+These are still represented in the repository as action items, not completed
+facts. Investor-facing material should preserve that distinction.
+
 ## 5. Product Claims Allowed / Disallowed
 
 Allowed:
@@ -92,7 +95,9 @@ Allowed:
 - AI settlement testing infrastructure;
 - policy-bounded agent execution;
 - EVM-compatible builder surfaces;
-- testnet bridge evidence.
+- testnet bridge evidence;
+- limited public-testnet wrapped-asset and swap testing where documentation and
+  route evidence exist.
 
 Disallowed unless counsel and production controls say otherwise:
 
@@ -155,6 +160,8 @@ The following should exist before broad investor or ecosystem outreach:
 - no production audit opinion is included yet;
 - as of June 14, 2026, `https://www.ynxweb4.com/privacy` and `/terms` still
   return the website shell rather than standalone legal disclosure pages;
+- `SECURITY.md` currently documents GitHub Advisory reporting, but a dedicated
+  company-managed security alias still remains a readiness task;
 - bridge narratives must remain carefully testnet-scoped;
 - BSC/BNB route work should not drive regulatory or fundraising positioning.
 

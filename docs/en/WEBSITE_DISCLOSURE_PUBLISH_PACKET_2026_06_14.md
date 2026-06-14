@@ -15,6 +15,12 @@ Observed on June 14, 2026:
 
 This is a diligence-visible blocker for investor and enterprise-facing outreach.
 
+Important wording boundary:
+
+- repository drafts are not the same thing as website publication;
+- until these routes are independently reachable, investor-facing materials
+  should describe legal publication as in progress, not completed.
+
 ## Required Public Routes
 
 Before broad investor outreach, the website should expose distinct public pages:

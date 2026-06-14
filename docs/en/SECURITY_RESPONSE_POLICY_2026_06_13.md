@@ -1,7 +1,7 @@
 # YNX Security Response Policy
 
 Status: active working policy  
-Last updated: 2026-06-13  
+Last updated: 2026-06-14  
 Canonical language: English
 
 ## Purpose
@@ -39,7 +39,14 @@ Primary private intake:
 
 Fallback intake:
 
-- `jiahao15345932820@gmail.com`
+- a private contact request through the official website asking for a
+  security-reporting channel
+
+Current maturity caveat:
+
+- GitHub Advisory is the only explicitly documented dedicated intake path today;
+- a company-managed security alias remains a readiness task, not a completed
+  control.
 
 Reporters should include:
 

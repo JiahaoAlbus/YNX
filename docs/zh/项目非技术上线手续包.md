@@ -1,16 +1,16 @@
 # YNX 项目非技术上线手续包
 
 状态：active
-最后更新：2026-05-01
+最后更新：2026-06-14
 规范语言：中文
 
 ## 1. 对外介绍
 
-YNX 是一条 AI-native Web4 公共执行网络，提供 EVM 兼容开发入口、机器支付流程，以及 human / agent 执行所需的 owner-policy-session 控制模型。
+YNX 是一条面向 Web4 与 AI execution 的公共测试网执行层，提供 EVM 兼容开发入口、机器支付流程，以及 human / agent 执行所需的 owner-policy-session 控制模型。
 
 当前准确对外表述：
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The network is still completing public P2P and validator redundancy before mainnet-candidate status.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt and YUSD.test are the currently usable public-testnet assets. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations with mixed automation maturity; production-grade custody, redemption, and official real-asset liquidity are not live yet.`
 
 ## 2. YNX 不是什么
 
@@ -42,7 +42,7 @@ YNX 不应被描述为：
 - “政府黑客不能破解”；
 - “保证收益”；
 - readiness gate 通过前不能说 “mainnet-ready”；
-- 只有 1 个验证人时不能说 “decentralized validator network”。
+- 在没有独立 operator 控制权分布证据前，不能说 “decentralized validator network”。
 
 ## 4. 官网必须具备的页面
 
@@ -67,8 +67,8 @@ YNX 不应被描述为：
 
 - 确定公司主体和司法辖区；
 - 明确 security、ops、legal、finance、developer relations 负责人；
-- 创建 security contact email；
-- 创建 abuse/contact email；
+- 创建专用 security contact email 或表单；
+- 创建专用 abuse/contact email 或表单；
 - 创建事故响应升级渠道；
 - 定义公共服务数据留存策略；
 - 定义 API/SLA/private deployment 合同模板；
@@ -110,10 +110,17 @@ YNX 是否碰用户资产？
 YNX 是否做托管？
 
 - 不做。基础项目保持非托管。
+- 当前测试网 bridge 证据也不能讲成生产托管能力。
 
 YNX 是否做交易所？
 
 - 不做。YNX 不运营撮合引擎或交易所业务。
+
+YNX 现在能交易 BTC、ETH、BNB、USDT、USDC 吗？
+
+- 还不能作为“真实外部资产已正式可交易”来讲。当前可用的是 NYXT/anyxt 与
+  YUSD.test；BTC、ETH、BNB、USDT、USDC 对应的 wrapped testnet 表示和 route
+  证据已经存在，但真实资产交易口径仍取决于流动性、风控、监控和法务确认。
 
 YNX 是否做稳定币？
 

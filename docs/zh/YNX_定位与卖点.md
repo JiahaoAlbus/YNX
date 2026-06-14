@@ -1,7 +1,7 @@
 # YNX 定位与卖点（中文）
 
 状态：active  
-最后更新：2026-05-17
+最后更新：2026-06-14
 
 ## 一句话定位
 
@@ -10,7 +10,7 @@ YNX 是一条 **Web4 与 AI execution layer**，提供 **EVM 兼容开发入口*
 
 当前公开测试网准确表述：
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt and YUSD.test are the currently usable public-testnet assets. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations with mixed automation maturity; production-grade custody, redemption, and official real-asset liquidity are not live yet.`
 
 ## YNX 现在是什么、还不是什么
 

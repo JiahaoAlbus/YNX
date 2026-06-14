@@ -22,8 +22,12 @@ Important boundary:
 - Cosmos Chain ID: `ynx_9102-1`
 - EVM Chain ID: `0x238e`
 - Denom: `anyxt`
-- Fully usable public-testnet asset: `NYXT` / `anyxt`
-- Public wrapped routes deployed: `wBTC.y`, `wETH.y`, `wBNB.y`, `wUSDT.y`, `wUSDC.y`
+- Currently usable public-testnet assets: `NYXT` / `anyxt`, `YUSD.test`
+- Public-testnet wrapped representations deployed: `wBTC.y`, `wETH.y`,
+  `wBNB.y`, `wUSDT.y`, `wUSDC.y`
+- Important scope: these wrapped assets are testnet contracts and route
+  evidence, not proof of production custody, redemption, or official
+  mainnet-asset liquidity
 - AI settlement rail: `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
 
 Public HTTPS endpoints:

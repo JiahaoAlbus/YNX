@@ -1,7 +1,7 @@
 # YNX Fundraising Memo
 
-Status: investor-ready draft  
-Last updated: 2026-06-13  
+Status: investor diligence draft  
+Last updated: 2026-06-14  
 Canonical language: English
 
 ## 1. One-Line Summary
@@ -19,13 +19,23 @@ As of June 13, 2026, YNX already has:
 - 4 bonded validators on the public testnet;
 - working owner-policy-session authorization flows for protected agent actions;
 - live AI settlement rails with vault/job/result/finalize workflow;
-- public bridge infrastructure with 5/5 full-loop-tested testnet routes;
+- public bridge infrastructure with `5/5` full-loop-tested testnet routes and
+  only `2/5` routes with the strongest publicly observed automatic evidence;
 - operator scripts, probes, runbooks, and public readiness evidence.
 
 YNX is therefore past the "concept deck" stage. The current task is not proving
 technical possibility. The current task is hardening, narrowing product scope,
 and turning live infrastructure into an investable and commercially legible
 company.
+
+Current diligence-visible blockers still open:
+
+- no external security audit report is included yet;
+- no external legal memo is included yet;
+- website legal disclosure routes such as `/privacy` and `/terms` are not yet
+  published as standalone pages as of June 14, 2026;
+- company formation, named responsible owners, and dedicated security/contact
+  aliases are still listed as readiness work, not completed facts.
 
 ## 3. Investment Thesis
 
@@ -88,7 +98,7 @@ The company should fund the following core scope first:
 - hosted RPC / indexer / explorer / gateway infrastructure;
 - builder tooling, SDKs, and operator observability;
 - limited bridge and wrapped-asset support where it directly helps developer
-  workflows.
+  workflows, while keeping all external language testnet-scoped.
 
 De-prioritized scope:
 
@@ -137,6 +147,8 @@ assumption of the company.
 - The business should stay non-custodial by default.
 - Wrapped testnet routes are evidence of architecture, not proof of licensed
   production custody.
+- Automatic-loop-ready is a testnet configuration state, not a synonym for
+  production safety or repeated scale proof.
 - Historical tokenomics drafts exist, but they are not the current financing
   term sheet or a founder-fee commitment.
 - The best financing use case is infrastructure expansion and hardening, not

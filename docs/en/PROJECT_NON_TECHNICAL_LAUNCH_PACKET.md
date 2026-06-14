@@ -1,7 +1,7 @@
 # YNX Non-Technical Launch Packet
 
 Status: Active
-Last updated: 2026-05-17
+Last updated: 2026-06-14
 Canonical language: English
 
 ## 1. Public Introduction
@@ -10,7 +10,7 @@ YNX is a speed-first Web4 execution and trading layer with EVM-compatible develo
 
 Current external wording:
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. The live public-testnet asset is NYXT/anyxt. Mainstream wrapped assets such as BTC, ETH, BNB, USDT, and USDC are planned trading targets, not live public-testnet assets yet.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt and YUSD.test are the currently usable public-testnet assets. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations with mixed automation maturity; production-grade custody, redemption, and official real-asset liquidity are not live yet.`
 
 ## 2. What YNX Is Not
 
@@ -42,7 +42,7 @@ Not allowed:
 - “government hackers cannot break it”;
 - “guaranteed profit”;
 - “mainnet-ready” before readiness gates pass;
-- “decentralized validator network” while validator count is `1`.
+- “decentralized validator network” without evidence of independent operator control distribution.
 - “BTC/ETH/BNB are tradable on YNX” before bridge routes, liquidity, and risk controls are live.
 
 ## 4. Required Public Pages
@@ -69,8 +69,8 @@ Before commercial launch:
 
 - choose operating entity and jurisdiction;
 - appoint responsible owner for security, ops, legal, finance, and developer relations;
-- create security contact email;
-- create abuse/contact email;
+- create dedicated security contact email or form;
+- create dedicated abuse/contact email or form;
 - create incident-response escalation channel;
 - define data retention for public services;
 - define customer contract templates for API/SLA/private deployments;
@@ -111,7 +111,8 @@ Does YNX touch user assets?
 
 Does YNX run custody?
 
-- No. The base project should remain non-custodial.
+- No. The base project should remain non-custodial, and current testnet bridge
+  evidence should not be described as production custody.
 
 Does YNX run an exchange?
 
@@ -122,9 +123,11 @@ Does YNX run an exchange?
 
 Can YNX trade BTC, ETH, and BNB today?
 
-- Not yet as official real external assets. Today the live public-testnet asset
-  is NYXT/anyxt. BTC, ETH, BNB, USDT, and USDC are priority wrapped-asset targets
-  for the speed-first trading roadmap.
+- Not yet as official real external assets. Today the currently usable
+  public-testnet assets are NYXT/anyxt and YUSD.test. Wrapped testnet
+  representations for BTC, ETH, BNB, USDT, and USDC exist, but real-asset
+  trading claims still depend on liquidity, monitoring, risk controls, and legal
+  sign-off.
 
 Does YNX issue a stablecoin?
 

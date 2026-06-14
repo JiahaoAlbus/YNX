@@ -1,12 +1,18 @@
 # YNX Investor Data Room Index
 
-Status: active  
-Last updated: 2026-06-13  
+Status: active diligence draft  
+Last updated: 2026-06-14  
 Canonical language: English
 
 ## Purpose
 
 This file is the investor and grant-reviewer entry point for YNX.
+
+Current use boundary:
+
+- this room is suitable for diligence review;
+- it is not evidence that company formation, legal publication, audit, or
+  commercial launch prerequisites are already complete.
 
 ## 1. Executive Narrative
 
@@ -70,6 +76,13 @@ YNX appears strongest as:
 - a live public-testnet protocol stack with verifiable technical evidence;
 - an early-stage project suitable for grants, pre-seed, or strategic infra
   funding.
+
+Open blockers that remain visible inside this room:
+
+- no standalone website `/privacy` or `/terms` publication yet;
+- no external audit report yet;
+- no external legal memo yet;
+- no completed company-formation evidence yet.
 
 YNX appears weakest when framed as:
 

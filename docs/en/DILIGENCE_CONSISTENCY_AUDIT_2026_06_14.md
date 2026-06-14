@@ -9,6 +9,23 @@ Canonical language: English
 This note records the most important consistency checks that a skeptical
 investor is likely to perform across README, public docs, and live endpoints.
 
+## Canonical Terminology Table
+
+| Term | Strongest evidence today | Must not be described as | Remaining gate |
+|---|---|---|---|
+| `live` | public HTTPS endpoints and public-testnet services respond | mainnet, institution-ready, or audited production | keep runtime evidence and docs aligned |
+| `public testnet` | chain `ynx_9102-1`, public endpoints, public operator workflows | commercial production network | validator, audit, legal, and DR gates |
+| `tradable` | only limited public-testnet swap/testing flows where assets, liquidity, and route behavior are actually observable | general availability of real external assets | liquidity, risk controls, legal sign-off |
+| `wrapped asset` | public-testnet representation minted on YNX from documented testnet route logic | licensed custody or redeemable mainnet claim | production custody, redemption, monitoring, legal review |
+| `full_loop_tested` | operator-attested testnet deposit, mint, burn, and release proof chain exists | automatic or scale-proven production safety | repeated automation evidence and audit |
+| `automatic_loop_ready` | route config, watchers, signer path, and adapters are configured | repeated public automation proof or production-safe bridge | observed automation and incident controls |
+| `production` | not yet applicable as a network-wide claim | synonym for current public testnet | audit, reliability, persistence, legal, governance |
+| `mainnet-candidate` | not yet applicable as of this audit | any currently live public-testnet state | readiness gates in full |
+| `decentralization` | limited topology redundancy and a live validator set | strong validator independence claim | independent operators and control-distribution evidence |
+| `non-custodial` | baseline product/company posture in current docs | guarantee that no operated bridge risk exists anywhere | counsel review and operational boundary enforcement |
+| `settlement` | testnet job/vault/result/finalize flows and related contracts | regulated payment finality or fiat settlement claim | legal review and production controls |
+| `compliance-ready` | documentation packet and identified workstreams exist | licensed, audited, or counsel-approved operation | entity, counsel, publication, and controls completion |
+
 ## 1. Bridge Readiness Terminology
 
 Live endpoint checked on June 14, 2026:

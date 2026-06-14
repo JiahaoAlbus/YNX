@@ -1,7 +1,7 @@
 # YNX Positioning (EN)
 
 Status: active  
-Last updated: 2026-05-17
+Last updated: 2026-06-14
 Canonical language: English
 
 ## One-line positioning
@@ -12,7 +12,7 @@ human and agent execution.
 
 Current public-testnet wording:
 
-`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt is the fully usable public-testnet asset. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations; production-grade external deposit/withdraw and official trading liquidity are not live yet.`
+`YNX public testnet is live for developers and operators. Core RPC, EVM, REST, Faucet, Indexer, Explorer, AI Gateway, and Web4 Hub services are online. NYXT/anyxt and YUSD.test are the currently usable public-testnet assets. Public wrapped-token contracts and bridge routes for BTC, ETH, BNB, USDT, and USDC are deployed on 9102 as testnet representations with mixed automation maturity; production-grade custody, redemption, and official real-asset liquidity are not live yet.`
 
 ## What YNX Is And Is Not
 

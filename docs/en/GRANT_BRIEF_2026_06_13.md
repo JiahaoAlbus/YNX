@@ -4,6 +4,12 @@
 
 YNX Web4 Public Testnet is a live testnet for protected AI-driven onchain execution, cross-chain test-asset routing, and Web4 session-policy authorization.
 
+Current support boundary:
+
+- YNX is still a project, not a publicly announced legal operating entity;
+- this brief is therefore optimized for grants, sponsorships, and other
+  project-stage infrastructure support.
+
 ## Problem
 
 AI agents can trigger onchain and cross-system actions faster than human operators can review them. Without policy-bound execution, session controls, and testnet-grade routing infrastructure, teams are forced to choose between automation and safety.
@@ -60,6 +66,12 @@ Funding would accelerate:
 - external security review and audit preparation
 - developer docs and builder onboarding
 - legal, privacy, and company-readiness implementation
+
+What this brief does not imply:
+
+- not a claim that YNX is already equity-ready as a standard operating company;
+- not a claim that custody, regulated trading, or audited production controls
+  are already live.
 
 ## 30 / 60 / 90 Day Use Of Funds
 

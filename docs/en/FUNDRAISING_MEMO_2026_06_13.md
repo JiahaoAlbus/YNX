@@ -1,6 +1,6 @@
-# YNX Fundraising Memo
+# YNX Funding Memo
 
-Status: investor diligence draft  
+Status: funding diligence draft  
 Last updated: 2026-06-14  
 Canonical language: English
 
@@ -9,6 +9,13 @@ Canonical language: English
 YNX is a live public-testnet Web4 execution layer for humans and AI agents,
 focused on policy-bounded onchain actions, fast EVM-compatible execution, and
 verifiable AI settlement infrastructure.
+
+Current funding boundary:
+
+- until a legal operating entity exists, this memo is strongest for grant,
+  sponsorship, strategic-support, and exploratory early-stage diligence;
+- it should not be read as proof that YNX is already ready for standard
+  institutional equity underwriting.
 
 ## 2. What Exists Today
 
@@ -25,22 +32,25 @@ As of June 13, 2026, YNX already has:
 
 YNX is therefore past the "concept deck" stage. The current task is not proving
 technical possibility. The current task is hardening, narrowing product scope,
-and turning live infrastructure into an investable and commercially legible
-company.
+and turning live infrastructure into an entity-ready and commercially legible
+organization.
 
 Current diligence-visible blockers still open:
 
 - no external security audit report is included yet;
 - no external legal memo is included yet;
-- website legal disclosure routes such as `/privacy` and `/terms` are not yet
-  published as standalone pages as of June 14, 2026;
+- no legal operating entity, assignable contract owner, or named corporate
+  responsibility stack is publicly announced yet;
+- website disclosure routes such as `/privacy` and `/terms` are browser
+  reachable as of June 14, 2026, but they still describe project-stage
+  boundaries rather than a formed company policy stack;
 - the live public indexer overview still exposes a testnet runtime parameter
   set with `fee_founder_bps = 1000`, so token-policy narrative still requires
   an explicit explanation rather than implication;
 - company formation, named responsible owners, and dedicated security/contact
   aliases are still listed as readiness work, not completed facts.
 
-## 3. Investment Thesis
+## 3. Funding Thesis
 
 YNX sits at the intersection of four durable needs:
 
@@ -52,7 +62,8 @@ YNX sits at the intersection of four durable needs:
    speculation.
 
 The project is strongest when positioned as a non-custodial infrastructure
-company with protocol leverage, not as a speculative token story.
+project that could later become a company with protocol leverage, not as a
+speculative token story.
 
 What this memo should not imply:
 
@@ -94,7 +105,7 @@ as a free valuation premium.
 
 ## 5. Product Scope To Fund
 
-The company should fund the following core scope first:
+The project should fund the following core scope first:
 
 - Web4 policy and session infrastructure;
 - AI settlement and machine-payment rails;
@@ -116,7 +127,7 @@ of funds.
 
 ## 6. Use Of Funds
 
-The next financing round should primarily fund:
+The next funding round, grant, or sponsorship should primarily fund:
 
 - security review, remediation, and incident-response hardening;
 - production observability, alerting, backups, and disaster recovery;
@@ -127,7 +138,8 @@ The next financing round should primarily fund:
 
 ## 7. Revenue Model
 
-YNX should be underwritten by non-speculative revenue lines:
+If and when YNX converts into a formal operating entity, it should be
+underwritten by non-speculative revenue lines:
 
 - hosted API and infrastructure subscriptions;
 - private or dedicated deployments;
@@ -139,9 +151,10 @@ YNX should be underwritten by non-speculative revenue lines:
 NYXT should remain a utility and coordination layer, not the only survival
 assumption of the company.
 
-## 8. What Investors Should Understand Clearly
+## 8. What Funders Should Understand Clearly
 
 - YNX is live on public testnet, not yet a mainnet-grade production network.
+- YNX is still a project, not a publicly announced legal operating entity.
 - The strongest moat today is the Web4 policy/session and AI settlement stack,
   not generic Cosmos/EVM assembly.
 - EVM compatibility is onboarding leverage, not differentiation by itself.
@@ -156,18 +169,25 @@ assumption of the company.
   term sheet or a founder-fee commitment.
 - The best financing use case is infrastructure expansion and hardening, not
   speculative liquidity theater.
+- Standard equity investors should assume entity formation, ownership
+  assignment, and legal sign-off remain preconditions rather than completed
+  facts.
 
 ## 9. The Ask
 
 YNX is suitable for:
 
-- pre-seed / seed infrastructure investors;
 - grant programs that support open protocol tooling, safe agent execution, or
   public developer infrastructure;
+- sponsors or strategic partners that want to support early infrastructure
+  hardening without overstating company maturity;
 - strategic partners that care about AI action safety, machine payments, or
   enterprise Web3/Web4 rails.
+- exploratory pre-seed / seed infrastructure investors only if they understand
+  that entity formation and legal ownership are still open work items.
 
 Recommended framing:
 
-`We are raising to harden and commercialize a live Web4 and AI-execution
-infrastructure stack, not to fund a paper architecture.`
+`We are seeking funding to harden and organize a live Web4 and AI-execution
+infrastructure stack, not to fund a paper architecture or imply that company
+formation is already complete.`

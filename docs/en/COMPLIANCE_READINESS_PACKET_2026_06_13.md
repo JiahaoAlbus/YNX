@@ -7,15 +7,17 @@ Canonical language: English
 ## Purpose
 
 This document is a practical compliance and company-readiness packet for YNX.
-It is not legal advice. It is designed to help founders, counsel, investors,
-and grant reviewers understand the operating boundary and the remaining legal
-work before commercial scale-up.
+It is not legal advice. It is designed to help founders, counsel, funders,
+investors, and grant reviewers understand the operating boundary and the
+remaining legal work before commercial scale-up.
 
 ## 1. Operating Position
 
 Current recommended posture:
 
-- non-custodial infrastructure company;
+- non-custodial infrastructure project today;
+- if and when an operating entity is formed, that entity should preserve the
+  same non-custodial baseline by default;
 - no direct user asset custody;
 - no centralized exchange or matching-engine claim;
 - no stablecoin issuance or reserve-management claim;
@@ -26,9 +28,13 @@ This posture is already aligned with
 `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md` and should remain
 the baseline until counsel approves any expansion.
 
-## 2. Jurisdiction-First Working Plan
+## 2. Future Entity Options, Not Current Facts
 
-Recommended default structure:
+As of June 14, 2026, no public legal operating entity is announced yet.
+The structure below is therefore a future decision tree, not a completed fact
+and not a funding promise.
+
+Possible future structure options:
 
 - Singapore operating company as the primary infrastructure and contracting
   entity;
@@ -37,7 +43,7 @@ Recommended default structure:
 - optional Delaware C-Corp only if U.S. fundraising, enterprise sales, or
   hiring becomes a first-order need.
 
-Rationale:
+Why these options exist:
 
 - current infra and operational narrative already point to Singapore;
 - the product is easier to position as infrastructure than as a regulated
@@ -72,7 +78,8 @@ Interpretation note:
 
 ## 4. Immediate Company Readiness Actions
 
-These are the minimum commercial-compliance actions that should be completed:
+These are the minimum commercial-compliance actions that should be completed
+before YNX is described as a formed operating company:
 
 1. Form the operating entity and appoint responsible owners.
 2. Reserve company name and complete ACRA registration flow.
@@ -158,8 +165,10 @@ The following should exist before broad investor or ecosystem outreach:
 
 - no final legal memo from external counsel is included yet;
 - no production audit opinion is included yet;
-- as of June 14, 2026, `https://www.ynxweb4.com/privacy` and `/terms` still
-  return the website shell rather than standalone legal disclosure pages;
+- no public legal entity, controller identity, or company-level responsible
+  owner is yet named on the website;
+- website disclosures are now browser-reachable, but they are still
+  project-stage notices rather than entity-specific corporate policies;
 - `SECURITY.md` currently documents GitHub Advisory reporting, but a dedicated
   company-managed security alias still remains a readiness task;
 - bridge narratives must remain carefully testnet-scoped;

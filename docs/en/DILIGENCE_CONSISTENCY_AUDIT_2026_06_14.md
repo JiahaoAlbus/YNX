@@ -62,17 +62,21 @@ It does not prove:
 Therefore investor-facing material should use "public-testnet validator set live"
 or "topology redundancy present", not broad decentralization claims.
 
-## 3. Website Legal Disclosure Gap
+## 3. Website Disclosure Status
 
 Observed on June 14, 2026:
 
-- `https://www.ynxweb4.com/privacy` returns the website shell
-- `https://www.ynxweb4.com/terms` returns the website shell
+- `https://www.ynxweb4.com/privacy` and `/terms` are browser-reachable
+  disclosure routes on the public site;
+- raw HTTP fetch still returns the SPA shell, so publication should be judged
+  by reachable rendered content rather than server-side static HTML alone.
 
 Conclusion:
 
-- legal content drafts exist in the repository;
-- publication to standalone website routes remains an open blocker.
+- website-visible disclosure routes now exist;
+- the remaining blocker is not route existence, but the absence of a formed
+  legal entity and entity-specific ownership/controller disclosures behind
+  those project-stage pages.
 
 ## 4. Token Policy Separation
 
@@ -96,4 +100,4 @@ three things aligned at all times:
 
 1. live endpoint truth;
 2. written diligence materials;
-3. website-visible disclosure pages.
+3. website-visible disclosure pages and the repo text that describes them.

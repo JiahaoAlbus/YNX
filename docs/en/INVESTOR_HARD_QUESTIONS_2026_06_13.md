@@ -67,3 +67,11 @@ Because YNX is already beyond concept stage: there is a live public stack,
 public evidence, operator tooling, and a differentiated execution thesis. The
 round is for hardening and commercialization, not for inventing the first
 version on paper.
+
+## 11. What if there is no legal entity yet?
+
+Then the honest answer is that YNX is still best suited to grants,
+sponsorships, strategic technical backing, and exploratory diligence rather
+than a standard no-friction institutional equity process. Entity formation,
+ownership assignment, and legal sign-off remain real preconditions, not items
+that should be waved away with narrative.

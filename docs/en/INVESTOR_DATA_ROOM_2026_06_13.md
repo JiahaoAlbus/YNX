@@ -6,11 +6,14 @@ Canonical language: English
 
 ## Purpose
 
-This file is the investor and grant-reviewer entry point for YNX.
+This file is the funding, grant-reviewer, sponsor, and diligence entry point
+for YNX.
 
 Current use boundary:
 
 - this room is suitable for diligence review;
+- it is strongest for grant, sponsorship, and exploratory early-stage funding
+  conversations;
 - it is not evidence that company formation, legal publication, audit, or
   commercial launch prerequisites are already complete.
 
@@ -59,7 +62,8 @@ Current use boundary:
 
 ## 6. Internal Diligence Questions This Room Should Answer
 
-An investor or grant reviewer should be able to answer:
+A grant reviewer, sponsor, partner, or early-stage investor should be able to
+answer:
 
 - Is the project real and live?
 - Is the product differentiated?
@@ -70,25 +74,29 @@ An investor or grant reviewer should be able to answer:
 
 ## 7. Current High-Level Conclusion
 
-YNX appears strongest as:
+YNX appears strongest today as:
 
-- a non-custodial infrastructure and AI-execution company;
+- a non-custodial infrastructure and AI-execution project;
 - a live public-testnet protocol stack with verifiable technical evidence;
-- an early-stage project suitable for grants, pre-seed, or strategic infra
-  funding.
+- an early-stage effort suitable for grants, sponsorships, strategic infra
+  support, and only exploratory pre-seed diligence while no entity exists.
 
 Open blockers that remain visible inside this room:
 
-- no standalone website `/privacy` or `/terms` publication yet;
+- no publicly announced legal operating entity or named company-level owner yet;
+- browser-reachable `/privacy`, `/terms`, `/risk`, and `/security` pages now
+  exist on `ynxweb4.com`, but they remain project-stage disclosures rather than
+  entity-level corporate policies;
 - live public runtime still shows `fee_founder_bps = 1000` in the indexer
   overview, so financing-safe token policy language must be read as a stated
   future posture rather than current chain parameter truth;
 - no external audit report yet;
 - no external legal memo yet;
-- no completed company-formation evidence yet.
+- no completed company-formation evidence or assignable contract owner yet.
 
 YNX appears weakest when framed as:
 
+- a standard institutional equity financing that is ready to close today;
 - a near-term regulated exchange;
 - a custody-heavy bridge business;
 - a BNB-dependent ecosystem pitch;

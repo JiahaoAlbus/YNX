@@ -14,6 +14,11 @@ Important boundary:
   production network yet.
 - Public bridge routes are testnet architecture evidence, not production
   custody claims.
+- No public legal entity has been announced yet, so project disclosures should
+  not be read as company-level legal completion.
+- Current external support is best framed as grants, sponsorships, or other
+  project-stage infrastructure backing until entity formation and legal
+  ownership are complete.
 
 ---
 
@@ -91,7 +96,15 @@ Docs:
 - ZH: [`docs/zh/公开资产状态.md`](docs/zh/公开资产状态.md)
 - ZH: [`docs/zh/极速优先多资产交易计划.md`](docs/zh/极速优先多资产交易计划.md)
 
-### 4.5) Investor / grant / compliance packet
+### 4.5) Funding / grant / compliance packet
+
+Current funding boundary:
+
+- these materials are strongest for grants, sponsorships, strategic technical
+  support, and exploratory early-stage diligence;
+- they should not be used to imply that YNX already has a formed operating
+  entity, completed external audit coverage, or standard institutional equity
+  readiness.
 
 - EN: [`docs/en/INVESTOR_DATA_ROOM_2026_06_13.md`](docs/en/INVESTOR_DATA_ROOM_2026_06_13.md)
 - EN: [`docs/en/FUNDRAISING_MEMO_2026_06_13.md`](docs/en/FUNDRAISING_MEMO_2026_06_13.md)

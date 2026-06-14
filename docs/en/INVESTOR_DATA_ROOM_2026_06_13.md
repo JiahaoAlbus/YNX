@@ -80,6 +80,9 @@ YNX appears strongest as:
 Open blockers that remain visible inside this room:
 
 - no standalone website `/privacy` or `/terms` publication yet;
+- live public runtime still shows `fee_founder_bps = 1000` in the indexer
+  overview, so financing-safe token policy language must be read as a stated
+  future posture rather than current chain parameter truth;
 - no external audit report yet;
 - no external legal memo yet;
 - no completed company-formation evidence yet.

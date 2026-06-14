@@ -28,6 +28,15 @@ Until a formal governance, legal, and disclosure process is complete:
   design space unless explicitly restated in an approved financing document;
 - investor outreach should emphasize infrastructure revenue, not token rent.
 
+Important live-state caveat:
+
+- as of June 14, 2026, the public indexer overview still exposes a testnet
+  runtime parameter set that includes `fee_founder_bps = 1000`;
+- that live testnet parameter should be described as current runtime state, not
+  as the financing policy investors are being asked to underwrite;
+- if runtime parameters and financing language diverge, YNX should explain the
+  difference explicitly rather than hoping diligence readers will infer it.
+
 ## Historical Documents
 
 These older documents remain useful as implementation history, but should not be

@@ -34,6 +34,9 @@ Current diligence-visible blockers still open:
 - no external legal memo is included yet;
 - website legal disclosure routes such as `/privacy` and `/terms` are not yet
   published as standalone pages as of June 14, 2026;
+- the live public indexer overview still exposes a testnet runtime parameter
+  set with `fee_founder_bps = 1000`, so token-policy narrative still requires
+  an explicit explanation rather than implication;
 - company formation, named responsible owners, and dedicated security/contact
   aliases are still listed as readiness work, not completed facts.
 

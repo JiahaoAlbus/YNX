@@ -85,6 +85,9 @@ Current financing-safe position:
 - future default founder fee policy should remain `0 bps` unless separately
   disclosed and approved;
 - infrastructure revenue should be the underwriting story, not token extraction.
+- as of June 14, 2026, the live public indexer overview still exposes
+  `fee_founder_bps = 1000`, so investors should expect an explicit explanation
+  of why current testnet runtime state and financing posture are not identical.
 
 ## 5. Practical Conclusion
 

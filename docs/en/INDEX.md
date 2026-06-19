@@ -5,6 +5,9 @@ Last updated: 2026-04-30
 
 ## Public Docs (Website-safe)
 
+- `START_HERE_FOR_SUPPORT.md` — fastest public entry point for grants, sponsors, and early diligence
+- `docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.md` — one-page public funding summary
+- `docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.pdf` — PDF version of the one-page public funding summary
 - `docs/en/RELEASE_YNXWEB4.md` — consolidated Web4 release notes (`ynxweb4`)
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
 - `docs/en/BUILDER_QUICKSTART.md` — builder quickstart for EVM, Web4 Hub, and AI Gateway surfaces
@@ -28,6 +31,8 @@ Last updated: 2026-04-30
 - `docs/en/PRODUCTION_HARDENING_ROADMAP.md` — executable hardening roadmap for reliability, validators, persistence, audit, and legal gates
 - `docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md` — public wording, company, legal, and launch paperwork checklist
 - `docs/en/INVESTOR_DATA_ROOM_2026_06_13.md` — investor / grant diligence landing page
+- `docs/en/EXTERNAL_RESPONSE_PACK_2026_06_19.md` — standardized short, medium, and long external answers
+- `docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md` — email follow-up templates for grant and sponsor outreach
 - `docs/en/FUNDRAISING_MEMO_2026_06_13.md` — financing narrative, use of funds, and scope discipline
 - `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md` — company, privacy, and regulatory readiness packet
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary

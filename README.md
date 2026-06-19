@@ -106,6 +106,14 @@ Current funding boundary:
   entity, completed external audit coverage, or standard institutional equity
   readiness.
 
+- Root start-here page: [`START_HERE_FOR_SUPPORT.md`](START_HERE_FOR_SUPPORT.md)
+- EN one-pager: [`docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.md`](docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.md)
+- EN one-pager PDF: [`docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.pdf`](docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.pdf)
+- EN standard answer pack: [`docs/en/EXTERNAL_RESPONSE_PACK_2026_06_19.md`](docs/en/EXTERNAL_RESPONSE_PACK_2026_06_19.md)
+- EN follow-up templates: [`docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md`](docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md)
+- ZH start-here page: [`docs/zh/资助与尽调入口_2026_06_19.md`](docs/zh/资助与尽调入口_2026_06_19.md)
+- ZH standard answer pack: [`docs/zh/对外答复标准包_2026_06_19.md`](docs/zh/对外答复标准包_2026_06_19.md)
+- ZH follow-up templates: [`docs/zh/跟进模板_2026_06_19.md`](docs/zh/跟进模板_2026_06_19.md)
 - EN: [`docs/en/INVESTOR_DATA_ROOM_2026_06_13.md`](docs/en/INVESTOR_DATA_ROOM_2026_06_13.md)
 - EN: [`docs/en/FUNDRAISING_MEMO_2026_06_13.md`](docs/en/FUNDRAISING_MEMO_2026_06_13.md)
 - EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)

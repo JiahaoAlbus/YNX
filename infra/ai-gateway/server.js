@@ -1717,7 +1717,8 @@ async function callConfiguredLlm(message, context) {
   if (!llmConfigured()) return null;
   const system = [
     "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
-    "Use the provided live context. Be candid about testnet limits.",
+    "Use only the provided live YNX context for factual claims about YNX. If the context is incomplete, say so instead of guessing from outside knowledge.",
+    "Be candid about testnet limits: no legal entity yet, no production mainnet claim, no real-asset custody claim, no external audit claim unless present in the live context.",
     "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
     "For product or feature suggestions, avoid generic blockchain advice. Ground every suggestion in the current YNX context: live assets, AMM pairs, validators, bridge routes, Web4 policy, and AI settlement.",
     "When discussing assets, distinguish live public-testnet assets from real mainnet custody, redemption, and liquidity.",
@@ -1741,7 +1742,7 @@ async function callConfiguredLlm(message, context) {
             },
           ],
           options: {
-            temperature: 0.2,
+            temperature: 0.1,
             num_ctx: AI_LLM_NUM_CTX,
             num_predict: AI_LLM_NUM_PREDICT,
           },

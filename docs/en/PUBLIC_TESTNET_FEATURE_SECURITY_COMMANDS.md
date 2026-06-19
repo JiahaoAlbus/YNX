@@ -15,7 +15,7 @@ Live surfaces:
 - wrapped mainstream assets: `wBTC.y`, `wETH.y`, `wBNB.y`, `wUSDT.y`, `wUSDC.y`;
 - synthetic test stable asset: `YUSD.test`, not redeemable and no mainnet value;
 - test AMM pairs: `wUSDC.y/YUSD.test`, `wETH.y/YUSD.test`;
-- Bridge Service with 5/5 full-loop-tested routes, BTC/TRON automatic watcher adapters, BSC lockbox automation path, and signer-gated public-testnet release adapters;
+- Bridge Service with `4/5` deposit-tested routes, `4/5` routes with release evidence, BTC/TRON automatic watcher adapters, signer-gated Sepolia release, and a BSC lockbox gap still open;
 - Web4 Hub policy, session, agent, tool, intent, and audit controls;
 - AI Gateway intelligence, jobs, vaults, payments, x402, and on-chain settlement;
 - server-local Ollama, real-time model `qwen3:1.7b`, with `qwen3:4b/8b/14b` retained for background analysis; official factual answers remain grounded in live chain/RPC queries;

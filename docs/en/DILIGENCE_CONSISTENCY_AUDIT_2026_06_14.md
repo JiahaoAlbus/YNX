@@ -34,7 +34,8 @@ Live endpoint rechecked on June 19, 2026:
 
 Observed summary:
 
-- `full_loop_tested = 5/5`
+- `deposit_tested = 4/5`
+- `release_evidence_observed = 4/5`
 - `automatic_loop_ready = 2/5`
 
 Required wording discipline:

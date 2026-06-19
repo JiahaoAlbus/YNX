@@ -50,7 +50,7 @@ YNX combines:
 
 Use this wording consistently:
 
-`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, protected AI trade execution through Web4 session policy, and 2/5 routes with the strongest publicly observed automatic deposit/release evidence. The remaining routes should still be described as testnet-scope readiness work, not production-safe bridge capacity.`
+`YNX Web4 public testnet is live. We currently have 4/5 bridge routes deposit-tested, 4/5 routes with public release evidence, and 2/5 routes that are fully automatic on the current public-testnet adapter path. Sepolia ETH and USDC still remain signer-gated for automatic release, and BNB still remains blocked by the missing BSC lockbox. The bridge should still be described as testnet-scope readiness work, not production-safe bridge capacity.`
 
 ## Why Funding Helps Now
 
@@ -60,7 +60,7 @@ concept validation.
 
 Funding would accelerate:
 
-- BTC/TRON deposit address and release-signer completion
+- Sepolia release-signer completion and BSC lockbox completion
 - production monitoring and incident automation
 - validator and infra redundancy
 - external security review and audit preparation

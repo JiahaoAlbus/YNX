@@ -19,15 +19,16 @@ Current funding boundary:
 
 ## 2. What Exists Today
 
-As of June 13, 2026, YNX already has:
+As of June 19, 2026, YNX already has:
 
 - live public RPC, EVM RPC, REST, faucet, indexer, explorer, AI gateway, and
   Web4 hub endpoints;
 - 4 bonded validators on the public testnet;
 - working owner-policy-session authorization flows for protected agent actions;
 - live AI settlement rails with vault/job/result/finalize workflow;
-- public bridge infrastructure with `5/5` full-loop-tested testnet routes and
-  only `2/5` routes with the strongest publicly observed automatic evidence;
+- public bridge infrastructure with `4/5` deposit-tested routes, `4/5` routes
+  with publicly observable release evidence, and `2/5` routes that are fully
+  automatic on the current public-testnet adapter path;
 - operator scripts, probes, runbooks, and public readiness evidence.
 
 YNX is therefore past the "concept deck" stage. The current task is not proving

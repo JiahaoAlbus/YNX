@@ -1,7 +1,7 @@
 # YNX Public Asset Status
 
 Status: active  
-Last updated: 2026-06-14
+Last updated: 2026-06-19
 Scope: public testnet `ynx_9102-1`
 
 ## Current Answer
@@ -37,11 +37,11 @@ Bridge service: `https://rpc.ynxweb4.com/bridge/*`
 
 | Source testnet asset | Route | YNX wrapped token | Contract | Decimals | Public-testnet status |
 |---|---|---|---|---:|---|
-| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | full loop tested via manual public-testnet proof |
-| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | full loop tested: deposit + withdrawal release |
-| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | full loop tested via manual public-testnet proof |
-| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | full loop tested via manual public-testnet proof |
-| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | full loop tested: deposit + withdrawal release |
+| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | deposit and release evidence observed; current testnet auto-release path active |
+| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | deposit tested; release evidence observed; automatic release still signer-gated |
+| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | route mapped; manual proof and release evidence observed; BSC lockbox still unconfigured |
+| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | deposit and release evidence observed; current testnet auto-release path active |
+| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | deposit tested; release evidence observed; automatic release still signer-gated |
 
 The bridge service exposes:
 
@@ -117,24 +117,25 @@ Current route readiness:
 
 ```text
 GET /bridge/route-readiness
-full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
-automatic_loop_ready: requires configured deposit addresses/source contracts, BSC lockbox, testnet release signers, and the active Sepolia lockbox owner signer for EVM release
-automatic_loop_observed: current strongest live public evidence is on BTC testnet BTC and TRON Shasta USDT after enabling testnet auto-release mock
-manual_loop_ready: none
+deposit_tested: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+automatic_loop_ready: btc-testnet-btc, tron-shasta-usdt
+bsc_gap: source_lockbox_unconfigured
 mapped_route_only: BSC testnet BNB
 ```
 
-As of 2026-06-13, the live bridge readiness posture is:
+As of 2026-06-19, the live bridge readiness posture is:
 
-- `5/5` routes `full_loop_tested`
+- `4/5` routes `deposit_tested`
+- `4/5` routes show public release evidence
 - `2/5` routes `automatic_loop_ready`
 - `btc-testnet-btc`: automatic-ready on the current public-testnet adapter path
 - `tron-shasta-usdt`: automatic-ready on the current public-testnet adapter path
-- `eth-sepolia-eth`: deposit-tested, but automatic release still waits on the Sepolia lockbox owner signer
-- `eth-sepolia-usdc`: deposit-tested, but automatic release still waits on the Sepolia lockbox owner signer
-- `bnb-testnet-bnb`: still waiting on BSC lockbox deployment before automatic readiness is possible
+- `eth-sepolia-eth`: deposit-tested with release evidence, but automatic release still waits on the Sepolia lockbox owner signer
+- `eth-sepolia-usdc`: deposit-tested with release evidence, but automatic release still waits on the Sepolia lockbox owner signer
+- `bnb-testnet-bnb`: route mapping and manual proof exist, but BSC lockbox deployment is still missing before it can count as deposit-tested or automatic-ready in the current readiness model
 
-Full-loop-tested evidence means:
+Current evidence boundaries mean:
 
 ```text
 external testnet deposit observed by operator
@@ -149,10 +150,11 @@ This is a real YNX-side public-testnet audit trail using operator-attested
 source proof and release records. The bridge service now has automatic watcher
 adapters for BTC testnet and TRON Shasta, reuses EVM lockbox automation for BSC
 testnet once a BSC lockbox is configured, and exposes signer-gated testnet
-release adapters. As of June 19, 2026, `automatic_loop_ready` is currently
-earned only where deposit watcher, burn watcher, and release adapter are all
-active together. The missing pieces for higher readiness today are the BSC
-lockbox and the Sepolia lockbox owner signer used for EVM release.
+release adapters. As of June 19, 2026, `automatic_loop_ready` is earned only
+where deposit watcher, burn watcher, and release adapter are all active
+together. Sepolia ETH and USDC currently have deposit-test and release evidence
+but remain short of automatic readiness because the Sepolia lockbox owner signer
+is not configured on the live service. BSC still lacks the source lockbox.
 
 Important diligence note:
 

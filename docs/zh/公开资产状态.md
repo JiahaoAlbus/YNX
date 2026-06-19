@@ -1,7 +1,7 @@
 # YNX 公开资产状态
 
 状态：active  
-最后更新：2026-06-14
+最后更新：2026-06-19
 范围：公开测试网 `ynx_9102-1`
 
 ## 当前答案
@@ -32,11 +32,11 @@ Bridge service：`https://rpc.ynxweb4.com/bridge/*`
 
 | 来源测试网资产 | Route | YNX wrapped token | 合约 | 小数位 | 公开测试网状态 |
 |---|---|---|---|---:|---|
-| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | 已通过 manual proof 完整闭环实测 |
-| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | 已完成完整闭环实测：充值 + 提现释放 |
-| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | 已通过 manual proof 完整闭环实测 |
-| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | 已通过 manual proof 完整闭环实测 |
-| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | 已完成完整闭环实测：充值 + 提现释放 |
+| BTC testnet BTC | `btc-testnet-btc` | `wBTC.y` | `0x1887Eb24feefB6538CBc2140B148ba831f313991` | 8 | 已观察到充值与释放证据；当前测试网自动释放路径可用 |
+| Sepolia ETH | `eth-sepolia-eth` | `wETH.y` | `0x5715Bb5a7B050234A225fC88FF74885eF55E9339` | 18 | 已 deposit-tested；已观察到释放证据；自动释放仍受 signer 限制 |
+| BSC testnet BNB | `bnb-testnet-bnb` | `wBNB.y` | `0x1A4DC3435b6A090824765970521cb782262523Ef` | 18 | route 已映射；已观察到 manual proof 和 release 证据；BSC lockbox 仍未配置 |
+| TRON Shasta USDT | `tron-shasta-usdt` | `wUSDT.y` | `0xB7fFfD780C1a1800d0bBD16FDbfb678cEbFe22E1` | 6 | 已观察到充值与释放证据；当前测试网自动释放路径可用 |
+| Circle Sepolia USDC | `eth-sepolia-usdc` | `wUSDC.y` | `0x847A90aF23667267DDf1028E68DC52C7AD2F8D6c` | 6 | 已 deposit-tested；已观察到释放证据；自动释放仍受 signer 限制 |
 
 Bridge service 暴露：
 
@@ -104,24 +104,25 @@ TRON release proof:       0xf02bc21e3b8522d784f67e2c17fbb26e91a7294f064957b7e590
 
 ```text
 GET /bridge/route-readiness
-full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
-automatic_loop_ready: 需要 deposit address/source contract、BSC lockbox、测试网 release signer，以及用于 EVM release 的 Sepolia lockbox owner signer 全部配置
-automatic_loop_observed: 截至 2026-06-19，当前最强的自动 release 路径体现在 BTC testnet BTC 和 TRON Shasta USDT
-manual_loop_ready: none
+deposit_tested: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+automatic_loop_ready: btc-testnet-btc, tron-shasta-usdt
+bsc_gap: source_lockbox_unconfigured
 mapped_route_only: BSC testnet BNB
 ```
 
-截至 2026-06-14，公开 bridge readiness 应统一理解成：
+截至 2026-06-19，公开 bridge readiness 应统一理解成：
 
-- `5/5` routes `full_loop_tested`
+- `4/5` routes `deposit_tested`
+- `4/5` routes 已公开观察到 release evidence
 - `2/5` routes `automatic_loop_ready`
 - `btc-testnet-btc`：当前 public-testnet adapter 路径下已 automatic-ready
 - `tron-shasta-usdt`：当前 public-testnet adapter 路径下已 automatic-ready
-- `eth-sepolia-eth`：已 deposit-tested，但 automatic release 仍等待 Sepolia lockbox owner signer
-- `eth-sepolia-usdc`：已 deposit-tested，但 automatic release 仍等待 Sepolia lockbox owner signer
-- `bnb-testnet-bnb`：仍等待 BSC lockbox 部署，自动 readiness 目前不成立
+- `eth-sepolia-eth`：已 deposit-tested 且有 release evidence，但 automatic release 仍等待 Sepolia lockbox owner signer
+- `eth-sepolia-usdc`：已 deposit-tested 且有 release evidence，但 automatic release 仍等待 Sepolia lockbox owner signer
+- `bnb-testnet-bnb`：已有 route mapping 和 manual proof，但在当前 readiness 模型下，BSC lockbox 缺失前还不能算 deposit-tested 或 automatic-ready
 
-full-loop-tested 证据链的意思是：
+当前证据边界应理解为：
 
 ```text
 外部测试网充值由 operator 验真
@@ -137,8 +138,9 @@ release 记录。Bridge service 现在已经实现 BTC testnet Blockstream watch
 TRON Shasta TronGrid watcher、BSC testnet EVM lockbox 自动化路径，以及
 测试网 signer-gated release adapter。截至 2026-06-19，只有当 deposit watcher、
 burn watcher 和 release adapter 同时健康时，某条 route 才会被标记为
-`automatic_loop_ready`。当前仍缺的是 BSC lockbox，以及用于 EVM release 的
-Sepolia lockbox owner signer。
+`automatic_loop_ready`。Sepolia ETH 和 USDC 当前已经有 deposit-test 和
+release evidence，但因为 live service 上没有配置 Sepolia lockbox owner
+signer，所以仍未达到 automatic-ready。BSC 当前仍缺 source lockbox。
 
 尽调时必须强调：
 

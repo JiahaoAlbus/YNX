@@ -719,6 +719,31 @@ function summarizeRoutePhases(context) {
   return items.map((item) => `${item.routeId}:${item.phase}`).join(", ");
 }
 
+function routeReadinessCounts(context) {
+  const payload = context.bridge?.route_readiness || {};
+  const summary = payload.summary || {};
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const routes = Number(summary.routes ?? items.length ?? 0);
+  const depositTested = Number(
+    summary.deposit_tested ??
+      items.filter((item) => item.phase === "deposit_tested" || item.phase === "full_loop_tested" || item.full_loop_tested).length,
+  );
+  const automaticReady = Number(summary.automatic_loop_ready ?? items.filter((item) => item.automatic_loop_ready).length);
+  const releaseProof = Number(
+    summary.release_evidence_observed ??
+      summary.release_observed ??
+      items.filter((item) => {
+        const evidence = item.evidence || {};
+        return (
+          item.full_loop_tested ||
+          Number(evidence.released_withdrawals || 0) > 0 ||
+          Number(evidence.withdrawal_watcher?.releases_executed || 0) > 0
+        );
+      }).length,
+  );
+  return { routes, depositTested, releaseProof, automaticReady };
+}
+
 function bridgeAssets(context) {
   const payload = context.bridge?.assets || {};
   return {
@@ -800,11 +825,14 @@ function compactIntelligenceContext(context) {
     bridge: {
       stats: bridgeHealth.stats || {},
       routes: routeReadiness.summary || {},
+      route_counts: routeReadinessCounts(context),
       route_phases: Array.isArray(routeReadiness.items)
         ? routeReadiness.items.map((item) => ({
             routeId: item.routeId,
             phase: item.phase,
             full_loop_tested: item.full_loop_tested,
+            automatic_loop_ready: item.automatic_loop_ready,
+            blockers: item.blockers || [],
           }))
         : [],
       assets: assets.map((asset) => ({
@@ -920,8 +948,6 @@ function wantsLiveStatusAnswer(message) {
     wantsLatestTransaction(text) ||
     wantsValidatorStatus(text) ||
     wantsCirculatingAssets(text) ||
-    wantsFeatureSuggestions(text) ||
-    wantsNetworkLayers(text) ||
     wantsTradeRequest(text) ||
     /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
   );
@@ -1480,6 +1506,35 @@ function deterministicIntelligenceAnswer(message, context) {
     ].join("\n");
   }
 
+  if (wantsNetworkLayers(message)) {
+    const counts = routeReadinessCounts(context);
+    const validators = validatorSignatureSummary(context);
+    if (zh) {
+      return [
+        "按最保守、最容易被核验的说法：YNX 现在是一个独立 L1 公共测试网，不是以太坊或 Solana 的 L2。",
+        "",
+        "- 对用户来说，它提供 EVM 兼容执行层，chainId=9102。",
+        "- 对跨链资产来说，它是 public-testnet wrapped asset / bridge settlement layer。",
+        "- 对 AI 来说，它是 Intelligence + Web4 policy/session + AI settlement 的执行和观察层。",
+        `- 当前桥证据：deposit-tested=${counts.depositTested}/${counts.routes}，release proof=${counts.releaseProof}/${counts.routes}，automatic-ready=${counts.automaticReady}/${counts.routes}。`,
+        `- 当前验证人签名：${validators.signed_count}/${validators.total}。`,
+        "",
+        "边界：这不是 production mainnet、不是真实资产托管，也不是已经完成外部审计的机构级网络。",
+      ].join("\n");
+    }
+    return [
+      "The most conservative verifiable framing: YNX is an independent L1 public testnet, not an Ethereum or Solana L2.",
+      "",
+      "- For users, it provides an EVM-compatible execution layer with chainId 9102.",
+      "- For bridged assets, it acts as a public-testnet wrapped-asset and bridge settlement layer.",
+      "- For AI, it is an Intelligence + Web4 policy/session + AI settlement execution and observability layer.",
+      `- Current bridge evidence: deposit-tested=${counts.depositTested}/${counts.routes}, release proof=${counts.releaseProof}/${counts.routes}, automatic-ready=${counts.automaticReady}/${counts.routes}.`,
+      `- Current validator signing: ${validators.signed_count}/${validators.total}.`,
+      "",
+      "Boundary: this is not production mainnet, not real-asset custody, and not externally audited institution-grade infrastructure yet.",
+    ].join("\n");
+  }
+
   if (wantsCirculatingAssets(message)) {
     const { assets, pairs, riskNotice } = bridgeAssets(context);
     const liveAssets = assets.filter((asset) => String(asset.status || "").toLowerCase() === "live");
@@ -1623,6 +1678,7 @@ function deterministicIntelligenceAnswer(message, context) {
   }
 
   const bridgeSummary = context.bridge?.route_readiness?.summary || {};
+  const counts = routeReadinessCounts(context);
   const healthStats = context.bridge?.health?.stats || {};
   const aiStats = context.ai?.stats || {};
   const onchain = context.ai?.onchain || {};
@@ -1631,19 +1687,19 @@ function deterministicIntelligenceAnswer(message, context) {
     return [
       "我是 YNX Intelligence，当前直接运行在 YNX AI Gateway 上。",
       "",
-      `交易/桥状态：${bridgeSummary.full_loop_tested || 0}/${bridgeSummary.routes || 0} 条 route 已完成 full-loop-tested；当前路线为 ${routePhases}。`,
+      `交易/桥状态：deposit-tested=${counts.depositTested}/${counts.routes}，release proof=${counts.releaseProof}/${counts.routes}，automatic-ready=${counts.automaticReady}/${counts.routes}；当前路线为 ${routePhases}。`,
       `Sepolia 闭环证据：minted deposits=${healthStats.minted_deposits ?? "-"}，released withdrawals=${healthStats.released_withdrawals ?? "-"}。`,
       `AI 链上结算：${onchain.enabled && onchain.ready ? "已开启并 ready" : "未完全 ready"}，settlement contract=${onchain.settlement_contract || "-"}，最近 tx=${onchain.last_tx_hash || "-"}。`,
       `AI 任务统计：jobs=${aiStats.total_jobs ?? 0}，vaults=${aiStats.total_vaults ?? 0}，payments=${aiStats.total_payments ?? 0}，finalized=${aiStats.by_status?.finalized ?? 0}。`,
       "",
       "产品定位建议：YNX AI 不应只叫 agent 权限与结算层，而应定位为 Intelligence Layer：链上状态分析、交易/跨链助手、AI 任务执行、机器支付、权限控制、链上结算、运维预警和开发者问答的组合。",
-      "下一步最有价值的是：继续扩大 full-loop-tested 交易路线，并让服务器本地模型/外部模型持续接入实时 YNX 上下文，形成真正的链上智能运营与交易助手。",
+      "下一步最有价值的是：把 Sepolia signer 和 BSC lockbox 补齐，让 automatic-ready 从当前 2/5 往 4/5 或 5/5 推进，并让服务器本地模型持续接入实时 YNX 上下文。",
     ].join("\n");
   }
   return [
     "I am YNX Intelligence, running inside the YNX AI Gateway.",
     "",
-    `Bridge/trading status: ${bridgeSummary.full_loop_tested || 0}/${bridgeSummary.routes || 0} routes are full-loop-tested; phases: ${routePhases}.`,
+    `Bridge/trading status: deposit-tested=${counts.depositTested}/${counts.routes}, release proof=${counts.releaseProof}/${counts.routes}, automatic-ready=${counts.automaticReady}/${counts.routes}; phases: ${routePhases}.`,
     `Sepolia loop evidence: minted deposits=${healthStats.minted_deposits ?? "-"}, released withdrawals=${healthStats.released_withdrawals ?? "-"}.`,
     `AI on-chain settlement: ${onchain.enabled && onchain.ready ? "enabled and ready" : "not fully ready"}, contract=${onchain.settlement_contract || "-"}, latest tx=${onchain.last_tx_hash || "-"}.`,
     `AI stats: jobs=${aiStats.total_jobs ?? 0}, vaults=${aiStats.total_vaults ?? 0}, payments=${aiStats.total_payments ?? 0}, finalized=${aiStats.by_status?.finalized ?? 0}.`,

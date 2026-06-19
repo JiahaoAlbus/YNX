@@ -118,22 +118,21 @@ Current route readiness:
 ```text
 GET /bridge/route-readiness
 full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
-automatic_loop_ready: requires configured deposit addresses/source contracts, BSC lockbox, and testnet release signers
-automatic_loop_observed: strongest live public evidence currently concentrated on Sepolia ETH and USDC
+automatic_loop_ready: requires configured deposit addresses/source contracts, BSC lockbox, testnet release signers, and the active Sepolia lockbox owner signer for EVM release
+automatic_loop_observed: current strongest live public evidence is on BTC testnet BTC and TRON Shasta USDT after enabling testnet auto-release mock
 manual_loop_ready: none
-mapped_route_only: none
+mapped_route_only: BSC testnet BNB
 ```
 
 As of 2026-06-13, the live bridge readiness posture is:
 
 - `5/5` routes `full_loop_tested`
-- `4/5` routes `automatic_loop_ready`
-- `2/5` routes with the strongest observed automatic public evidence: Sepolia ETH and Sepolia USDC
-- `btc-testnet-btc`: automatic-ready, but public observed automation evidence is still thinner
-- `eth-sepolia-eth`: automatic-ready and observed
-- `tron-shasta-usdt`: automatic-ready, but public observed automation evidence is still thinner
-- `eth-sepolia-usdc`: automatic-ready and observed
-- `bnb-testnet-bnb`: waiting on BSC lockbox deployment and testnet BNB funding
+- `2/5` routes `automatic_loop_ready`
+- `btc-testnet-btc`: automatic-ready on the current public-testnet adapter path
+- `tron-shasta-usdt`: automatic-ready on the current public-testnet adapter path
+- `eth-sepolia-eth`: deposit-tested, but automatic release still waits on the Sepolia lockbox owner signer
+- `eth-sepolia-usdc`: deposit-tested, but automatic release still waits on the Sepolia lockbox owner signer
+- `bnb-testnet-bnb`: still waiting on BSC lockbox deployment before automatic readiness is possible
 
 Full-loop-tested evidence means:
 
@@ -150,9 +149,10 @@ This is a real YNX-side public-testnet audit trail using operator-attested
 source proof and release records. The bridge service now has automatic watcher
 adapters for BTC testnet and TRON Shasta, reuses EVM lockbox automation for BSC
 testnet once a BSC lockbox is configured, and exposes signer-gated testnet
-release adapters. A route is not `automatic_loop_ready` unless its deposit
-address/contract, lockbox where needed, watcher scan, burn watcher, release
-signer, and release cap are all configured and healthy.
+release adapters. As of June 19, 2026, `automatic_loop_ready` is currently
+earned only where deposit watcher, burn watcher, and release adapter are all
+active together. The missing pieces for higher readiness today are the BSC
+lockbox and the Sepolia lockbox owner signer used for EVM release.
 
 Important diligence note:
 

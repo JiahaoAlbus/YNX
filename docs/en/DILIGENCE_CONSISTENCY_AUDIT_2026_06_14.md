@@ -28,20 +28,22 @@ investor is likely to perform across README, public docs, and live endpoints.
 
 ## 1. Bridge Readiness Terminology
 
-Live endpoint checked on June 14, 2026:
+Live endpoint rechecked on June 19, 2026:
 
 - `GET https://rpc.ynxweb4.com/bridge/route-readiness`
 
 Observed summary:
 
 - `full_loop_tested = 5/5`
-- `automatic_loop_ready = 4/5`
+- `automatic_loop_ready = 2/5`
 
 Required wording discipline:
 
 - `automatic_loop_ready` means configuration and adapter readiness;
-- strongest publicly observed automation evidence today is still concentrated on
-  the Sepolia ETH and USDC routes;
+- current automatic-ready routes are BTC testnet BTC and TRON Shasta USDT on
+  the public-testnet release-adapter path;
+- Sepolia ETH and USDC remain deposit-tested but not automatic-ready because the
+  Sepolia lockbox owner signer is not configured in the live bridge service;
 - do not collapse readiness into production safety.
 
 ## 2. Validator Language

@@ -29,7 +29,7 @@ Deliver a three-minute sponsor demo that proves the system is live, protected, a
 - show `/readiness`
 - state:
   - `5/5 full-loop-tested`
-  - `4/5 automatic-loop-ready`
+  - `2/5 automatic-loop-ready`
   - `2/5 strongest observed automatic public evidence today`
 - explain BSC as the clearest remaining automation blocker, and frame BTC/TRON as configured but still lighter on public observed automation evidence than Sepolia
 

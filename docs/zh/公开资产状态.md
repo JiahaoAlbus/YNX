@@ -105,20 +105,21 @@ TRON release proof:       0xf02bc21e3b8522d784f67e2c17fbb26e91a7294f064957b7e590
 ```text
 GET /bridge/route-readiness
 full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
-automatic_loop_ready: 需要 deposit address/source contract、BSC lockbox、测试网 release signer 全部配置
-automatic_loop_observed: 当前最强的真实公开自动化证据主要集中在 Sepolia ETH 和 USDC
+automatic_loop_ready: 需要 deposit address/source contract、BSC lockbox、测试网 release signer，以及用于 EVM release 的 Sepolia lockbox owner signer 全部配置
+automatic_loop_observed: 截至 2026-06-19，当前最强的自动 release 路径体现在 BTC testnet BTC 和 TRON Shasta USDT
 manual_loop_ready: none
-mapped_route_only: none
+mapped_route_only: BSC testnet BNB
 ```
 
 截至 2026-06-14，公开 bridge readiness 应统一理解成：
 
 - `5/5` routes `full_loop_tested`
-- `4/5` routes `automatic_loop_ready`
-- `2/5` routes 拥有最强的公开自动化实证：Sepolia ETH 和 Sepolia USDC
-- `btc-testnet-btc`：automatic-ready，但公开自动化实证还偏少
-- `tron-shasta-usdt`：automatic-ready，但公开自动化实证还偏少
-- `bnb-testnet-bnb`：仍等待 BSC lockbox 部署和 testnet BNB 资金
+- `2/5` routes `automatic_loop_ready`
+- `btc-testnet-btc`：当前 public-testnet adapter 路径下已 automatic-ready
+- `tron-shasta-usdt`：当前 public-testnet adapter 路径下已 automatic-ready
+- `eth-sepolia-eth`：已 deposit-tested，但 automatic release 仍等待 Sepolia lockbox owner signer
+- `eth-sepolia-usdc`：已 deposit-tested，但 automatic release 仍等待 Sepolia lockbox owner signer
+- `bnb-testnet-bnb`：仍等待 BSC lockbox 部署，自动 readiness 目前不成立
 
 full-loop-tested 证据链的意思是：
 
@@ -134,9 +135,10 @@ full-loop-tested 证据链的意思是：
 这是 YNX 侧真实测试网审计链路，使用 operator-attested source proof 和
 release 记录。Bridge service 现在已经实现 BTC testnet Blockstream watcher、
 TRON Shasta TronGrid watcher、BSC testnet EVM lockbox 自动化路径，以及
-测试网 signer-gated release adapter。某条 route 只有在 deposit address/contract、
-必要的 lockbox、watcher scan、burn watcher、release signer 和 release cap 都
-配置并健康时，才会被标记为 `automatic_loop_ready`。
+测试网 signer-gated release adapter。截至 2026-06-19，只有当 deposit watcher、
+burn watcher 和 release adapter 同时健康时，某条 route 才会被标记为
+`automatic_loop_ready`。当前仍缺的是 BSC lockbox，以及用于 EVM release 的
+Sepolia lockbox owner signer。
 
 尽调时必须强调：
 

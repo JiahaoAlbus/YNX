@@ -7,7 +7,7 @@ Status date: 2026-06-13
 - validators bonded: `4/4`
 - public readiness gate: `PASS`
 - bridge full-loop-tested: `5/5`
-- automatic-loop-ready: `4/5`
+- automatic-loop-ready: `2/5`
 - automatic-loop-observed: `2/5`
 
 Important interpretation:
@@ -24,9 +24,11 @@ Important interpretation:
 
 | Route | Current status | Missing production input | Why it is blocked |
 |---|---|---|---|
-| `btc-testnet-btc` | full-loop-tested, automatic-ready, limited observed automation evidence | repeated live automatic deposit/release evidence | BTC watcher and release adapter are configured, but the public evidence packet is still thinner than the Sepolia routes |
-| `bnb-testnet-bnb` | full-loop-tested, not automatic | BSC lockbox deployment, testnet BNB funding for deployer | EVM lockbox automation path exists, but the deploy signer has zero BSC testnet gas and no lockbox is configured |
-| `tron-shasta-usdt` | full-loop-tested, automatic-ready, limited observed automation evidence | repeated live automatic deposit/release evidence | TRON watcher/release adapter is configured, but the public evidence packet is still thinner than the Sepolia routes |
+| `btc-testnet-btc` | full-loop-tested, automatic-ready | repeated live automatic deposit/release evidence | BTC watcher and public-testnet release adapter are now configured, but this still should not be described as production-safe custody |
+| `eth-sepolia-eth` | deposit-tested, not automatic | Sepolia lockbox owner signer in the live bridge service | The lockbox and watcher are live, but release remains pending signer because the lockbox owner key is not wired into the bridge service |
+| `bnb-testnet-bnb` | full-loop-tested, not automatic | BSC lockbox deployment, testnet BNB funding for deployer | EVM lockbox automation path exists, but no BSC lockbox is configured yet |
+| `tron-shasta-usdt` | full-loop-tested, automatic-ready | repeated live automatic deposit/release evidence | TRON watcher and public-testnet release adapter are now configured, but this still should not be described as production-safe custody |
+| `eth-sepolia-usdc` | deposit-tested, not automatic | Sepolia lockbox owner signer in the live bridge service | The lockbox and watcher are live, but release remains pending signer because the lockbox owner key is not wired into the bridge service |
 
 ## What Was Completed
 
@@ -49,4 +51,4 @@ Important interpretation:
 
 Use this wording:
 
-`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested, 4/5 routes automatic-loop-ready by current route configuration, and the strongest observed automatic public evidence today on the Sepolia ETH and USDC routes. The bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`
+`YNX Web4 public testnet is live. We have 5/5 bridge routes full-loop tested and 2/5 routes automatic-loop-ready on the current public-testnet adapter path. BTC testnet BTC and TRON Shasta USDT are automatic-ready today; Sepolia ETH and USDC still wait on the Sepolia lockbox owner signer, and BNB still waits on a BSC lockbox. The bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`

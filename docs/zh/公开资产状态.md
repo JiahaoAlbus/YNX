@@ -105,7 +105,7 @@ TRON release proof:       0xf02bc21e3b8522d784f67e2c17fbb26e91a7294f064957b7e590
 ```text
 GET /bridge/route-readiness
 deposit_tested: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
-release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
 automatic_loop_ready: btc-testnet-btc, tron-shasta-usdt
 bsc_gap: source_lockbox_unconfigured
 mapped_route_only: BSC testnet BNB
@@ -114,13 +114,13 @@ mapped_route_only: BSC testnet BNB
 截至 2026-06-19，公开 bridge readiness 应统一理解成：
 
 - `4/5` routes `deposit_tested`
-- `4/5` routes 已公开观察到 release evidence
+- `5/5` routes 已公开观察到某种 release evidence
 - `2/5` routes `automatic_loop_ready`
 - `btc-testnet-btc`：当前 public-testnet adapter 路径下已 automatic-ready
 - `tron-shasta-usdt`：当前 public-testnet adapter 路径下已 automatic-ready
 - `eth-sepolia-eth`：已 deposit-tested 且有 release evidence，但 automatic release 仍等待 Sepolia lockbox owner signer
 - `eth-sepolia-usdc`：已 deposit-tested 且有 release evidence，但 automatic release 仍等待 Sepolia lockbox owner signer
-- `bnb-testnet-bnb`：已有 route mapping 和 manual proof，但在当前 readiness 模型下，BSC lockbox 缺失前还不能算 deposit-tested 或 automatic-ready
+- `bnb-testnet-bnb`：已有 route mapping 和 manual release proof，但在当前 readiness 模型下，BSC lockbox 缺失前还不能算 deposit-tested 或 automatic-ready
 
 当前证据边界应理解为：
 

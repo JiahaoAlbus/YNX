@@ -7,7 +7,7 @@ Status date: 2026-06-13
 - validators bonded: `4/4`
 - public readiness gate: `PASS`
 - bridge deposit-tested: `4/5`
-- bridge release-evidence-observed: `4/5`
+- bridge release-evidence-observed: `5/5`
 - automatic-loop-ready: `2/5`
 - automatic-loop-observed: `2/5`
 
@@ -53,4 +53,4 @@ Important interpretation:
 
 Use this wording:
 
-`YNX Web4 public testnet is live. We currently have 4/5 bridge routes deposit-tested, 4/5 routes with public release evidence, and 2/5 routes automatic-loop-ready on the current public-testnet adapter path. BTC testnet BTC and TRON Shasta USDT are automatic-ready today; Sepolia ETH and USDC still wait on the Sepolia lockbox owner signer, and BNB still waits on a BSC lockbox before it can count as deposit-tested in the current readiness model. The bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`
+`YNX Web4 public testnet is live. We currently have 4/5 bridge routes deposit-tested, 5/5 routes with some form of public release proof, and 2/5 routes automatic-loop-ready on the current public-testnet adapter path. BTC testnet BTC and TRON Shasta USDT are automatic-ready today; Sepolia ETH and USDC still wait on the Sepolia lockbox owner signer, and BNB still waits on a BSC lockbox before it can count as deposit-tested in the current readiness model. The bridge should still be described as testnet architecture evidence rather than production custody infrastructure.`

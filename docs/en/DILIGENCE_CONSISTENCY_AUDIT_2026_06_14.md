@@ -35,7 +35,7 @@ Live endpoint rechecked on June 19, 2026:
 Observed summary:
 
 - `deposit_tested = 4/5`
-- `release_evidence_observed = 4/5`
+- `release_evidence_observed = 5/5`
 - `automatic_loop_ready = 2/5`
 
 Required wording discipline:

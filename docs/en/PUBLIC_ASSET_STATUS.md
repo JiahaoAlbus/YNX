@@ -118,7 +118,7 @@ Current route readiness:
 ```text
 GET /bridge/route-readiness
 deposit_tested: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
-release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, tron-shasta-usdt, eth-sepolia-usdc
+release_evidence_observed: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc
 automatic_loop_ready: btc-testnet-btc, tron-shasta-usdt
 bsc_gap: source_lockbox_unconfigured
 mapped_route_only: BSC testnet BNB
@@ -127,13 +127,13 @@ mapped_route_only: BSC testnet BNB
 As of 2026-06-19, the live bridge readiness posture is:
 
 - `4/5` routes `deposit_tested`
-- `4/5` routes show public release evidence
+- `5/5` routes show some form of public release evidence
 - `2/5` routes `automatic_loop_ready`
 - `btc-testnet-btc`: automatic-ready on the current public-testnet adapter path
 - `tron-shasta-usdt`: automatic-ready on the current public-testnet adapter path
 - `eth-sepolia-eth`: deposit-tested with release evidence, but automatic release still waits on the Sepolia lockbox owner signer
 - `eth-sepolia-usdc`: deposit-tested with release evidence, but automatic release still waits on the Sepolia lockbox owner signer
-- `bnb-testnet-bnb`: route mapping and manual proof exist, but BSC lockbox deployment is still missing before it can count as deposit-tested or automatic-ready in the current readiness model
+- `bnb-testnet-bnb`: route mapping and manual release proof exist, but BSC lockbox deployment is still missing before it can count as deposit-tested or automatic-ready in the current readiness model
 
 Current evidence boundaries mean:
 

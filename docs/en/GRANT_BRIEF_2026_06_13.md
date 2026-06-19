@@ -50,7 +50,7 @@ YNX combines:
 
 Use this wording consistently:
 
-`YNX Web4 public testnet is live. We currently have 4/5 bridge routes deposit-tested, 4/5 routes with public release evidence, and 2/5 routes that are fully automatic on the current public-testnet adapter path. Sepolia ETH and USDC still remain signer-gated for automatic release, and BNB still remains blocked by the missing BSC lockbox. The bridge should still be described as testnet-scope readiness work, not production-safe bridge capacity.`
+`YNX Web4 public testnet is live. We currently have 4/5 bridge routes deposit-tested, 5/5 routes with some form of public release proof, and 2/5 routes that are fully automatic on the current public-testnet adapter path. Sepolia ETH and USDC still remain signer-gated for automatic release, and BNB still remains blocked by the missing BSC lockbox from counting as deposit-tested or automatic-ready. The bridge should still be described as testnet-scope readiness work, not production-safe bridge capacity.`
 
 ## Why Funding Helps Now
 

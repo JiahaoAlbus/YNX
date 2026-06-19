@@ -137,7 +137,18 @@ export PATH="$HOME/.local/bin:$PATH"
 ynx join --role full-node
 ```
 
+Fresh Windows machine:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx_windows.ps1 | iex
+```
+
+Windows support boundary: the documented path is WSL2 + Ubuntu. Native non-WSL Windows validator support is not claimed here.
+
 For consensus-validator candidates, use `ynx join --role validator` after operator review and funding. The CLI defaults to state sync for the public testnet so new machines do not replay incompatible historical genesis state.
+
+If deployment stalls, use the public AI troubleshooting page at `https://www.ynxweb4.com/ai` and paste the exact command plus exact error output.
 
 Use the **zero-start** join manuals below (EN/ZH).  
 These guides start from a clean machine and include complete bootstrap paths.

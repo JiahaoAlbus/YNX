@@ -1,7 +1,7 @@
 # YNX Builder Quickstart
 
 Status: active  
-Last updated: 2026-05-17  
+Last updated: 2026-06-19  
 Scope: public testnet `ynx_9102-1`
 
 YNX exposes three builder surfaces on the public testnet:
@@ -150,7 +150,35 @@ export PATH="$HOME/.local/bin:$PATH"
 ynx join --role full-node
 ```
 
+Windows from zero:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx_windows.ps1 | iex
+```
+
+Current boundary:
+
+- Windows onboarding is documented as a WSL2 + Ubuntu path.
+- Native non-WSL Windows node support is not claimed in this quickstart.
+
 Use `ynx join --role validator` only after operator review and funding if you are applying to become a consensus validator candidate.
+
+## 7. If Deployment Fails, Ask YNX AI
+
+Public troubleshooting entry:
+
+- `https://www.ynxweb4.com/ai`
+
+Recommended prompt:
+
+```text
+I am following the YNX Builder Quickstart on a fresh [Linux/Windows] machine.
+I ran: <exact command>
+I expected: <expected result>
+I got: <exact error output>
+Tell me the next command only. Also say whether this is a local environment problem, a missing dependency problem, or a YNX-side issue.
+```
 
 ## Safety Boundary
 

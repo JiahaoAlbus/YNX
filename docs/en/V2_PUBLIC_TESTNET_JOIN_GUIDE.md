@@ -2,7 +2,7 @@
 
 Status: active  
 Audience: public users, builders, node operators, consensus validator candidates  
-Last updated: 2026-04-19
+Last updated: 2026-06-19
 
 ## 1. Purpose
 
@@ -29,6 +29,29 @@ ynx join --role validator
 ```
 
 The public testnet join flow defaults to state sync. This is required for current live-testnet compatibility because fresh nodes should sync from the live state snapshot instead of replaying old genesis history.
+
+Windows 11 / fresh Windows machine path:
+
+1. Open **PowerShell as Administrator**.
+2. Run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx_windows.ps1 | iex
+```
+
+What this Windows installer does:
+
+- uses WSL2 with Ubuntu instead of claiming native Windows node support;
+- installs `curl`, `git`, `jq`, `bash` inside Ubuntu;
+- installs the YNX CLI inside WSL;
+- runs `ynx help` and `ynx join-plan --role full-node` as a verification step.
+
+Important boundary:
+
+- On a completely blank Windows machine, the first run may trigger WSL/Ubuntu installation and a reboot or first-time Ubuntu username setup.
+- After that first OS-level setup finishes, re-run the same PowerShell command above to complete the YNX install path.
+- Current operator documentation is WSL-first for Windows. A native non-WSL Windows validator path is **not** claimed.
 
 Manual fallback:
 
@@ -127,6 +150,27 @@ No. This is public testnet. Test tokens are not mainnet assets.
 
 Yes. This is the recommended sequence.
 
+### I am blocked during deployment. Is there an AI help path?
+
+Yes. Use the public YNX AI page:
+
+- `https://www.ynxweb4.com/ai`
+
+Best prompt format:
+
+```text
+I am deploying YNX from a fresh [Linux/Windows] machine.
+I ran: <exact command>
+I expected: <expected result>
+I got: <exact error output>
+Tell me the next command only, and explain whether this is a local machine issue, a missing package issue, or a YNX-side issue.
+```
+
+Boundary:
+
+- The AI page is a troubleshooting interface, not a guarantee that every deployment issue can be resolved automatically.
+- For validator or consensus onboarding, keep the canonical source of truth as this repo plus the validator guides.
+
 ## 5. Risk notice
 
 - Public testnet can be upgraded/reset.
@@ -138,3 +182,4 @@ Yes. This is the recommended sequence.
 - Repo: `https://github.com/JiahaoAlbus/YNX`
 - Explorer: `https://explorer.ynxweb4.com`
 - Network overview: `https://indexer.ynxweb4.com/ynx/overview`
+- AI troubleshooting: `https://www.ynxweb4.com/ai`

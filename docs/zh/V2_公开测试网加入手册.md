@@ -2,7 +2,7 @@
 
 状态：active  
 适用对象：体验用户、开发者、节点运营者、共识验证人候选者  
-最后更新：2026-04-19
+最后更新：2026-06-19
 
 ## 1. 手册目的
 
@@ -29,6 +29,29 @@ ynx join --role validator
 ```
 
 当前公开测试网默认使用 state sync 加入。这是为了和现网状态兼容，新机器不再从旧 genesis 历史重放。
+
+Windows 11 / 全新 Windows 机器路径：
+
+1. 用**管理员身份**打开 PowerShell。
+2. 执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+irm https://raw.githubusercontent.com/JiahaoAlbus/YNX/main/scripts/install_ynx_windows.ps1 | iex
+```
+
+这个 Windows 安装器会做什么：
+
+- 不会假装支持纯原生 Windows 节点，而是走 WSL2 + Ubuntu 的可信路径；
+- 在 Ubuntu 内安装 `curl`、`git`、`jq`、`bash`；
+- 在 WSL 里安装 YNX CLI；
+- 额外执行 `ynx help` 和 `ynx join-plan --role full-node` 作为校验步骤。
+
+边界说明：
+
+- 对完全空白的 Windows 机器，第一次执行时可能会先触发 WSL / Ubuntu 安装，并要求重启，或者要求先完成 Ubuntu 首次用户名创建。
+- 这些操作完成后，再执行一次上面的 PowerShell 命令，才能完成 YNX 安装。
+- 当前我们只声明 **WSL 路线可用**；**不声明**原生非 WSL Windows 验证节点已支持。
 
 手动备用路径：
 
@@ -127,6 +150,27 @@ curl -s https://faucet.ynxweb4.com/health | jq
 
 可以，建议按这个顺序。
 
+### 部署卡住了，能不能问 AI？
+
+可以。公开入口：
+
+- `https://www.ynxweb4.com/ai`
+
+建议直接这样问：
+
+```text
+我正在一台全新的 [Linux/Windows] 机器上部署 YNX。
+我执行了：<完整命令>
+我预期：<预期结果>
+我实际得到：<完整报错>
+你只告诉我下一条命令，并说明这是本机环境问题、缺包问题，还是 YNX 侧问题。
+```
+
+边界：
+
+- AI 页面是排障辅助入口，不等于保证所有部署问题都能自动修复。
+- 验证节点和共识验证人加入，仍以本仓库手册和验证人手册为准。
+
 ## 5. 风险提示
 
 - 公测网可能升级、重置或调参。
@@ -138,3 +182,4 @@ curl -s https://faucet.ynxweb4.com/health | jq
 - 仓库：`https://github.com/JiahaoAlbus/YNX`
 - 浏览器：`https://explorer.ynxweb4.com`
 - 网络概览：`https://indexer.ynxweb4.com/ynx/overview`
+- AI 排障：`https://www.ynxweb4.com/ai`

@@ -944,12 +944,17 @@ function wantsTradeRequest(message) {
 
 function wantsLiveStatusAnswer(message) {
   const text = String(message || "").toLowerCase();
+  const hasStatusIntent = /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status)/i.test(text);
+  const hasStatusSubject =
+    wantsNetworkLayers(text) ||
+    /(跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain|区块|高度|最高层数|最高区块|block|height)/i.test(text);
   return (
     wantsLatestTransaction(text) ||
     wantsValidatorStatus(text) ||
     wantsCirculatingAssets(text) ||
     wantsTradeRequest(text) ||
-    /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
+    /(跨链|桥|bridge|route|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|区块|高度|最高层数|最高区块|block|height)/i.test(text) ||
+    (hasStatusIntent && hasStatusSubject)
   );
 }
 

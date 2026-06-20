@@ -175,9 +175,29 @@ async function loadBridgeOverview() {
       ok: bridgeHealth?.ok !== false,
       health_url: YNX_PUBLIC_BRIDGE_HEALTH,
       stats: bridgeHealth?.stats || null,
+      onchain: bridgeHealth?.onchain
+        ? {
+            enabled: bridgeHealth.onchain.enabled !== false,
+            ready: bridgeHealth.onchain.ready !== false,
+            missing_requirements: bridgeHealth.onchain.missing_requirements || [],
+            gateway_signer_set: bridgeHealth.onchain.gateway_signer_set || null,
+          }
+        : null,
       route_readiness: {
         ok: routeReadiness?.ok !== false,
         summary: routeReadiness?.summary || null,
+        blockers: routeReadiness?.blockers || null,
+        requirements: routeReadiness?.requirements || null,
+        actions: Array.isArray(routeReadiness?.items)
+          ? routeReadiness.items
+              .filter((item) => item && item.blocker_class && item.blocker_class !== "ready")
+              .map((item) => ({
+                routeId: item.routeId,
+                blocker_class: item.blocker_class,
+                required_configuration: item.required_configuration || [],
+                recommended_action: item.recommended_action || "",
+              }))
+          : [],
       },
     };
     loadBridgeOverview.cache = {

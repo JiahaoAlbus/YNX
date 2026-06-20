@@ -94,6 +94,17 @@ function startMockRpcServer(port) {
     if (url.pathname === "/bridge/health") {
       return res.end(JSON.stringify({
         ok: true,
+        onchain: {
+          enabled: false,
+          ready: false,
+          missing_requirements: ["bridge_onchain_disabled", "source_evm_private_key_required"],
+          gateway_signer_set: {
+            configured: true,
+            signers: ["0xSignerA"],
+            threshold: 1,
+            epoch: 2,
+          },
+        },
         stats: {
           routes: 5,
           validators: 4,
@@ -109,6 +120,34 @@ function startMockRpcServer(port) {
             release_evidence_observed: 5,
             mapped_route_only: 1,
           },
+          blockers: {
+            total_routes_with_blockers: 3,
+            by_blocker: {
+              release_pending_signer: ["eth-sepolia-eth", "eth-sepolia-usdc"],
+              source_lockbox_unconfigured: ["bnb-testnet-bnb"],
+            },
+          },
+          requirements: {
+            total_routes_with_requirements: 3,
+            by_requirement: {
+              BRIDGE_SOURCE_EVM_PRIVATE_KEY: ["eth-sepolia-eth", "eth-sepolia-usdc"],
+              "source lockbox deployment": ["bnb-testnet-bnb"],
+            },
+          },
+          items: [
+            {
+              routeId: "eth-sepolia-eth",
+              blocker_class: "service_config_missing",
+              required_configuration: ["BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
+              recommended_action: "Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ethereum-sepolia release for eth-sepolia-eth.",
+            },
+            {
+              routeId: "bnb-testnet-bnb",
+              blocker_class: "contract_deployment_missing",
+              required_configuration: ["source lockbox deployment", "lockboxAddress"],
+              recommended_action: "Deploy bsc-testnet source lockbox, then set lockboxAddress for bnb-testnet-bnb.",
+            },
+          ],
         },
       }));
     }
@@ -190,4 +229,7 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.bridge.ok, true);
   assert.equal(overview.bridge.route_readiness.summary.deposit_tested, 4);
   assert.equal(overview.bridge.route_readiness.summary.automatic_loop_ready, 2);
+  assert.equal(overview.bridge.onchain.gateway_signer_set.signers[0], "0xSignerA");
+  assert.equal(overview.bridge.route_readiness.actions.length, 2);
+  assert.equal(overview.bridge.route_readiness.actions[0].blocker_class, "service_config_missing");
 });

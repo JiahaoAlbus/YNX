@@ -78,6 +78,8 @@ const YNX_PUBLIC_AI_GATEWAY = process.env.YNX_PUBLIC_AI_GATEWAY || process.env.Y
 const YNX_PUBLIC_WEB4_HUB = process.env.YNX_PUBLIC_WEB4_HUB || process.env.YNX_WEB4_HUB || "http://127.0.0.1:38091";
 const YNX_PUBLIC_BRIDGE_HEALTH =
   process.env.YNX_PUBLIC_BRIDGE_HEALTH || `${YNX_PUBLIC_RPC.replace(/\/$/, "")}/bridge/health`;
+const YNX_BRIDGE_OVERVIEW_TIMEOUT_MS = envNumber("YNX_BRIDGE_OVERVIEW_TIMEOUT_MS", 2000);
+const YNX_BRIDGE_OVERVIEW_CACHE_MS = envNumber("YNX_BRIDGE_OVERVIEW_CACHE_MS", 30000);
 const YNX_QUERY_REST = process.env.INDEXER_YNX_REST || YNX_PUBLIC_REST;
 const YNX_SEEDS = process.env.YNX_SEEDS || "";
 const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
@@ -130,7 +132,7 @@ function rpcRequest(pathname) {
   });
 }
 
-function httpJsonRequest(target) {
+function httpJsonRequest(target, timeoutMs = 8000) {
   const url = new URL(target);
   const lib = url.protocol === "https:" ? https : http;
   return new Promise((resolve, reject) => {
@@ -147,6 +149,7 @@ function httpJsonRequest(target) {
         }
       });
     });
+    req.setTimeout(timeoutMs, () => req.destroy(new Error("http_timeout")));
     req.on("error", reject);
     req.end();
   });
@@ -157,10 +160,18 @@ function appendJsonLine(filePath, payload) {
 }
 
 async function loadBridgeOverview() {
+  const now = Date.now();
+  if (
+    loadBridgeOverview.cache &&
+    loadBridgeOverview.cache.expiresAt > now &&
+    loadBridgeOverview.cache.value
+  ) {
+    return loadBridgeOverview.cache.value;
+  }
   try {
-    const bridgeHealth = await httpJsonRequest(YNX_PUBLIC_BRIDGE_HEALTH);
+    const bridgeHealth = await httpJsonRequest(YNX_PUBLIC_BRIDGE_HEALTH, YNX_BRIDGE_OVERVIEW_TIMEOUT_MS);
     const routeReadiness = bridgeHealth?.route_readiness || {};
-    return {
+    const value = {
       ok: bridgeHealth?.ok !== false,
       health_url: YNX_PUBLIC_BRIDGE_HEALTH,
       stats: bridgeHealth?.stats || null,
@@ -169,7 +180,22 @@ async function loadBridgeOverview() {
         summary: routeReadiness?.summary || null,
       },
     };
+    loadBridgeOverview.cache = {
+      value,
+      expiresAt: now + YNX_BRIDGE_OVERVIEW_CACHE_MS,
+    };
+    return value;
   } catch (err) {
+    if (loadBridgeOverview.cache?.value) {
+      return {
+        ...loadBridgeOverview.cache.value,
+        ok: false,
+        stale: true,
+        error: "bridge_health_stale_cache",
+        detail: err.message,
+        cached_at: new Date(loadBridgeOverview.cache.expiresAt - YNX_BRIDGE_OVERVIEW_CACHE_MS).toISOString(),
+      };
+    }
     return {
       ok: false,
       health_url: YNX_PUBLIC_BRIDGE_HEALTH,

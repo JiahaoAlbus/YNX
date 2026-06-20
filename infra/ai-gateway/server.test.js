@@ -478,6 +478,7 @@ test("reports on-chain readiness and fails requested on-chain writes when signer
   assert.equal(health.onchain.enabled, true);
   assert.equal(health.onchain.ready, false);
   assert.equal(health.onchain.signer_configured, false);
+  assert.equal(health.onchain.settlement_contract, "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf");
 
   const created = await requestJson(`http://127.0.0.1:${port}/ai/vaults`, {
     method: "POST",

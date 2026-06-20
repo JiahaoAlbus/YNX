@@ -96,6 +96,24 @@ function uniqueStrings(items) {
   return [...new Set((Array.isArray(items) ? items : []).filter((item) => typeof item === "string" && item.trim()))];
 }
 
+function numericChainIdHint(value) {
+  const match = String(value || "").match(/(\d+)/);
+  return match ? match[1] : "";
+}
+
+function discoverPublicAiSettlementContract(chainIdHint) {
+  const numericId = numericChainIdHint(chainIdHint);
+  if (!numericId) return "";
+  const deploymentPath = path.resolve(__dirname, `../../packages/contracts/deployments/public-ai-settlement-${numericId}.json`);
+  if (!fs.existsSync(deploymentPath)) return "";
+  try {
+    const parsed = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
+    return parsed?.contracts?.aiSettlement || "";
+  } catch {
+    return "";
+  }
+}
+
 function atomicWriteJson(filePath, payload) {
   const tmpPath = `${filePath}.${process.pid}.tmp`;
   fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2));
@@ -242,7 +260,10 @@ const AI_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.AI_PERSIST_DEBOU
 const AI_ONCHAIN_ENABLED = process.env.AI_ONCHAIN_ENABLED === "1";
 const AI_ONCHAIN_RPC_URL = process.env.AI_ONCHAIN_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "";
 const AI_ONCHAIN_PRIVATE_KEY = process.env.AI_ONCHAIN_PRIVATE_KEY || process.env.YNX_EVM_PRIVATE_KEY || "";
-const AI_SETTLEMENT_CONTRACT = process.env.AI_SETTLEMENT_CONTRACT || process.env.YNX_AI_SETTLEMENT_CONTRACT || "";
+const AI_SETTLEMENT_CONTRACT =
+  process.env.AI_SETTLEMENT_CONTRACT ||
+  process.env.YNX_AI_SETTLEMENT_CONTRACT ||
+  discoverPublicAiSettlementContract(process.env.AI_CHAIN_ID || process.env.YNX_CHAIN_ID || "ynx_9102-1");
 const AI_ONCHAIN_CONFIRMATIONS = Math.max(0, parseInt(process.env.AI_ONCHAIN_CONFIRMATIONS || "1", 10) || 0);
 const AI_INTELLIGENCE_ENABLED = process.env.AI_INTELLIGENCE_ENABLED !== "0";
 const AI_LLM_PROVIDER = (process.env.AI_LLM_PROVIDER || "openai-responses").toLowerCase();

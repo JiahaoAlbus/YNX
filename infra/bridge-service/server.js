@@ -648,6 +648,48 @@ async function verifyGatewayRoute(route) {
   };
 }
 
+async function fetchGatewaySignerSet() {
+  if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) {
+    return {
+      configured: false,
+      signers: [],
+      threshold: 0,
+      epoch: 0,
+    };
+  }
+  try {
+    const provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
+    const gateway = new ethers.Contract(
+      gatewayAddress(),
+      [
+        "function signers() view returns (address[])",
+        "function signerThreshold() view returns (uint256)",
+        "function signerEpoch() view returns (uint64)",
+      ],
+      provider,
+    );
+    const [signers, threshold, epoch] = await Promise.all([
+      gateway.signers(),
+      gateway.signerThreshold(),
+      gateway.signerEpoch(),
+    ]);
+    return {
+      configured: true,
+      signers,
+      threshold: Number(threshold),
+      epoch: Number(epoch),
+    };
+  } catch (error) {
+    return {
+      configured: false,
+      signers: [],
+      threshold: 0,
+      epoch: 0,
+      error: error.message || String(error),
+    };
+  }
+}
+
 async function routeReadiness(route, options = {}) {
   const includeSource = Boolean(options.includeSource);
   const [gatewayCheck, source] = await Promise.all([
@@ -761,6 +803,20 @@ function summarizeRouteBlockers(items) {
   return {
     total_routes_with_blockers: (items || []).filter((item) => (item.blockers || []).length > 0).length,
     by_blocker: byBlocker,
+  };
+}
+
+function summarizeRouteRequirements(items) {
+  const byRequirement = {};
+  for (const item of items || []) {
+    for (const requirement of item.required_configuration || []) {
+      if (!byRequirement[requirement]) byRequirement[requirement] = [];
+      byRequirement[requirement].push(item.routeId);
+    }
+  }
+  return {
+    total_routes_with_requirements: (items || []).filter((item) => (item.required_configuration || []).length > 0).length,
+    by_requirement: byRequirement,
   };
 }
 
@@ -1259,6 +1315,8 @@ const server = http.createServer(async (req, res) => {
   if ((req.method === "GET" || req.method === "HEAD") && (url.pathname === "/health" || url.pathname === "/bridge/health")) {
     const readinessItems = await allRouteReadiness();
     const readinessBlockers = summarizeRouteBlockers(readinessItems);
+    const readinessRequirements = summarizeRouteRequirements(readinessItems);
+    const gatewaySignerSet = await fetchGatewaySignerSet();
     const readinessSummary = {
       routes: readinessItems.length,
       full_loop_ready: readinessItems.filter((item) => item.full_loop_ready).length,
@@ -1283,6 +1341,7 @@ const server = http.createServer(async (req, res) => {
         relayer_mode: BRIDGE_RELAYER_MODE,
         remote_signer_configured: Boolean(BRIDGE_REMOTE_SIGNER_ADDRESS),
         signer_address: runtime.signerAddress,
+        gateway_signer_set: gatewaySignerSet,
         attester_configured: Boolean(BRIDGE_ATTESTER_PRIVATE_KEY),
         attester_address: runtime.attesterWallet ? runtime.attesterWallet.address : "",
         confirmations: BRIDGE_CONFIRMATIONS,
@@ -1312,6 +1371,7 @@ const server = http.createServer(async (req, res) => {
         items: readinessItems,
         summary: readinessSummary,
         blockers: readinessBlockers,
+        requirements: readinessRequirements,
       },
     });
   }

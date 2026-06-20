@@ -76,6 +76,8 @@ const YNX_PUBLIC_INDEXER = process.env.YNX_PUBLIC_INDEXER || process.env.YNX_IND
 const YNX_PUBLIC_EXPLORER = process.env.YNX_PUBLIC_EXPLORER || process.env.YNX_EXPLORER || "http://127.0.0.1:38082";
 const YNX_PUBLIC_AI_GATEWAY = process.env.YNX_PUBLIC_AI_GATEWAY || process.env.YNX_AI_GATEWAY || "http://127.0.0.1:38090";
 const YNX_PUBLIC_WEB4_HUB = process.env.YNX_PUBLIC_WEB4_HUB || process.env.YNX_WEB4_HUB || "http://127.0.0.1:38091";
+const YNX_PUBLIC_BRIDGE_HEALTH =
+  process.env.YNX_PUBLIC_BRIDGE_HEALTH || `${YNX_PUBLIC_RPC.replace(/\/$/, "")}/bridge/health`;
 const YNX_QUERY_REST = process.env.INDEXER_YNX_REST || YNX_PUBLIC_REST;
 const YNX_SEEDS = process.env.YNX_SEEDS || "";
 const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
@@ -152,6 +154,33 @@ function httpJsonRequest(target) {
 
 function appendJsonLine(filePath, payload) {
   fs.appendFileSync(filePath, `${JSON.stringify(payload)}\n`);
+}
+
+async function loadBridgeOverview() {
+  try {
+    const bridgeHealth = await httpJsonRequest(YNX_PUBLIC_BRIDGE_HEALTH);
+    const routeReadiness = bridgeHealth?.route_readiness || {};
+    return {
+      ok: bridgeHealth?.ok !== false,
+      health_url: YNX_PUBLIC_BRIDGE_HEALTH,
+      stats: bridgeHealth?.stats || null,
+      route_readiness: {
+        ok: routeReadiness?.ok !== false,
+        summary: routeReadiness?.summary || null,
+      },
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      health_url: YNX_PUBLIC_BRIDGE_HEALTH,
+      error: "bridge_health_unavailable",
+      detail: err.message,
+      route_readiness: {
+        ok: false,
+        summary: null,
+      },
+    };
+  }
 }
 
 function txHashFromBase64(base64) {
@@ -583,6 +612,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === "/ynx/overview") {
+    const bridge = await loadBridgeOverview();
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -594,6 +624,7 @@ const server = http.createServer(async (req, res) => {
       system_contracts: systemContractsMeta,
       endpoints: {
         rpc: YNX_PUBLIC_RPC,
+        bridge_health: YNX_PUBLIC_BRIDGE_HEALTH,
         evm_rpc: YNX_PUBLIC_EVM_RPC,
         evm_ws: YNX_PUBLIC_EVM_WS,
         rest: YNX_PUBLIC_REST,
@@ -665,6 +696,7 @@ const server = http.createServer(async (req, res) => {
           "audit",
         ],
       },
+      bridge,
     });
   }
 

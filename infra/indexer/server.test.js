@@ -91,6 +91,28 @@ function startMockRpcServer(port) {
       }));
     }
 
+    if (url.pathname === "/bridge/health") {
+      return res.end(JSON.stringify({
+        ok: true,
+        stats: {
+          routes: 5,
+          validators: 4,
+        },
+        route_readiness: {
+          ok: true,
+          summary: {
+            routes: 5,
+            full_loop_ready: 2,
+            full_loop_tested: 2,
+            automatic_loop_ready: 2,
+            deposit_tested: 4,
+            release_evidence_observed: 5,
+            mapped_route_only: 1,
+          },
+        },
+      }));
+    }
+
     res.statusCode = 404;
     return res.end(JSON.stringify({ error: "not_found" }));
   });
@@ -141,6 +163,8 @@ test("supports validator detail and unified search", async (t) => {
       INDEXER_RPC: `http://127.0.0.1:${rpcPort}`,
       INDEXER_PORT: String(indexerPort),
       INDEXER_DATA_DIR: dataDir,
+      YNX_PUBLIC_RPC: `http://127.0.0.1:${rpcPort}`,
+      YNX_PUBLIC_BRIDGE_HEALTH: `http://127.0.0.1:${rpcPort}/bridge/health`,
     },
     `http://127.0.0.1:${indexerPort}/health`,
   );
@@ -160,4 +184,10 @@ test("supports validator detail and unified search", async (t) => {
   const txSearch = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=0xTXHASH88`), 200);
   assert.equal(txSearch.kind, "tx");
   assert.equal(txSearch.tx.height, 88);
+
+  const overview = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/ynx/overview`), 200);
+  assert.equal(overview.endpoints.bridge_health, `http://127.0.0.1:${rpcPort}/bridge/health`);
+  assert.equal(overview.bridge.ok, true);
+  assert.equal(overview.bridge.route_readiness.summary.deposit_tested, 4);
+  assert.equal(overview.bridge.route_readiness.summary.automatic_loop_ready, 2);
 });

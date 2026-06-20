@@ -353,6 +353,15 @@ function onchainConfigReady() {
   return Boolean(AI_ONCHAIN_ENABLED && AI_ONCHAIN_RPC_URL && AI_ONCHAIN_PRIVATE_KEY && AI_SETTLEMENT_CONTRACT);
 }
 
+function onchainMissingRequirements() {
+  const missing = [];
+  if (!AI_ONCHAIN_ENABLED) missing.push("onchain_disabled");
+  if (!AI_ONCHAIN_RPC_URL) missing.push("onchain_rpc_required");
+  if (!AI_ONCHAIN_PRIVATE_KEY) missing.push("onchain_private_key_required");
+  if (!AI_SETTLEMENT_CONTRACT) missing.push("settlement_contract_required");
+  return missing;
+}
+
 function getSettlementContract() {
   if (!AI_ONCHAIN_ENABLED) throw new Error("onchain_disabled");
   if (!AI_ONCHAIN_RPC_URL) throw new Error("onchain_rpc_required");
@@ -2069,6 +2078,7 @@ const server = http.createServer(async (req, res) => {
         rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
         signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
+        missing_requirements: onchainMissingRequirements(),
         confirmations: AI_ONCHAIN_CONFIRMATIONS,
         last_tx_hash: onchainRuntime.last_tx_hash,
         last_tx_at: onchainRuntime.last_tx_at,
@@ -2101,6 +2111,7 @@ const server = http.createServer(async (req, res) => {
       onchain: {
         enabled: AI_ONCHAIN_ENABLED,
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
+        missing_requirements: onchainMissingRequirements(),
         confirmations: AI_ONCHAIN_CONFIRMATIONS,
         last_tx_hash: onchainRuntime.last_tx_hash,
         last_tx_at: onchainRuntime.last_tx_at,

@@ -333,6 +333,22 @@ function onchainReady() {
   );
 }
 
+function bridgeOnchainMissingRequirements() {
+  const missing = [];
+  if (!BRIDGE_ONCHAIN_ENABLED) missing.push("bridge_onchain_disabled");
+  if (!BRIDGE_YNX_RPC_URL) missing.push("bridge_ynx_rpc_required");
+  if (!gatewayAddress()) missing.push("bridge_gateway_required");
+  if (BRIDGE_RELAYER_MODE === "remote") {
+    if (!BRIDGE_REMOTE_SIGNER_ADDRESS) missing.push("bridge_remote_signer_required");
+  } else if (!BRIDGE_RELAYER_PRIVATE_KEY) {
+    missing.push("bridge_relayer_private_key_required");
+  }
+  if (!BRIDGE_ATTESTER_PRIVATE_KEY) missing.push("bridge_attester_private_key_required");
+  const needsSourceEvmRelayer = (routesConfig.routes || []).some((route) => route.sourceKind === "evm" && route.lockboxAddress);
+  if (needsSourceEvmRelayer && !BRIDGE_SOURCE_EVM_PRIVATE_KEY) missing.push("source_evm_private_key_required");
+  return missing;
+}
+
 async function getGateway() {
   if (!BRIDGE_ONCHAIN_ENABLED) throw new Error("bridge_onchain_disabled");
   if (!BRIDGE_YNX_RPC_URL) throw new Error("bridge_ynx_rpc_required");
@@ -1233,6 +1249,7 @@ const server = http.createServer(async (req, res) => {
       onchain: {
         enabled: BRIDGE_ONCHAIN_ENABLED,
         ready: onchainReady(),
+        missing_requirements: bridgeOnchainMissingRequirements(),
         rpc_configured: Boolean(BRIDGE_YNX_RPC_URL),
         relayer_configured: Boolean(BRIDGE_RELAYER_PRIVATE_KEY),
         relayer_mode: BRIDGE_RELAYER_MODE,

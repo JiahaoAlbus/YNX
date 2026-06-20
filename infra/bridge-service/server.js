@@ -752,6 +752,7 @@ async function routeReadiness(route, options = {}) {
   else if (manualProofReady && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && depositWatcherLive) phase = "deposit_ready";
+  const requiredConfiguration = blockerRequirements(route, blockers);
 
   return {
     routeId: route.routeId,
@@ -768,7 +769,9 @@ async function routeReadiness(route, options = {}) {
     automatic_loop_ready: automaticLoopReady,
     capabilities,
     blockers,
-    required_configuration: blockerRequirements(route, blockers),
+    blocker_class: blockerClass(blockers),
+    required_configuration: requiredConfiguration,
+    recommended_action: recommendedAction(route, blockers, requiredConfiguration),
     source,
     gateway: gatewayCheck,
     evidence: {
@@ -845,6 +848,38 @@ function blockerRequirements(route, blockers) {
     }
   }
   return [...new Set(out)];
+}
+
+function blockerClass(blockers) {
+  if ((blockers || []).includes("source_lockbox_unconfigured")) return "contract_deployment_missing";
+  if ((blockers || []).includes("release_pending_signer")) return "service_config_missing";
+  if ((blockers || []).includes("deposit_watcher_not_live") || (blockers || []).includes("ynx_burn_watcher_not_live")) {
+    return "runtime_watcher_recovery";
+  }
+  if ((blockers || []).length > 0) return "configuration_gap";
+  return "ready";
+}
+
+function recommendedAction(route, blockers, requirements) {
+  if ((blockers || []).includes("source_lockbox_unconfigured")) {
+    return `Deploy ${route.sourceNetwork} source lockbox, then set lockboxAddress for ${route.routeId}.`;
+  }
+  if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")) {
+    return `Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ${route.sourceNetwork} release for ${route.routeId}.`;
+  }
+  if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER")) {
+    return `Configure BRIDGE_SOURCE_BTC_TESTNET_SIGNER to enable automatic release for ${route.routeId}.`;
+  }
+  if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_TRON_SHASTA_SIGNER")) {
+    return `Configure BRIDGE_SOURCE_TRON_SHASTA_SIGNER to enable automatic release for ${route.routeId}.`;
+  }
+  if ((blockers || []).includes("deposit_watcher_not_live")) {
+    return `Recover source deposit watcher / RPC health for ${route.routeId}.`;
+  }
+  if ((blockers || []).includes("ynx_burn_watcher_not_live")) {
+    return `Recover YNX burn watcher for ${route.routeId}.`;
+  }
+  return "";
 }
 
 async function scanEvmLockboxRoute(route) {

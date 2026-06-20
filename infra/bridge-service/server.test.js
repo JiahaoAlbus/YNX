@@ -84,7 +84,9 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.equal(health.onchain.gateway_signer_set.configured, true);
   assert.ok(Array.isArray(health.onchain.gateway_signer_set.signers));
   const bsc = health.route_readiness.items.find((item) => item.routeId === "bnb-testnet-bnb");
+  assert.equal(bsc.blocker_class, "contract_deployment_missing");
   assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
+  assert.match(bsc.recommended_action, /Deploy .* lockbox/i);
   const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
   assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
 

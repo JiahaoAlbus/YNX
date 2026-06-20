@@ -6,9 +6,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
 	cmtcfg "github.com/cometbft/cometbft/v2/config"
 	cmtcli "github.com/cometbft/cometbft/v2/libs/cli"
@@ -21,8 +24,10 @@ import (
 	cosmosevmserver "github.com/cosmos/evm/server"
 	srvflags "github.com/cosmos/evm/server/flags"
 
+	"cosmossdk.io/client/v2/autocli"
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
+	autocliflag "cosmossdk.io/client/v2/autocli/flag"
 	snapshottypes "cosmossdk.io/store/snapshots/types"
 	storetypes "cosmossdk.io/store/types"
 	confixcmd "cosmossdk.io/tools/confix/cmd"
@@ -143,11 +148,65 @@ func NewRootCmd() *cobra.Command {
 	initClientCtx, _ = clientcfg.ReadFromClientConfig(initClientCtx)
 	autoCliOpts.ClientCtx = initClientCtx
 
-	if err := autoCliOpts.EnhanceRootCommand(rootCmd); err != nil {
+	if err := enhanceRootCommandWithSafeAutoCLI(rootCmd, autoCliOpts); err != nil {
 		panic(err)
 	}
 
 	return rootCmd
+}
+
+func enhanceRootCommandWithSafeAutoCLI(rootCmd *cobra.Command, appOptions autocli.AppOptions) error {
+	var (
+		mergedFiles autocliflag.FileResolver
+		err         error
+	)
+
+	mergedFiles, err = proto.MergedRegistry()
+	if err != nil {
+		mergedFiles = appOptions.ClientCtx.InterfaceRegistry
+	}
+
+	builder := &autocli.Builder{
+		Builder: autocliflag.Builder{
+			TypeResolver:          protoregistry.GlobalTypes,
+			FileResolver:          mergedFiles,
+			AddressCodec:          appOptions.AddressCodec,
+			ValidatorAddressCodec: appOptions.ValidatorAddressCodec,
+			ConsensusAddressCodec: appOptions.ConsensusAddressCodec,
+		},
+		GetClientConn: func(cmd *cobra.Command) (grpc.ClientConnInterface, error) {
+			return client.GetClientQueryContext(cmd)
+		},
+		AddQueryConnFlags: func(cmd *cobra.Command) {
+			addSafeQueryFlagsToCmd(cmd)
+			flags.AddKeyringFlags(cmd.Flags())
+		},
+		AddTxConnFlags: flags.AddTxFlagsToCmd,
+	}
+
+	return appOptions.EnhanceRootCommandWithBuilder(rootCmd, builder)
+}
+
+func addSafeQueryFlagsToCmd(cmd *cobra.Command) {
+	flagSet := cmd.Flags()
+
+	if flagSet.Lookup(flags.FlagNode) == nil {
+		flagSet.String(flags.FlagNode, "tcp://localhost:26657", "<host>:<port> to CometBFT RPC interface for this chain")
+	}
+	if flagSet.Lookup(flags.FlagGRPC) == nil {
+		flagSet.String(flags.FlagGRPC, "", "the gRPC endpoint to use for this chain")
+	}
+	if flagSet.Lookup(flags.FlagGRPCInsecure) == nil {
+		flagSet.Bool(flags.FlagGRPCInsecure, false, "allow gRPC over insecure channels, if not the server must use TLS")
+	}
+	if flagSet.Lookup(flags.FlagHeight) == nil {
+		flagSet.Int64(flags.FlagHeight, 0, "Use a specific height to query state at (this can error if the node is pruning state)")
+	}
+	if flagSet.Lookup(flags.FlagOutput) == nil {
+		flagSet.StringP(flags.FlagOutput, "o", "text", "Output format (text|json)")
+	}
+
+	_ = cmd.MarkFlagRequired(flags.FlagChainID)
 }
 
 // initCometConfig helps to override default CometBFT Config values.
@@ -234,7 +293,6 @@ func queryCommand() *cobra.Command {
 		authcmd.QueryTxsByEventsCmd(),
 		authcmd.QueryTxCmd(),
 		sdkserver.QueryBlockCmd(),
-		sdkserver.QueryBlockResultsCmd(),
 	)
 
 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")

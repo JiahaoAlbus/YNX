@@ -1199,6 +1199,16 @@ const server = http.createServer(async (req, res) => {
   const segments = url.pathname.split("/").filter(Boolean);
 
   if ((req.method === "GET" || req.method === "HEAD") && (url.pathname === "/health" || url.pathname === "/bridge/health")) {
+    const readinessItems = await allRouteReadiness();
+    const readinessSummary = {
+      routes: readinessItems.length,
+      full_loop_ready: readinessItems.filter((item) => item.full_loop_ready).length,
+      full_loop_tested: readinessItems.filter((item) => item.full_loop_tested).length,
+      automatic_loop_ready: readinessItems.filter((item) => item.automatic_loop_ready).length,
+      deposit_tested: readinessItems.filter((item) => item.phase === "deposit_tested" || item.phase === "full_loop_tested").length,
+      release_evidence_observed: readinessItems.filter((item) => (item.evidence?.released_withdrawals || 0) > 0 || item.full_loop_tested).length,
+      mapped_route_only: readinessItems.filter((item) => item.phase === "mapped_route_only").length,
+    };
     return json(res, 200, {
       ok: true,
       service: "ynx-bridge-service",
@@ -1236,6 +1246,11 @@ const server = http.createServer(async (req, res) => {
         released_withdrawals: state.withdrawals.filter((item) => item.status === "released" || item.status === "already_released").length,
         watcher_routes: Object.keys(state.watchers).length,
         withdrawal_watcher_routes: Object.keys(state.withdrawal_watchers).length,
+      },
+      route_readiness: {
+        ok: readinessItems.every((item) => item.ok),
+        items: readinessItems,
+        summary: readinessSummary,
       },
     });
   }

@@ -70,6 +70,12 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   const ready = assertJson(await requestJson(`http://127.0.0.1:${port}/ready`), 200);
   assert.equal(ready.ok, true);
 
+  const health = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/health`), 200);
+  assert.equal(health.ok, true);
+  assert.equal(health.route_readiness.summary.routes, 5);
+  assert.equal(typeof health.route_readiness.summary.deposit_tested, "number");
+  assert.equal(typeof health.route_readiness.summary.release_evidence_observed, "number");
+
   const routes = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/routes`), 200);
   assert.equal(routes.items.length, 5);
   assert.equal(routes.items.some((item) => item.routeId === "eth-sepolia-eth"), true);

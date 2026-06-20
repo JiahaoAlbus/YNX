@@ -733,6 +733,20 @@ async function allRouteReadiness(options = {}) {
   return items;
 }
 
+function summarizeRouteBlockers(items) {
+  const byBlocker = {};
+  for (const item of items || []) {
+    for (const blocker of item.blockers || []) {
+      if (!byBlocker[blocker]) byBlocker[blocker] = [];
+      byBlocker[blocker].push(item.routeId);
+    }
+  }
+  return {
+    total_routes_with_blockers: (items || []).filter((item) => (item.blockers || []).length > 0).length,
+    by_blocker: byBlocker,
+  };
+}
+
 async function scanEvmLockboxRoute(route) {
   if (route.sourceKind !== "evm") return { routeId: route.routeId, ok: false, skipped: true, reason: "non_evm_route" };
   if (!route.lockboxAddress) return { routeId: route.routeId, ok: false, skipped: true, reason: "lockbox_unconfigured" };
@@ -1200,6 +1214,7 @@ const server = http.createServer(async (req, res) => {
 
   if ((req.method === "GET" || req.method === "HEAD") && (url.pathname === "/health" || url.pathname === "/bridge/health")) {
     const readinessItems = await allRouteReadiness();
+    const readinessBlockers = summarizeRouteBlockers(readinessItems);
     const readinessSummary = {
       routes: readinessItems.length,
       full_loop_ready: readinessItems.filter((item) => item.full_loop_ready).length,
@@ -1251,6 +1266,7 @@ const server = http.createServer(async (req, res) => {
         ok: readinessItems.every((item) => item.ok),
         items: readinessItems,
         summary: readinessSummary,
+        blockers: readinessBlockers,
       },
     });
   }

@@ -75,6 +75,8 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.equal(health.route_readiness.summary.routes, 5);
   assert.equal(typeof health.route_readiness.summary.deposit_tested, "number");
   assert.equal(typeof health.route_readiness.summary.release_evidence_observed, "number");
+  assert.equal(typeof health.route_readiness.blockers.total_routes_with_blockers, "number");
+  assert.ok(Array.isArray(health.route_readiness.blockers.by_blocker.source_lockbox_unconfigured));
 
   const routes = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/routes`), 200);
   assert.equal(routes.items.length, 5);

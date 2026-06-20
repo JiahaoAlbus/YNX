@@ -692,7 +692,7 @@ async function routeReadiness(route, options = {}) {
   if (phase === "full_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
   else if (phase === "manual_loop_ready" && mintedDeposits > 0 && releasedWithdrawals > 0) phase = "full_loop_tested";
   else if (manualProofReady && mintedDeposits > 0) phase = "deposit_tested";
-  else if (hasLockbox && depositWatcherLive && mintedDeposits > 0) phase = "deposit_tested";
+  else if (hasLockbox && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && depositWatcherLive) phase = "deposit_ready";
 
   return {

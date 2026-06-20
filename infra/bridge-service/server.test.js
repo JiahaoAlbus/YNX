@@ -515,3 +515,86 @@ test("reports per-route bridge readiness without claiming unsupported full loops
   assert.equal(readiness.items[0].blockers.includes("release_unsupported"), true);
   assert.equal(readiness.summary.mapped_route_only, 1);
 });
+
+test("retains deposit-tested classification when minted proof exists but evm watcher live checks degrade", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-bridge-route-evidence-");
+  const fixtureRoutesFile = path.join(dataDir, "routes-evidence.json");
+  fs.writeFileSync(
+    fixtureRoutesFile,
+    JSON.stringify(
+      {
+        network: "test",
+        ynxChainId: 9102,
+        gateway: "0x3a2948da8f35b86dce1440ebfb56b8ae041cebfe",
+        routes: [
+          {
+            routeId: "eth-sepolia-eth",
+            asset: "ETH",
+            displayName: "Sepolia ETH",
+            sourceKind: "evm",
+            sourceNetwork: "ethereum-sepolia",
+            sourceChainId: "11155111",
+            sourceAssetId: "0x53c8e7d5d089739d7b49c1653e11be768809fa93673300c1b3deede98494cf19",
+            wrappedToken: "0x5715Bb5a7B050234A225fC88FF74885eF55E9339",
+            wrappedSymbol: "wETH.y",
+            decimals: 18,
+            lockboxAddress: "0x9b9913ee3f99147856a19d7359a9fe5b7c8318c6",
+            rpc: "http://127.0.0.1:1",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  fs.writeFileSync(
+    path.join(dataDir, "state.json"),
+    JSON.stringify(
+      {
+        lastDepositNonce: 1,
+        lastWithdrawalNonce: 0,
+        deposits: [
+          {
+            route_id: "eth-sepolia-eth",
+            deposit_id: "dep-1",
+            status: "minted",
+            proof: { automatic: false },
+          },
+        ],
+        withdrawals: [],
+        watchers: {
+          "eth-sepolia-eth": {
+            last_scan_at: "2026-06-20T00:00:00.000Z",
+            last_error: "archive rpc unavailable",
+            events_seen: 1,
+            deposits_minted: 1,
+          },
+        },
+        withdrawal_watchers: {},
+        audit: [],
+      },
+      null,
+      2,
+    ),
+  );
+  const server = await startNodeServer(
+    serverPath,
+    {
+      BRIDGE_PORT: String(port),
+      BRIDGE_DATA_DIR: dataDir,
+      BRIDGE_ROUTES_FILE: fixtureRoutesFile,
+      BRIDGE_ONCHAIN_ENABLED: "0",
+    },
+    `http://127.0.0.1:${port}/ready`,
+  );
+  t.after(async () => server.stop());
+
+  const readiness = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/route-readiness`), 200);
+  assert.equal(readiness.items.length, 1);
+  assert.equal(readiness.items[0].routeId, "eth-sepolia-eth");
+  assert.equal(readiness.items[0].phase, "deposit_tested");
+  assert.equal(readiness.items[0].evidence.minted_deposits, 1);
+  assert.equal(readiness.items[0].blockers.includes("deposit_watcher_not_live"), true);
+  assert.equal(readiness.summary.deposit_tested, 1);
+});

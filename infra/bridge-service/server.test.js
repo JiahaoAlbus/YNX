@@ -79,6 +79,7 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(Array.isArray(health.route_readiness.blockers.by_blocker.source_lockbox_unconfigured));
   assert.equal(typeof health.route_readiness.requirements.total_routes_with_requirements, "number");
   assert.ok(Array.isArray(health.route_readiness.requirements.by_requirement["source lockbox deployment"]));
+  assert.ok(Array.isArray(health.route_readiness.actions));
   assert.ok(Array.isArray(health.onchain.missing_requirements));
   assert.ok(health.onchain.missing_requirements.includes("bridge_onchain_disabled"));
   assert.equal(health.onchain.gateway_signer_set.configured, true);
@@ -87,6 +88,7 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.equal(bsc.blocker_class, "contract_deployment_missing");
   assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
   assert.match(bsc.recommended_action, /Deploy .* lockbox/i);
+  assert.ok(health.route_readiness.actions.some((item) => item.blocker_class === "contract_deployment_missing"));
   const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
   assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
 

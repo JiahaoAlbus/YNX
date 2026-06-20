@@ -823,6 +823,29 @@ function summarizeRouteRequirements(items) {
   };
 }
 
+function summarizeNextActions(items) {
+  const actions = [];
+  const byKey = new Map();
+  for (const item of items || []) {
+    if (!item || item.blocker_class === "ready" || !item.recommended_action) continue;
+    const key = `${item.blocker_class}::${item.recommended_action}`;
+    if (!byKey.has(key)) {
+      byKey.set(key, {
+        blocker_class: item.blocker_class,
+        recommended_action: item.recommended_action,
+        required_configuration: [...(item.required_configuration || [])],
+        routes: [item.routeId],
+      });
+      continue;
+    }
+    const existing = byKey.get(key);
+    existing.routes.push(item.routeId);
+    existing.required_configuration = [...new Set([...(existing.required_configuration || []), ...(item.required_configuration || [])])];
+  }
+  actions.push(...byKey.values());
+  return actions;
+}
+
 function blockerRequirements(route, blockers) {
   const out = [];
   for (const blocker of blockers || []) {
@@ -1351,6 +1374,7 @@ const server = http.createServer(async (req, res) => {
     const readinessItems = await allRouteReadiness();
     const readinessBlockers = summarizeRouteBlockers(readinessItems);
     const readinessRequirements = summarizeRouteRequirements(readinessItems);
+    const readinessActions = summarizeNextActions(readinessItems);
     const gatewaySignerSet = await fetchGatewaySignerSet();
     const readinessSummary = {
       routes: readinessItems.length,
@@ -1407,6 +1431,7 @@ const server = http.createServer(async (req, res) => {
         summary: readinessSummary,
         blockers: readinessBlockers,
         requirements: readinessRequirements,
+        actions: readinessActions,
       },
     });
   }

@@ -79,6 +79,11 @@ h2 {
   color: #c5d2ea;
 }
 
+.search-hint {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

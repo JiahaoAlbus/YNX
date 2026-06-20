@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"io"
+	"net/http"
 
 	"os"
 	"time"
@@ -1055,11 +1056,86 @@ func (app *App) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig
 
 	// Register grpc-gateway routes for all modules.
 	app.BasicModuleManager.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	app.registerYNXHTTPRoutes(apiSvr)
 
 	// register swagger API from root so that other applications can override easily
 	if err := sdkserver.RegisterSwaggerAPI(apiSvr.ClientCtx, apiSvr.Router, apiConfig.Swagger); err != nil {
 		panic(err)
 	}
+}
+
+func (app *App) registerYNXHTTPRoutes(apiSvr *api.Server) {
+	apiSvr.Router.HandleFunc("/ynx/ynx/v1/params", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			writeYNXAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+
+		ctx, err := app.CreateQueryContext(app.LastBlockHeight(), false)
+		if err != nil {
+			writeYNXAPIError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		params, err := app.YNXKeeper.Params.Get(ctx)
+		if err != nil {
+			writeYNXAPIError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeYNXAPIJSON(w, http.StatusOK, map[string]any{"params": params})
+	}).Methods(http.MethodGet, http.MethodHead)
+
+	apiSvr.Router.HandleFunc("/ynx/ynx/v1/system_contracts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			writeYNXAPIError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+
+		ctx, err := app.CreateQueryContext(app.LastBlockHeight(), false)
+		if err != nil {
+			writeYNXAPIError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		system, err := app.YNXKeeper.SystemConfig.Get(ctx)
+		if err != nil {
+			writeYNXAPIError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		contracts, err := app.YNXKeeper.SystemContracts.Get(ctx)
+		if err != nil {
+			writeYNXAPIError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		writeYNXAPIJSON(w, http.StatusOK, map[string]any{
+			"system":           system,
+			"system_contracts": contracts,
+		})
+	}).Methods(http.MethodGet, http.MethodHead)
+}
+
+func writeYNXAPIJSON(w http.ResponseWriter, status int, payload any) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, `{"code":13,"message":"marshal_failed","details":[]}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", cast.ToString(len(body)))
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
+}
+
+func writeYNXAPIError(w http.ResponseWriter, status int, message string) {
+	writeYNXAPIJSON(w, status, map[string]any{
+		"code":    status,
+		"message": message,
+		"details": []any{},
+	})
 }
 
 // RegisterTxService implements the Application.RegisterTxService method.

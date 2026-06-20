@@ -303,21 +303,22 @@ while IFS=$'\t' read -r label pair; do
   eth_call_uint_check "amm_${safe_label}_reserve1" "$pair" "0x5a76f25e" 1
 done < <(jq -r '.pairs[] | [.label, .pair] | @tsv' "$AMM_CONFIG")
 
-if grep -q "2026-06-07" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
-  && grep -q "full_loop_tested: btc-testnet-btc, eth-sepolia-eth, bnb-testnet-bnb, tron-shasta-usdt, eth-sepolia-usdc" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
-  && grep -q "TRON Shasta USDT release tx" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt"; then
+if grep -q "Last updated: 2026-06-19" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
+  && grep -q "\`4/5\` routes \`deposit_tested\`" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
+  && grep -q "\`2/5\` routes \`automatic_loop_ready\`" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt" \
+  && grep -q "BSC lockbox deployment is still missing" "${OUTPUT_DIR}/responses/docs_public_asset_status.txt"; then
   record PASS "website_docs_bridge_status" "public asset status is current"
 else
   record WARN "website_docs_bridge_status" "website docs are stale; live bridge route-readiness is authoritative for this probe"
 fi
 
-if grep -q '<div id="root">' "${OUTPUT_DIR}/responses/website_withdraw.txt"; then
+if grep -Eq '<div id="root"([^>]*)>' "${OUTPUT_DIR}/responses/website_withdraw.txt"; then
   record PASS "website_withdraw_page" "${WEBSITE_URL}/withdraw"
 else
   record FAIL "website_withdraw_page" "app root missing"
 fi
 
-if grep -q '<div id="root">' "${OUTPUT_DIR}/responses/website_readiness.txt"; then
+if grep -Eq '<div id="root"([^>]*)>' "${OUTPUT_DIR}/responses/website_readiness.txt"; then
   record PASS "website_readiness_page" "${WEBSITE_URL}/readiness"
 else
   record FAIL "website_readiness_page" "app root missing"

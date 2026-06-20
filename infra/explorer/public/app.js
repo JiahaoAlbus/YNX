@@ -10,6 +10,7 @@ const txsTable = document.getElementById("txsTable");
 const statusPanel = document.getElementById("statusPanel");
 const validatorsSummary = document.getElementById("validatorsSummary");
 const validatorsTable = document.getElementById("validatorsTable");
+const searchHint = document.getElementById("searchHint");
 
 async function fetchJson(path) {
   const res = await fetch(`${indexerBase}${path}`);
@@ -170,16 +171,28 @@ async function runSearch() {
   if (!query) return;
   searchResult.textContent = "Searching...";
   try {
-    if (/^[0-9]+$/.test(query)) {
-      const block = await fetchJson(`/blocks/${query}`);
-      const b = block.block;
+    const result = await fetchJson(`/search?q=${encodeURIComponent(query)}`);
+    if (result.kind === "block") {
+      const b = result.block;
       searchResult.innerHTML = `<div><strong>Block ${escapeHtml(b.height)}</strong></div>
         <div>Hash: ${escapeHtml(b.hash)}</div>
         <div>Time: ${escapeHtml(formatTime(b.time))}</div>
+        <div>Proposer: ${escapeHtml(b.proposer)}</div>
         <div>Txs: ${escapeHtml(b.num_txs)}</div>`;
-    } else {
-      const tx = await fetchJson(`/txs/${query}`);
-      const t = tx.tx;
+      return;
+    }
+    if (result.kind === "validator") {
+      const v = result.validator;
+      searchResult.innerHTML = `<div><strong>Validator ${escapeHtml(v.address)}</strong></div>
+        <div>Latest height: ${escapeHtml(result.latest_height)}</div>
+        <div>Voting power: ${escapeHtml(v.voting_power)}</div>
+        <div>Proposer priority: ${escapeHtml(v.proposer_priority)}</div>
+        <div>Signed last block: ${escapeHtml(v.signed_last_block ? "yes" : "no")}</div>
+        <div>Validator set size: ${escapeHtml(result.total)}</div>`;
+      return;
+    }
+    if (result.kind === "tx") {
+      const t = result.tx;
       searchResult.innerHTML = `<div><strong>Tx ${escapeHtml(t.hash)}</strong></div>
         <div>Height: ${escapeHtml(t.height)}</div>
         <div>Index: ${escapeHtml(t.index)}</div>
@@ -197,6 +210,9 @@ async function init() {
     indexerBase = config.indexer || "";
   } catch {
     indexerBase = "";
+  }
+  if (searchHint) {
+    searchHint.textContent = "Search block height, tx hash, or validator consensus address";
   }
   await refreshAll();
 }

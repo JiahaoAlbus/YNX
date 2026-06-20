@@ -76,6 +76,7 @@ const YNX_PUBLIC_INDEXER = process.env.YNX_PUBLIC_INDEXER || process.env.YNX_IND
 const YNX_PUBLIC_EXPLORER = process.env.YNX_PUBLIC_EXPLORER || process.env.YNX_EXPLORER || "http://127.0.0.1:38082";
 const YNX_PUBLIC_AI_GATEWAY = process.env.YNX_PUBLIC_AI_GATEWAY || process.env.YNX_AI_GATEWAY || "http://127.0.0.1:38090";
 const YNX_PUBLIC_WEB4_HUB = process.env.YNX_PUBLIC_WEB4_HUB || process.env.YNX_WEB4_HUB || "http://127.0.0.1:38091";
+const YNX_QUERY_REST = process.env.INDEXER_YNX_REST || YNX_PUBLIC_REST;
 const YNX_SEEDS = process.env.YNX_SEEDS || "";
 const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
 const YNX_BINARY_VERSION = process.env.YNX_BINARY_VERSION || "local-build";
@@ -127,6 +128,28 @@ function rpcRequest(pathname) {
   });
 }
 
+function httpJsonRequest(target) {
+  const url = new URL(target);
+  const lib = url.protocol === "https:" ? https : http;
+  return new Promise((resolve, reject) => {
+    const req = lib.request(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk.toString();
+      });
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(data || "{}"));
+        } catch (err) {
+          reject(new Error(`HTTP JSON parse failed: ${err.message}`));
+        }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 function appendJsonLine(filePath, payload) {
   fs.appendFileSync(filePath, `${JSON.stringify(payload)}\n`);
 }
@@ -142,6 +165,7 @@ const txsCache = [];
 let latestSeenHeight = 0;
 let indexing = false;
 let chainId = "";
+let systemContractsMeta = {};
 let governanceMeta = {
   founder_address: YNX_FOUNDER_ADDRESS,
   treasury_address: YNX_TREASURY_ADDRESS,
@@ -166,6 +190,33 @@ async function initChainId() {
 
 async function initGovernanceMeta() {
   try {
+    const [paramsRes, systemContractsRes] = await Promise.all([
+      httpJsonRequest(`${YNX_QUERY_REST.replace(/\/$/, "")}/ynx/ynx/v1/params`),
+      httpJsonRequest(`${YNX_QUERY_REST.replace(/\/$/, "")}/ynx/ynx/v1/system_contracts`),
+    ]);
+
+    const params = paramsRes?.params || {};
+    const system = systemContractsRes?.system || {};
+    const contracts = systemContractsRes?.system_contracts || {};
+    governanceMeta = {
+      founder_address: params.founder_address || governanceMeta.founder_address,
+      treasury_address: params.treasury_address || governanceMeta.treasury_address,
+      team_beneficiary_address: system.team_beneficiary_address || governanceMeta.team_beneficiary_address,
+      community_recipient_address: system.community_recipient_address || governanceMeta.community_recipient_address,
+      fee_burn_bps: Number(params.fee_burn_bps ?? governanceMeta.fee_burn_bps),
+      fee_treasury_bps: Number(params.fee_treasury_bps ?? governanceMeta.fee_treasury_bps),
+      fee_founder_bps: Number(params.fee_founder_bps ?? governanceMeta.fee_founder_bps),
+      inflation_treasury_bps: Number(params.inflation_treasury_bps ?? governanceMeta.inflation_treasury_bps),
+      no_base_fee: governanceMeta.no_base_fee,
+      base_fee: governanceMeta.base_fee,
+    };
+    systemContractsMeta = contracts;
+    return;
+  } catch {
+    // fall back to genesis-derived metadata below
+  }
+
+  try {
     const genesis = await rpcRequest("/genesis");
     const appState = genesis?.result?.genesis?.app_state || {};
     const ynx = appState?.ynx || {};
@@ -185,6 +236,7 @@ async function initGovernanceMeta() {
       no_base_fee: feemarket.no_base_fee ?? governanceMeta.no_base_fee,
       base_fee: feemarket.base_fee || governanceMeta.base_fee,
     };
+    systemContractsMeta = ynx?.system_contracts || systemContractsMeta;
   } catch {
     return;
   }
@@ -374,6 +426,42 @@ function listTxs(limit, height) {
   return slice.reverse();
 }
 
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+async function findValidatorByAddress(address) {
+  const target = normalizeText(address).toUpperCase();
+  if (!target) return null;
+  const snapshot = await fetchValidatorsSnapshot();
+  const validator = (snapshot.validators || []).find((item) => String(item.address || "").toUpperCase() === target);
+  if (!validator) return null;
+  return {
+    latest_height: snapshot.latest_height,
+    total: snapshot.total,
+    signed_count: snapshot.signed_count,
+    validator,
+  };
+}
+
+async function searchIndex(query) {
+  const raw = normalizeText(query);
+  if (!raw) return { ok: false, error: "empty_query" };
+
+  if (/^[0-9]+$/.test(raw)) {
+    const block = await findBlockByHeight(parseInt(raw, 10));
+    if (block) return { ok: true, kind: "block", block };
+  }
+
+  const validator = await findValidatorByAddress(raw);
+  if (validator) return { ok: true, kind: "validator", ...validator };
+
+  const tx = await findTxByHash(raw);
+  if (tx) return { ok: true, kind: "tx", tx };
+
+  return { ok: false, error: "not_found", query: raw };
+}
+
 function metrics() {
   const lines = [];
   lines.push("# HELP ynx_indexer_last_height Last indexed block height");
@@ -503,6 +591,19 @@ const server = http.createServer(async (req, res) => {
       latest_seen: latestSeenHeight || 0,
       last_indexed: state.last_height || 0,
       governance: governanceMeta,
+      system_contracts: systemContractsMeta,
+      endpoints: {
+        rpc: YNX_PUBLIC_RPC,
+        evm_rpc: YNX_PUBLIC_EVM_RPC,
+        evm_ws: YNX_PUBLIC_EVM_WS,
+        rest: YNX_PUBLIC_REST,
+        grpc: YNX_PUBLIC_GRPC,
+        faucet: YNX_PUBLIC_FAUCET,
+        indexer: YNX_PUBLIC_INDEXER,
+        explorer: YNX_PUBLIC_EXPLORER,
+        ai_gateway: YNX_PUBLIC_AI_GATEWAY,
+        web4_hub: YNX_PUBLIC_WEB4_HUB,
+      },
       value_proposition: {
         evm_compatible: true,
         onchain_governance: true,
@@ -614,6 +715,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (url.pathname.startsWith("/validators/")) {
+    const address = decodeURIComponent(url.pathname.split("/")[2] || "");
+    if (!address) {
+      return json(res, 400, { ok: false, error: "invalid_validator_address" });
+    }
+    try {
+      const result = await findValidatorByAddress(address);
+      if (!result) {
+        return json(res, 404, { ok: false, error: "not_found" });
+      }
+      return json(res, 200, { ok: true, ...result });
+    } catch (err) {
+      return json(res, 500, { ok: false, error: "validator_fetch_failed", detail: err.message });
+    }
+  }
+
   if (url.pathname === "/blocks") {
     const limit = envNumber("INDEXER_API_LIMIT", 20);
     const requestedParam = url.searchParams.get("limit");
@@ -659,6 +776,16 @@ const server = http.createServer(async (req, res) => {
       return json(res, 404, { ok: false, error: "not_found" });
     }
     return json(res, 200, { ok: true, tx });
+  }
+
+  if (url.pathname === "/search") {
+    const query = url.searchParams.get("q") || "";
+    try {
+      const result = await searchIndex(query);
+      return json(res, result.ok ? 200 : result.error === "empty_query" ? 400 : 404, result);
+    } catch (err) {
+      return json(res, 500, { ok: false, error: "search_failed", detail: err.message });
+    }
   }
 
   return json(res, 404, { ok: false, error: "not_found" });

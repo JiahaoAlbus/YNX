@@ -726,6 +726,7 @@ async function routeReadiness(route, options = {}) {
     automatic_loop_ready: automaticLoopReady,
     capabilities,
     blockers,
+    required_configuration: blockerRequirements(route, blockers),
     source,
     gateway: gatewayCheck,
     evidence: {
@@ -761,6 +762,33 @@ function summarizeRouteBlockers(items) {
     total_routes_with_blockers: (items || []).filter((item) => (item.blockers || []).length > 0).length,
     by_blocker: byBlocker,
   };
+}
+
+function blockerRequirements(route, blockers) {
+  const out = [];
+  for (const blocker of blockers || []) {
+    if (blocker === "release_pending_signer") {
+      if (route.sourceKind === "evm") {
+        out.push("BRIDGE_SOURCE_EVM_PRIVATE_KEY");
+      } else if (route.sourceKind === "bitcoin") {
+        out.push("BRIDGE_SOURCE_BTC_TESTNET_SIGNER");
+      } else if (route.sourceKind === "tron") {
+        out.push("BRIDGE_SOURCE_TRON_SHASTA_SIGNER");
+      }
+    } else if (blocker === "source_lockbox_unconfigured") {
+      out.push("source lockbox deployment");
+      out.push("lockboxAddress");
+    } else if (blocker === "deposit_watcher_not_live") {
+      out.push("source RPC / watcher recovery");
+    } else if (blocker === "ynx_burn_watcher_not_live") {
+      out.push("YNX burn watcher recovery");
+    } else if (blocker === "ynx_gateway_route_not_verified") {
+      out.push("gateway route mapping");
+    } else if (blocker === "source_chain_unconfigured") {
+      out.push("source RPC configuration");
+    }
+  }
+  return [...new Set(out)];
 }
 
 async function scanEvmLockboxRoute(route) {

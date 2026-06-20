@@ -79,6 +79,10 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(Array.isArray(health.route_readiness.blockers.by_blocker.source_lockbox_unconfigured));
   assert.ok(Array.isArray(health.onchain.missing_requirements));
   assert.ok(health.onchain.missing_requirements.includes("bridge_onchain_disabled"));
+  const bsc = health.route_readiness.items.find((item) => item.routeId === "bnb-testnet-bnb");
+  assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
+  const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
+  assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
 
   const routes = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/routes`), 200);
   assert.equal(routes.items.length, 5);

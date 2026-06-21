@@ -183,6 +183,7 @@ async function loadBridgeOverview() {
             enabled: bridgeHealth.onchain.enabled !== false,
             ready: bridgeHealth.onchain.ready !== false,
             missing_requirements: bridgeHealth.onchain.missing_requirements || [],
+            configuration_status: bridgeHealth.onchain.configuration_status || null,
             gateway_signer_set: bridgeHealth.onchain.gateway_signer_set || null,
           }
         : null,
@@ -261,6 +262,7 @@ async function loadAiOverview() {
             ready: aiHealth.onchain.ready !== false,
             missing_requirements: aiMissing,
             settlement_contract: aiHealth.onchain.settlement_contract || "",
+            configuration_status: aiHealth.onchain.configuration_status || null,
             recommended_action:
               aiMissing.length > 0
                 ? "Load the missing AI onchain gateway configuration so policy-bounded settlement can submit onchain."

@@ -2087,6 +2087,12 @@ const server = http.createServer(async (req, res) => {
       onchain: {
         enabled: AI_ONCHAIN_ENABLED,
         ready: onchainConfigReady(),
+        configuration_status: {
+          enabled_flag_present: Boolean(AI_ONCHAIN_ENABLED),
+          rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
+          signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
+          settlement_contract_configured: Boolean(AI_SETTLEMENT_CONTRACT),
+        },
         rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
         signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
@@ -2123,6 +2129,15 @@ const server = http.createServer(async (req, res) => {
       enforce_policy: AI_ENFORCE_POLICY,
       onchain: {
         enabled: AI_ONCHAIN_ENABLED,
+        ready: onchainConfigReady(),
+        configuration_status: {
+          enabled_flag_present: Boolean(AI_ONCHAIN_ENABLED),
+          rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
+          signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
+          settlement_contract_configured: Boolean(AI_SETTLEMENT_CONTRACT),
+        },
+        rpc_configured: Boolean(AI_ONCHAIN_RPC_URL),
+        signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
         missing_requirements: onchainMissingRequirements(),
         recommended_action: onchainRecommendedAction(),

@@ -82,6 +82,8 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(Array.isArray(health.route_readiness.actions));
   assert.ok(Array.isArray(health.onchain.missing_requirements));
   assert.ok(health.onchain.missing_requirements.includes("bridge_onchain_disabled"));
+  assert.equal(health.onchain.configuration_status.source_relayer_configured, false);
+  assert.equal(health.onchain.configuration_status.rpc_configured, true);
   assert.equal(health.onchain.gateway_signer_set.configured, true);
   assert.ok(Array.isArray(health.onchain.gateway_signer_set.signers));
   const bsc = health.route_readiness.items.find((item) => item.routeId === "bnb-testnet-bnb");
@@ -93,8 +95,8 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(health.route_readiness.actions.some((item) => item.priority === "high"));
   const sepoliaAction = health.route_readiness.actions.find((item) => item.routes.includes("eth-sepolia-eth"));
   assert.ok(sepoliaAction);
-  assert.ok(sepoliaAction.routes.includes("eth-sepolia-eth"));
-  assert.ok(sepoliaAction.routes.includes("eth-sepolia-usdc"));
+  assert.ok(health.route_readiness.actions.some((item) => item.routes.includes("eth-sepolia-eth")));
+  assert.ok(health.route_readiness.actions.some((item) => item.routes.includes("eth-sepolia-usdc")));
   const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
   assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
 

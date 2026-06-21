@@ -477,6 +477,9 @@ test("reports on-chain readiness and fails requested on-chain writes when signer
   const health = assertJson(await requestJson(`http://127.0.0.1:${port}/health`), 200);
   assert.equal(health.onchain.enabled, true);
   assert.equal(health.onchain.ready, false);
+  assert.equal(health.onchain.configuration_status.rpc_configured, true);
+  assert.equal(health.onchain.configuration_status.signer_configured, false);
+  assert.equal(health.onchain.configuration_status.settlement_contract_configured, true);
   assert.equal(health.onchain.signer_configured, false);
   assert.equal(health.onchain.settlement_contract, "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf");
   assert.ok(health.onchain.missing_requirements.includes("onchain_private_key_required"));

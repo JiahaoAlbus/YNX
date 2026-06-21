@@ -98,6 +98,15 @@ function startMockRpcServer(port) {
           enabled: false,
           ready: false,
           missing_requirements: ["bridge_onchain_disabled", "source_evm_private_key_required"],
+          configuration_status: {
+            rpc_configured: true,
+            relayer_configured: false,
+            remote_signer_configured: false,
+            attester_configured: false,
+            source_relayer_configured: false,
+            btc_testnet_release_signer_configured: true,
+            tron_shasta_release_signer_configured: true,
+          },
           gateway_signer_set: {
             configured: true,
             signers: ["0xSignerA"],
@@ -180,6 +189,12 @@ function startMockRpcServer(port) {
         onchain: {
           enabled: false,
           ready: false,
+          configuration_status: {
+            enabled_flag_present: false,
+            rpc_configured: true,
+            signer_configured: false,
+            settlement_contract_configured: true,
+          },
           missing_requirements: ["onchain_disabled", "onchain_private_key_required"],
           settlement_contract: "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf",
         },
@@ -265,12 +280,14 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.bridge.ok, true);
   assert.equal(overview.bridge.route_readiness.summary.deposit_tested, 4);
   assert.equal(overview.bridge.route_readiness.summary.automatic_loop_ready, 2);
+  assert.equal(overview.bridge.onchain.configuration_status.source_relayer_configured, false);
   assert.equal(overview.bridge.onchain.gateway_signer_set.signers[0], "0xSignerA");
   assert.equal(overview.bridge.route_readiness.actions.length, 2);
   assert.equal(overview.bridge.route_readiness.actions[0].blocker_class, "service_config_missing");
   assert.equal(overview.bridge.route_readiness.actions[0].routes.length, 2);
   assert.equal(overview.bridge.route_readiness.actions[0].priority, "high");
   assert.equal(overview.ai_runtime.onchain.missing_requirements[0], "onchain_disabled");
+  assert.equal(overview.ai_runtime.onchain.configuration_status.signer_configured, false);
   assert.match(overview.ai_runtime.onchain.recommended_action, /AI onchain gateway configuration/i);
   assert.equal(overview.ai_runtime.intelligence.model, "qwen2.5:1.5b");
   assert.equal(overview.execution_backlog[0].area, "bridge");

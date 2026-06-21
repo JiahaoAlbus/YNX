@@ -188,7 +188,15 @@ async function loadBridgeOverview() {
         summary: routeReadiness?.summary || null,
         blockers: routeReadiness?.blockers || null,
         requirements: routeReadiness?.requirements || null,
-        actions: Array.isArray(routeReadiness?.items)
+        actions: Array.isArray(routeReadiness?.actions)
+          ? routeReadiness.actions.map((item) => ({
+              blocker_class: item.blocker_class,
+              required_configuration: item.required_configuration || [],
+              recommended_action: item.recommended_action || "",
+              routes: item.routes || [],
+              priority: item.priority || "medium",
+            }))
+          : Array.isArray(routeReadiness?.items)
           ? routeReadiness.items
               .filter((item) => item && item.blocker_class && item.blocker_class !== "ready")
               .map((item) => ({

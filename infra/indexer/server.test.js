@@ -134,6 +134,22 @@ function startMockRpcServer(port) {
               "source lockbox deployment": ["bnb-testnet-bnb"],
             },
           },
+          actions: [
+            {
+              blocker_class: "service_config_missing",
+              required_configuration: ["BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
+              recommended_action: "Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic release for routes: eth-sepolia-eth, eth-sepolia-usdc.",
+              routes: ["eth-sepolia-eth", "eth-sepolia-usdc"],
+              priority: "high",
+            },
+            {
+              blocker_class: "contract_deployment_missing",
+              required_configuration: ["source lockbox deployment", "lockboxAddress"],
+              recommended_action: "Deploy source lockbox and set lockboxAddress for routes: bnb-testnet-bnb.",
+              routes: ["bnb-testnet-bnb"],
+              priority: "high",
+            },
+          ],
           items: [
             {
               routeId: "eth-sepolia-eth",
@@ -232,4 +248,6 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.bridge.onchain.gateway_signer_set.signers[0], "0xSignerA");
   assert.equal(overview.bridge.route_readiness.actions.length, 2);
   assert.equal(overview.bridge.route_readiness.actions[0].blocker_class, "service_config_missing");
+  assert.equal(overview.bridge.route_readiness.actions[0].routes.length, 2);
+  assert.equal(overview.bridge.route_readiness.actions[0].priority, "high");
 });

@@ -99,6 +99,19 @@ function startMockRpcServer(port) {
       }));
     }
 
+    if (url.pathname === "/cosmos/staking/v1beta1/validators") {
+      return res.end(JSON.stringify({
+        validators: [
+          {
+            operator_address: "ynxvaloper1alpha",
+            jailed: false,
+            status: "BOND_STATUS_BONDED",
+            description: { moniker: "Alpha" },
+          },
+        ],
+      }));
+    }
+
     if (url.pathname === "/bridge/health") {
       return res.end(JSON.stringify({
         ok: true,
@@ -272,6 +285,7 @@ test("supports validator detail and unified search", async (t) => {
       INDEXER_PORT: String(indexerPort),
       INDEXER_DATA_DIR: dataDir,
       YNX_PUBLIC_RPC: `http://127.0.0.1:${rpcPort}`,
+      YNX_PUBLIC_REST: `http://127.0.0.1:${rpcPort}`,
       YNX_PUBLIC_BRIDGE_HEALTH: `http://127.0.0.1:${rpcPort}/bridge/health`,
       YNX_PUBLIC_AI_GATEWAY: `http://127.0.0.1:${rpcPort}/ai`,
       YNX_PUBLIC_AI_HEALTH: `http://127.0.0.1:${rpcPort}/ai/health`,
@@ -325,6 +339,8 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.public_operations.validator.signed_count, 1);
   assert.equal(overview.public_operations.validator.public_peers, 2);
   assert.equal(overview.public_operations.validator.peer_gate_pass, true);
+  assert.equal(overview.public_operations.validator.validators[0].moniker, "Alpha");
+  assert.equal(overview.public_operations.validator.validators[0].operator, "ynxvaloper1alpha");
   assert.equal(overview.public_operations.routes.deposit_tested, 4);
   assert.equal(overview.public_operations.routes.release_observed, 5);
   assert.equal(overview.public_operations.routes.deposit_watchers_live, 1);
@@ -350,6 +366,7 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(publicOps.ok, true);
   assert.equal(publicOps.title, "The shortest live proof board");
   assert.equal(publicOps.validator.public_peers, 2);
+  assert.equal(publicOps.validator.validators[0].moniker, "Alpha");
   assert.equal(publicOps.routes.deposit_tested, 4);
   assert.equal(publicOps.cards[2].value, "5/5");
 });

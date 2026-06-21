@@ -321,7 +321,7 @@ async function loadAiOverview() {
   }
 }
 
-function buildPublicOperations(validatorSnapshot, bridge, publicPeers = 0) {
+function buildPublicOperations(validatorSnapshot, validatorDetails, bridge, publicPeers = 0) {
   const summary = bridge?.route_readiness?.summary || {};
   const items = bridge?.route_readiness?.items || [];
   const routeTotal = Number(summary.routes || 0);
@@ -371,7 +371,7 @@ function buildPublicOperations(validatorSnapshot, bridge, publicPeers = 0) {
       validator_gate_pass: bondedCount >= minValidators,
       peer_gate_pass: publicPeers >= minPublicPeers,
       overall_gate_pass: bondedCount >= minValidators && publicPeers >= minPublicPeers,
-      validators: [],
+      validators: validatorDetails?.validators || [],
     },
     routes: {
       total: routeTotal,
@@ -407,7 +407,7 @@ function buildPublicOperations(validatorSnapshot, bridge, publicPeers = 0) {
             : "Checking automatic release and watcher coverage",
       },
     ],
-    errors: [],
+    errors: validatorDetails?.errors || [],
   };
 }
 
@@ -943,6 +943,30 @@ async function fetchPublicPeerCount() {
   }
 }
 
+async function fetchBondedValidatorDetails() {
+  try {
+    const payload = await httpJsonRequest(
+      `${YNX_QUERY_REST.replace(/\/$/, "")}/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED&pagination.limit=100`,
+      4000,
+    );
+    const validators = Array.isArray(payload?.validators) ? payload.validators : [];
+    return {
+      validators: validators.map((item) => ({
+        moniker: String(item?.description?.moniker || "unknown"),
+        operator: String(item?.operator_address || ""),
+        status: String(item?.status || ""),
+        jailed: Boolean(item?.jailed),
+      })),
+      errors: [],
+    };
+  } catch (err) {
+    return {
+      validators: [],
+      errors: [`bonded_validators_failed:${err instanceof Error ? err.message : String(err)}`],
+    };
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -999,12 +1023,13 @@ const server = http.createServer(async (req, res) => {
     const bridge = await loadBridgeOverview();
     const ai_runtime = await loadAiOverview();
     const validator_snapshot = await fetchValidatorsSnapshot();
+    const validator_details = await fetchBondedValidatorDetails();
     const public_peer_count = await fetchPublicPeerCount();
     const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
     const headline_metrics = buildHeadlineMetrics(bridge, ai_runtime, state.last_height || 0, latestSeenHeight || 0);
     const next_step = buildNextStepSummary(execution_backlog);
     const readiness_scorecard = buildReadinessScorecard(bridge, ai_runtime);
-    const public_operations = buildPublicOperations(validator_snapshot, bridge, public_peer_count);
+    const public_operations = buildPublicOperations(validator_snapshot, validator_details, bridge, public_peer_count);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -1102,10 +1127,11 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/ynx/public-operations") {
     const bridge = await loadBridgeOverview();
     const validator_snapshot = await fetchValidatorsSnapshot();
+    const validator_details = await fetchBondedValidatorDetails();
     const public_peer_count = await fetchPublicPeerCount();
     return json(res, 200, {
       ok: true,
-      ...buildPublicOperations(validator_snapshot, bridge, public_peer_count),
+      ...buildPublicOperations(validator_snapshot, validator_details, bridge, public_peer_count),
     });
   }
 

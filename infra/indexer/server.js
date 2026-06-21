@@ -377,8 +377,10 @@ function buildNextStepSummary(executionBacklog) {
   return {
     priority: next.priority || "medium",
     area: next.area || "",
+    blocker_class: next.blocker_class || "",
     action: next.action || "",
     routes: next.routes || [],
+    required_configuration: next.required_configuration || [],
   };
 }
 

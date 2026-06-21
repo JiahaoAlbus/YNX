@@ -279,6 +279,8 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.headline_metrics.ai_onchain_ready, false);
   assert.equal(overview.next_step.area, "bridge");
   assert.equal(overview.next_step.priority, "high");
+  assert.equal(overview.next_step.blocker_class, "service_config_missing");
+  assert.ok(overview.next_step.required_configuration.includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY"));
   assert.equal(overview.readiness_scorecard.bridge.deposit_tested.completed, 4);
   assert.equal(overview.readiness_scorecard.ai_runtime.onchain_ready, false);
 });

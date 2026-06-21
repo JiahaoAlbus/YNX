@@ -89,6 +89,11 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
   assert.match(bsc.recommended_action, /Deploy .* lockbox/i);
   assert.ok(health.route_readiness.actions.some((item) => item.blocker_class === "contract_deployment_missing"));
+  assert.ok(health.route_readiness.actions.some((item) => item.priority === "high"));
+  const sepoliaAction = health.route_readiness.actions.find((item) => item.routes.includes("eth-sepolia-eth"));
+  assert.ok(sepoliaAction);
+  assert.ok(sepoliaAction.routes.includes("eth-sepolia-eth"));
+  assert.ok(sepoliaAction.routes.includes("eth-sepolia-usdc"));
   const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
   assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
 

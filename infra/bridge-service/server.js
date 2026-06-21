@@ -828,13 +828,22 @@ function summarizeNextActions(items) {
   const byKey = new Map();
   for (const item of items || []) {
     if (!item || item.blocker_class === "ready" || !item.recommended_action) continue;
-    const key = `${item.blocker_class}::${item.recommended_action}`;
+    const requirementKey = JSON.stringify([...(item.required_configuration || [])].sort());
+    const key = `${item.blocker_class}::${requirementKey}`;
     if (!byKey.has(key)) {
       byKey.set(key, {
         blocker_class: item.blocker_class,
         recommended_action: item.recommended_action,
         required_configuration: [...(item.required_configuration || [])],
         routes: [item.routeId],
+        priority:
+          item.blocker_class === "service_config_missing"
+            ? "high"
+            : item.blocker_class === "contract_deployment_missing"
+              ? "high"
+              : item.blocker_class === "runtime_watcher_recovery"
+                ? "medium"
+                : "medium",
       });
       continue;
     }
@@ -842,7 +851,25 @@ function summarizeNextActions(items) {
     existing.routes.push(item.routeId);
     existing.required_configuration = [...new Set([...(existing.required_configuration || []), ...(item.required_configuration || [])])];
   }
+  for (const action of byKey.values()) {
+    if (
+      action.blocker_class === "service_config_missing" &&
+      action.required_configuration.length === 1 &&
+      action.required_configuration[0] === "BRIDGE_SOURCE_EVM_PRIVATE_KEY"
+    ) {
+      action.recommended_action = `Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic release for routes: ${action.routes.join(", ")}.`;
+    } else if (
+      action.blocker_class === "contract_deployment_missing" &&
+      action.required_configuration.includes("source lockbox deployment")
+    ) {
+      action.recommended_action = `Deploy source lockbox and set lockboxAddress for routes: ${action.routes.join(", ")}.`;
+    }
+  }
   actions.push(...byKey.values());
+  actions.sort((a, b) => {
+    const order = { high: 0, medium: 1, low: 2 };
+    return (order[a.priority] ?? 9) - (order[b.priority] ?? 9);
+  });
   return actions;
 }
 

@@ -362,6 +362,12 @@ function onchainMissingRequirements() {
   return missing;
 }
 
+function onchainRecommendedAction() {
+  const missing = onchainMissingRequirements();
+  if (missing.length === 0) return "";
+  return "Load the missing AI onchain gateway configuration so policy-bounded settlement can submit onchain.";
+}
+
 function getSettlementContract() {
   if (!AI_ONCHAIN_ENABLED) throw new Error("onchain_disabled");
   if (!AI_ONCHAIN_RPC_URL) throw new Error("onchain_rpc_required");
@@ -2085,6 +2091,7 @@ const server = http.createServer(async (req, res) => {
         signer_configured: Boolean(AI_ONCHAIN_PRIVATE_KEY),
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
         missing_requirements: onchainMissingRequirements(),
+        recommended_action: onchainRecommendedAction(),
         confirmations: AI_ONCHAIN_CONFIRMATIONS,
         last_tx_hash: onchainRuntime.last_tx_hash,
         last_tx_at: onchainRuntime.last_tx_at,
@@ -2118,6 +2125,7 @@ const server = http.createServer(async (req, res) => {
         enabled: AI_ONCHAIN_ENABLED,
         settlement_contract: AI_SETTLEMENT_CONTRACT || "",
         missing_requirements: onchainMissingRequirements(),
+        recommended_action: onchainRecommendedAction(),
         confirmations: AI_ONCHAIN_CONFIRMATIONS,
         last_tx_hash: onchainRuntime.last_tx_hash,
         last_tx_at: onchainRuntime.last_tx_at,

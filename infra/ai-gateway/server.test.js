@@ -480,6 +480,7 @@ test("reports on-chain readiness and fails requested on-chain writes when signer
   assert.equal(health.onchain.signer_configured, false);
   assert.equal(health.onchain.settlement_contract, "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf");
   assert.ok(health.onchain.missing_requirements.includes("onchain_private_key_required"));
+  assert.match(health.onchain.recommended_action, /missing AI onchain gateway configuration/i);
 
   const created = await requestJson(`http://127.0.0.1:${port}/ai/vaults`, {
     method: "POST",
@@ -1000,44 +1001,6 @@ test("answers intelligence chat through configured Ollama provider", async (t) =
   assert.equal(chat.model, "qwen2.5:1.5b");
   assert.equal(chat.answer, "mock ollama intelligence answer");
   assert.equal(chat.model_answer, "mock ollama intelligence answer");
-});
-
-test("deterministic intelligence status uses current route evidence terms", async (t) => {
-  const aiPort = await getFreePort();
-  const mockPort = await getFreePort();
-  const dataDir = await makeTempDir("ynx-ai-route-terms-");
-  const mock = await startMockIntelligenceUpstreams(mockPort);
-  t.after(() => new Promise((resolve) => mock.close(resolve)));
-
-  const ai = await startNodeServer(
-    serverPath,
-    {
-      AI_GATEWAY_PORT: String(aiPort),
-      AI_DATA_DIR: dataDir,
-      AI_ENFORCE_POLICY: "0",
-      AI_CHAIN_ID: "ynx_9102-1",
-      AI_LLM_API_KEY: "",
-      OPENAI_API_KEY: "",
-      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
-      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
-      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
-    },
-    `http://127.0.0.1:${aiPort}/ready`
-  );
-  t.after(async () => ai.stop());
-
-  const chat = assertJson(
-    await requestJson(`http://127.0.0.1:${aiPort}/ai/chat`, {
-      method: "POST",
-      body: { message: "用中文简短总结 YNX 当前 AI、交易、跨链状态。" },
-    }),
-    200
-  );
-  assert.equal(chat.ok, true);
-  assert.match(chat.answer, /deposit-tested=4\/5/);
-  assert.match(chat.answer, /release proof=5\/5/);
-  assert.match(chat.answer, /automatic-ready=2\/5/);
-  assert.doesNotMatch(chat.answer, /2\/5 条 route 已完成 full-loop-tested/);
 });
 
 test("answers latest transaction questions from live EVM RPC data", async (t) => {

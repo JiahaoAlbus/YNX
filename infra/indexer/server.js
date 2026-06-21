@@ -331,7 +331,10 @@ function buildPublicOperations(validatorSnapshot, bridge) {
   const depositTested = Number(summary.deposit_tested || 0);
   const releaseObserved = Number(summary.release_evidence_observed || 0);
   const automaticReady = Number(summary.automatic_loop_ready || 0);
-  const depositWatchersLive = items.filter((item) => item?.source_live === true).length;
+  const depositWatchersLive = items.filter((item) => {
+    if (item?.source_live === true) return true;
+    return ["deposit_ready", "deposit_tested", "full_loop_ready", "full_loop_tested"].includes(item?.phase || "");
+  }).length;
   const blockers = items
     .filter((item) => Array.isArray(item?.blockers) && item.blockers.length > 0)
     .map((item) => ({

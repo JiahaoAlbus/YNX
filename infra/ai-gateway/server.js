@@ -749,6 +749,15 @@ function summarizeRoutePhases(context) {
   return items.map((item) => `${item.routeId}:${item.phase}`).join(", ");
 }
 
+function summarizeBacklog(context) {
+  const backlog = context.chain?.overview?.execution_backlog || [];
+  if (!Array.isArray(backlog) || backlog.length === 0) return "";
+  return backlog
+    .slice(0, 3)
+    .map((item) => `${item.area}:${item.priority}:${item.action}`)
+    .join(" | ");
+}
+
 function routeReadinessCounts(context) {
   const payload = context.bridge?.route_readiness || {};
   const summary = payload.summary || {};
@@ -974,17 +983,12 @@ function wantsTradeRequest(message) {
 
 function wantsLiveStatusAnswer(message) {
   const text = String(message || "").toLowerCase();
-  const hasStatusIntent = /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status)/i.test(text);
-  const hasStatusSubject =
-    wantsNetworkLayers(text) ||
-    /(跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain|区块|高度|最高层数|最高区块|block|height)/i.test(text);
   return (
     wantsLatestTransaction(text) ||
     wantsValidatorStatus(text) ||
     wantsCirculatingAssets(text) ||
     wantsTradeRequest(text) ||
-    /(跨链|桥|bridge|route|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|区块|高度|最高层数|最高区块|block|height)/i.test(text) ||
-    (hasStatusIntent && hasStatusSubject)
+    /(状态|现状|当前|现在|ready|health|是否|能不能|可用|上线|live|status|跨链|桥|bridge|route|资产|asset|settlement|结算|yusd|usdc|usdt|btc|eth|bnb|链上|on.?chain)/i.test(text)
   );
 }
 
@@ -1718,6 +1722,7 @@ function deterministicIntelligenceAnswer(message, context) {
   const aiStats = context.ai?.stats || {};
   const onchain = context.ai?.onchain || {};
   const routePhases = summarizeRoutePhases(context);
+  const backlogSummary = summarizeBacklog(context);
   if (zh) {
     return [
       "我是 YNX Intelligence，当前直接运行在 YNX AI Gateway 上。",
@@ -1726,6 +1731,7 @@ function deterministicIntelligenceAnswer(message, context) {
       `Sepolia 闭环证据：minted deposits=${healthStats.minted_deposits ?? "-"}，released withdrawals=${healthStats.released_withdrawals ?? "-"}。`,
       `AI 链上结算：${onchain.enabled && onchain.ready ? "已开启并 ready" : "未完全 ready"}，settlement contract=${onchain.settlement_contract || "-"}，最近 tx=${onchain.last_tx_hash || "-"}。`,
       `AI 任务统计：jobs=${aiStats.total_jobs ?? 0}，vaults=${aiStats.total_vaults ?? 0}，payments=${aiStats.total_payments ?? 0}，finalized=${aiStats.by_status?.finalized ?? 0}。`,
+      backlogSummary ? `当前执行清单：${backlogSummary}` : "",
       "",
       "产品定位建议：YNX AI 不应只叫 agent 权限与结算层，而应定位为 Intelligence Layer：链上状态分析、交易/跨链助手、AI 任务执行、机器支付、权限控制、链上结算、运维预警和开发者问答的组合。",
       "下一步最有价值的是：把 Sepolia signer 和 BSC lockbox 补齐，让 automatic-ready 从当前 2/5 往 4/5 或 5/5 推进，并让服务器本地模型持续接入实时 YNX 上下文。",
@@ -1738,6 +1744,7 @@ function deterministicIntelligenceAnswer(message, context) {
     `Sepolia loop evidence: minted deposits=${healthStats.minted_deposits ?? "-"}, released withdrawals=${healthStats.released_withdrawals ?? "-"}.`,
     `AI on-chain settlement: ${onchain.enabled && onchain.ready ? "enabled and ready" : "not fully ready"}, contract=${onchain.settlement_contract || "-"}, latest tx=${onchain.last_tx_hash || "-"}.`,
     `AI stats: jobs=${aiStats.total_jobs ?? 0}, vaults=${aiStats.total_vaults ?? 0}, payments=${aiStats.total_payments ?? 0}, finalized=${aiStats.by_status?.finalized ?? 0}.`,
+    backlogSummary ? `Current execution backlog: ${backlogSummary}.` : "",
     "",
     "Product position: YNX AI should be the Intelligence Layer: chain-state analysis, bridge/trading assistant, AI task execution, machine payments, policy control, on-chain settlement, ops alerts, and developer Q&A.",
   ].join("\n");
@@ -1747,8 +1754,7 @@ async function callConfiguredLlm(message, context) {
   if (!llmConfigured()) return null;
   const system = [
     "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
-    "Use only the provided live YNX context for factual claims about YNX. If the context is incomplete, say so instead of guessing from outside knowledge.",
-    "Be candid about testnet limits: no legal entity yet, no production mainnet claim, no real-asset custody claim, no external audit claim unless present in the live context.",
+    "Use the provided live context. Be candid about testnet limits.",
     "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
     "For product or feature suggestions, avoid generic blockchain advice. Ground every suggestion in the current YNX context: live assets, AMM pairs, validators, bridge routes, Web4 policy, and AI settlement.",
     "When discussing assets, distinguish live public-testnet assets from real mainnet custody, redemption, and liquidity.",
@@ -1772,7 +1778,7 @@ async function callConfiguredLlm(message, context) {
             },
           ],
           options: {
-            temperature: 0.1,
+            temperature: 0.2,
             num_ctx: AI_LLM_NUM_CTX,
             num_predict: AI_LLM_NUM_PREDICT,
           },

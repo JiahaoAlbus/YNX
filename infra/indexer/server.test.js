@@ -130,7 +130,7 @@ function startMockRpcServer(port) {
           requirements: {
             total_routes_with_requirements: 3,
             by_requirement: {
-              BRIDGE_SOURCE_EVM_PRIVATE_KEY: ["eth-sepolia-eth", "eth-sepolia-usdc"],
+              BRIDGE_SOURCE_EVM_PRIVATE_KEY: ["eth-sepolia-eth", "eth-sepolia-usdc", "bnb-testnet-bnb"],
               "source lockbox deployment": ["bnb-testnet-bnb"],
             },
           },
@@ -144,8 +144,8 @@ function startMockRpcServer(port) {
             },
             {
               blocker_class: "contract_deployment_missing",
-              required_configuration: ["source lockbox deployment", "lockboxAddress"],
-              recommended_action: "Deploy source lockbox and set lockboxAddress for routes: bnb-testnet-bnb.",
+              required_configuration: ["source lockbox deployment", "lockboxAddress", "BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
+              recommended_action: "Deploy source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for routes: bnb-testnet-bnb.",
               routes: ["bnb-testnet-bnb"],
               priority: "high",
             },
@@ -160,8 +160,8 @@ function startMockRpcServer(port) {
             {
               routeId: "bnb-testnet-bnb",
               blocker_class: "contract_deployment_missing",
-              required_configuration: ["source lockbox deployment", "lockboxAddress"],
-              recommended_action: "Deploy bsc-testnet source lockbox, then set lockboxAddress for bnb-testnet-bnb.",
+              required_configuration: ["source lockbox deployment", "lockboxAddress", "BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
+              recommended_action: "Deploy bsc-testnet source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for bnb-testnet-bnb.",
             },
           ],
         },

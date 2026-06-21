@@ -862,7 +862,9 @@ function summarizeNextActions(items) {
       action.blocker_class === "contract_deployment_missing" &&
       action.required_configuration.includes("source lockbox deployment")
     ) {
-      action.recommended_action = `Deploy source lockbox and set lockboxAddress for routes: ${action.routes.join(", ")}.`;
+      action.recommended_action = action.required_configuration.includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")
+        ? `Deploy source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for routes: ${action.routes.join(", ")}.`
+        : `Deploy source lockbox and set lockboxAddress for routes: ${action.routes.join(", ")}.`;
     }
   }
   actions.push(...byKey.values());
@@ -887,6 +889,7 @@ function blockerRequirements(route, blockers) {
     } else if (blocker === "source_lockbox_unconfigured") {
       out.push("source lockbox deployment");
       out.push("lockboxAddress");
+      if (!BRIDGE_SOURCE_EVM_PRIVATE_KEY) out.push("BRIDGE_SOURCE_EVM_PRIVATE_KEY");
     } else if (blocker === "deposit_watcher_not_live") {
       out.push("source RPC / watcher recovery");
     } else if (blocker === "ynx_burn_watcher_not_live") {
@@ -912,7 +915,9 @@ function blockerClass(blockers) {
 
 function recommendedAction(route, blockers, requirements) {
   if ((blockers || []).includes("source_lockbox_unconfigured")) {
-    return `Deploy ${route.sourceNetwork} source lockbox, then set lockboxAddress for ${route.routeId}.`;
+    return (requirements || []).includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")
+      ? `Deploy ${route.sourceNetwork} source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for ${route.routeId}.`
+      : `Deploy ${route.sourceNetwork} source lockbox, then set lockboxAddress for ${route.routeId}.`;
   }
   if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")) {
     return `Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ${route.sourceNetwork} release for ${route.routeId}.`;

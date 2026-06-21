@@ -87,6 +87,7 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   const bsc = health.route_readiness.items.find((item) => item.routeId === "bnb-testnet-bnb");
   assert.equal(bsc.blocker_class, "contract_deployment_missing");
   assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
+  assert.ok(bsc.required_configuration.includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY"));
   assert.match(bsc.recommended_action, /Deploy .* lockbox/i);
   assert.ok(health.route_readiness.actions.some((item) => item.blocker_class === "contract_deployment_missing"));
   assert.ok(health.route_readiness.actions.some((item) => item.priority === "high"));

@@ -251,6 +251,7 @@ async function loadAiOverview() {
   }
   try {
     const aiHealth = await httpJsonRequest(YNX_PUBLIC_AI_HEALTH, YNX_AI_OVERVIEW_TIMEOUT_MS);
+    const aiMissing = aiHealth?.onchain?.missing_requirements || [];
     const value = {
       ok: aiHealth?.ok !== false,
       health_url: YNX_PUBLIC_AI_HEALTH,
@@ -258,8 +259,12 @@ async function loadAiOverview() {
         ? {
             enabled: aiHealth.onchain.enabled !== false,
             ready: aiHealth.onchain.ready !== false,
-            missing_requirements: aiHealth.onchain.missing_requirements || [],
+            missing_requirements: aiMissing,
             settlement_contract: aiHealth.onchain.settlement_contract || "",
+            recommended_action:
+              aiMissing.length > 0
+                ? "Load the missing AI onchain gateway configuration so policy-bounded settlement can submit onchain."
+                : "",
           }
         : null,
       intelligence: aiHealth?.intelligence

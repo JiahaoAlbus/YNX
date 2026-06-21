@@ -333,8 +333,49 @@ function buildExecutionBacklog(bridge, aiRuntime) {
   return items;
 }
 
+function buildConfigurationChecklist(status, labels) {
+  const entries = [];
+  for (const [key, label] of Object.entries(labels || {})) {
+    if (!(key in (status || {}))) continue;
+    entries.push({
+      key,
+      label,
+      configured: Boolean(status[key]),
+    });
+  }
+  return entries;
+}
+
+function summarizeConfigurationChecklist(items) {
+  const checklist = Array.isArray(items) ? items : [];
+  return {
+    configured: checklist.filter((item) => item.configured).length,
+    total: checklist.length,
+    items: checklist,
+  };
+}
+
 function buildHeadlineMetrics(bridge, aiRuntime, lastIndexed, latestSeen) {
   const summary = bridge?.route_readiness?.summary || {};
+  const bridgeConfig = summarizeConfigurationChecklist(
+    buildConfigurationChecklist(bridge?.onchain?.configuration_status, {
+      rpc_configured: "YNX bridge RPC",
+      relayer_configured: "YNX relayer key",
+      remote_signer_configured: "Remote signer address",
+      attester_configured: "Attester key",
+      source_relayer_configured: "Source EVM signer",
+      btc_testnet_release_signer_configured: "BTC testnet release signer",
+      tron_shasta_release_signer_configured: "TRON Shasta release signer",
+    }),
+  );
+  const aiConfig = summarizeConfigurationChecklist(
+    buildConfigurationChecklist(aiRuntime?.onchain?.configuration_status, {
+      enabled_flag_present: "AI onchain enabled flag",
+      rpc_configured: "AI onchain RPC",
+      signer_configured: "AI onchain signer",
+      settlement_contract_configured: "AI settlement contract",
+    }),
+  );
   return {
     routes_total: Number(summary.routes || 0),
     routes_full_loop_tested: Number(summary.full_loop_tested || 0),
@@ -342,8 +383,12 @@ function buildHeadlineMetrics(bridge, aiRuntime, lastIndexed, latestSeen) {
     routes_deposit_tested: Number(summary.deposit_tested || 0),
     routes_mapped_only: Number(summary.mapped_route_only || 0),
     bridge_blocked_routes: Number(bridge?.route_readiness?.blockers?.total_routes_with_blockers || 0),
+    bridge_configured_checks: bridgeConfig.configured,
+    bridge_total_checks: bridgeConfig.total,
     ai_onchain_ready: Boolean(aiRuntime?.onchain?.ready),
     ai_onchain_missing_requirements: aiRuntime?.onchain?.missing_requirements || [],
+    ai_configured_checks: aiConfig.configured,
+    ai_total_checks: aiConfig.total,
     last_indexed: Number(lastIndexed || 0),
     latest_seen: Number(latestSeen || 0),
   };
@@ -358,10 +403,29 @@ function buildReadinessScorecard(bridge, aiRuntime) {
     bridge: {
       deposit_tested: { completed: depositTested, total: routes },
       automatic_ready: { completed: automaticReady, total: routes },
+      configuration: summarizeConfigurationChecklist(
+        buildConfigurationChecklist(bridge?.onchain?.configuration_status, {
+          rpc_configured: "YNX bridge RPC",
+          relayer_configured: "YNX relayer key",
+          remote_signer_configured: "Remote signer address",
+          attester_configured: "Attester key",
+          source_relayer_configured: "Source EVM signer",
+          btc_testnet_release_signer_configured: "BTC testnet release signer",
+          tron_shasta_release_signer_configured: "TRON Shasta release signer",
+        }),
+      ),
     },
     ai_runtime: {
       onchain_ready: Boolean(aiRuntime?.onchain?.ready),
       missing_requirements: aiRuntime?.onchain?.missing_requirements || [],
+      configuration: summarizeConfigurationChecklist(
+        buildConfigurationChecklist(aiRuntime?.onchain?.configuration_status, {
+          enabled_flag_present: "AI onchain enabled flag",
+          rpc_configured: "AI onchain RPC",
+          signer_configured: "AI onchain signer",
+          settlement_contract_configured: "AI settlement contract",
+        }),
+      ),
     },
   };
 }

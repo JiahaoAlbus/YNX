@@ -331,6 +331,40 @@ function buildExecutionBacklog(bridge, aiRuntime) {
   return items;
 }
 
+function buildHeadlineMetrics(bridge, aiRuntime, lastIndexed, latestSeen) {
+  const summary = bridge?.route_readiness?.summary || {};
+  return {
+    routes_total: Number(summary.routes || 0),
+    routes_full_loop_tested: Number(summary.full_loop_tested || 0),
+    routes_automatic_ready: Number(summary.automatic_loop_ready || 0),
+    routes_deposit_tested: Number(summary.deposit_tested || 0),
+    routes_mapped_only: Number(summary.mapped_route_only || 0),
+    bridge_blocked_routes: Number(bridge?.route_readiness?.blockers?.total_routes_with_blockers || 0),
+    ai_onchain_ready: Boolean(aiRuntime?.onchain?.ready),
+    ai_onchain_missing_requirements: aiRuntime?.onchain?.missing_requirements || [],
+    last_indexed: Number(lastIndexed || 0),
+    latest_seen: Number(latestSeen || 0),
+  };
+}
+
+function buildNextStepSummary(executionBacklog) {
+  const next = Array.isArray(executionBacklog) ? executionBacklog[0] : null;
+  if (!next) {
+    return {
+      priority: "none",
+      area: "",
+      action: "",
+      routes: [],
+    };
+  }
+  return {
+    priority: next.priority || "medium",
+    area: next.area || "",
+    action: next.action || "",
+    routes: next.routes || [],
+  };
+}
+
 function txHashFromBase64(base64) {
   const bytes = Buffer.from(base64, "base64");
   const hash = crypto.createHash("sha256").update(bytes).digest("hex").toUpperCase();
@@ -763,6 +797,8 @@ const server = http.createServer(async (req, res) => {
     const bridge = await loadBridgeOverview();
     const ai_runtime = await loadAiOverview();
     const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
+    const headline_metrics = buildHeadlineMetrics(bridge, ai_runtime, state.last_height || 0, latestSeenHeight || 0);
+    const next_step = buildNextStepSummary(execution_backlog);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -849,6 +885,8 @@ const server = http.createServer(async (req, res) => {
       bridge,
       ai_runtime,
       execution_backlog,
+      headline_metrics,
+      next_step,
     });
   }
 

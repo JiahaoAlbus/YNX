@@ -275,4 +275,8 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.ai_runtime.intelligence.model, "qwen2.5:1.5b");
   assert.equal(overview.execution_backlog[0].area, "bridge");
   assert.equal(overview.execution_backlog.at(-1).area, "ai_runtime");
+  assert.equal(overview.headline_metrics.routes_deposit_tested, 4);
+  assert.equal(overview.headline_metrics.ai_onchain_ready, false);
+  assert.equal(overview.next_step.area, "bridge");
+  assert.equal(overview.next_step.priority, "high");
 });

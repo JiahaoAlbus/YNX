@@ -168,6 +168,24 @@ function startMockRpcServer(port) {
       }));
     }
 
+    if (url.pathname === "/ai/health") {
+      return res.end(JSON.stringify({
+        ok: true,
+        intelligence: {
+          enabled: true,
+          llm_configured: true,
+          llm_provider: "ollama",
+          model: "qwen2.5:1.5b",
+        },
+        onchain: {
+          enabled: false,
+          ready: false,
+          missing_requirements: ["onchain_disabled", "onchain_private_key_required"],
+          settlement_contract: "0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf",
+        },
+      }));
+    }
+
     res.statusCode = 404;
     return res.end(JSON.stringify({ error: "not_found" }));
   });
@@ -220,6 +238,8 @@ test("supports validator detail and unified search", async (t) => {
       INDEXER_DATA_DIR: dataDir,
       YNX_PUBLIC_RPC: `http://127.0.0.1:${rpcPort}`,
       YNX_PUBLIC_BRIDGE_HEALTH: `http://127.0.0.1:${rpcPort}/bridge/health`,
+      YNX_PUBLIC_AI_GATEWAY: `http://127.0.0.1:${rpcPort}/ai`,
+      YNX_PUBLIC_AI_HEALTH: `http://127.0.0.1:${rpcPort}/ai/health`,
     },
     `http://127.0.0.1:${indexerPort}/health`,
   );
@@ -250,4 +270,6 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.bridge.route_readiness.actions[0].blocker_class, "service_config_missing");
   assert.equal(overview.bridge.route_readiness.actions[0].routes.length, 2);
   assert.equal(overview.bridge.route_readiness.actions[0].priority, "high");
+  assert.equal(overview.ai_runtime.onchain.missing_requirements[0], "onchain_disabled");
+  assert.equal(overview.ai_runtime.intelligence.model, "qwen2.5:1.5b");
 });

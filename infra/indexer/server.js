@@ -78,8 +78,11 @@ const YNX_PUBLIC_AI_GATEWAY = process.env.YNX_PUBLIC_AI_GATEWAY || process.env.Y
 const YNX_PUBLIC_WEB4_HUB = process.env.YNX_PUBLIC_WEB4_HUB || process.env.YNX_WEB4_HUB || "http://127.0.0.1:38091";
 const YNX_PUBLIC_BRIDGE_HEALTH =
   process.env.YNX_PUBLIC_BRIDGE_HEALTH || `${YNX_PUBLIC_RPC.replace(/\/$/, "")}/bridge/health`;
+const YNX_PUBLIC_AI_HEALTH = process.env.YNX_PUBLIC_AI_HEALTH || `${YNX_PUBLIC_AI_GATEWAY.replace(/\/$/, "")}/health`;
 const YNX_BRIDGE_OVERVIEW_TIMEOUT_MS = envNumber("YNX_BRIDGE_OVERVIEW_TIMEOUT_MS", 2000);
 const YNX_BRIDGE_OVERVIEW_CACHE_MS = envNumber("YNX_BRIDGE_OVERVIEW_CACHE_MS", 30000);
+const YNX_AI_OVERVIEW_TIMEOUT_MS = envNumber("YNX_AI_OVERVIEW_TIMEOUT_MS", 2000);
+const YNX_AI_OVERVIEW_CACHE_MS = envNumber("YNX_AI_OVERVIEW_CACHE_MS", 30000);
 const YNX_QUERY_REST = process.env.INDEXER_YNX_REST || YNX_PUBLIC_REST;
 const YNX_SEEDS = process.env.YNX_SEEDS || "";
 const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
@@ -233,6 +236,64 @@ async function loadBridgeOverview() {
         ok: false,
         summary: null,
       },
+    };
+  }
+}
+
+async function loadAiOverview() {
+  const now = Date.now();
+  if (
+    loadAiOverview.cache &&
+    loadAiOverview.cache.expiresAt > now &&
+    loadAiOverview.cache.value
+  ) {
+    return loadAiOverview.cache.value;
+  }
+  try {
+    const aiHealth = await httpJsonRequest(YNX_PUBLIC_AI_HEALTH, YNX_AI_OVERVIEW_TIMEOUT_MS);
+    const value = {
+      ok: aiHealth?.ok !== false,
+      health_url: YNX_PUBLIC_AI_HEALTH,
+      onchain: aiHealth?.onchain
+        ? {
+            enabled: aiHealth.onchain.enabled !== false,
+            ready: aiHealth.onchain.ready !== false,
+            missing_requirements: aiHealth.onchain.missing_requirements || [],
+            settlement_contract: aiHealth.onchain.settlement_contract || "",
+          }
+        : null,
+      intelligence: aiHealth?.intelligence
+        ? {
+            enabled: aiHealth.intelligence.enabled !== false,
+            llm_configured: aiHealth.intelligence.llm_configured !== false,
+            llm_provider: aiHealth.intelligence.llm_provider || "",
+            model: aiHealth.intelligence.model || "",
+          }
+        : null,
+    };
+    loadAiOverview.cache = {
+      value,
+      expiresAt: now + YNX_AI_OVERVIEW_CACHE_MS,
+    };
+    return value;
+  } catch (err) {
+    if (loadAiOverview.cache?.value) {
+      return {
+        ...loadAiOverview.cache.value,
+        ok: false,
+        stale: true,
+        error: "ai_health_stale_cache",
+        detail: err.message,
+        cached_at: new Date(loadAiOverview.cache.expiresAt - YNX_AI_OVERVIEW_CACHE_MS).toISOString(),
+      };
+    }
+    return {
+      ok: false,
+      health_url: YNX_PUBLIC_AI_HEALTH,
+      error: "ai_health_unavailable",
+      detail: err.message,
+      onchain: null,
+      intelligence: null,
     };
   }
 }
@@ -667,6 +728,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/ynx/overview") {
     const bridge = await loadBridgeOverview();
+    const ai_runtime = await loadAiOverview();
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -751,6 +813,7 @@ const server = http.createServer(async (req, res) => {
         ],
       },
       bridge,
+      ai_runtime,
     });
   }
 

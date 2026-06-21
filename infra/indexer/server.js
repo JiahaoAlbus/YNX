@@ -321,13 +321,14 @@ async function loadAiOverview() {
   }
 }
 
-function buildPublicOperations(validatorSnapshot, bridge) {
+function buildPublicOperations(validatorSnapshot, bridge, publicPeers = 0) {
   const summary = bridge?.route_readiness?.summary || {};
   const items = bridge?.route_readiness?.items || [];
   const routeTotal = Number(summary.routes || 0);
   const bondedCount = Number(validatorSnapshot?.total || 0);
   const signedCount = Number(validatorSnapshot?.signed_count || 0);
   const minValidators = 4;
+  const minPublicPeers = 2;
   const depositTested = Number(summary.deposit_tested || 0);
   const releaseObserved = Number(summary.release_evidence_observed || 0);
   const automaticReady = Number(summary.automatic_loop_ready || 0);
@@ -356,6 +357,8 @@ function buildPublicOperations(validatorSnapshot, bridge) {
       recommended_action: item.recommended_action || "",
     }));
   return {
+    updated_at: new Date().toISOString(),
+    chain_id: chainId,
     title: "The shortest live proof board",
     validator: {
       bonded_count: bondedCount,
@@ -363,6 +366,12 @@ function buildPublicOperations(validatorSnapshot, bridge) {
       unjailed_count: bondedCount,
       indexer_total: bondedCount,
       min_validators: minValidators,
+      public_peers: publicPeers,
+      min_public_peers: minPublicPeers,
+      validator_gate_pass: bondedCount >= minValidators,
+      peer_gate_pass: publicPeers >= minPublicPeers,
+      overall_gate_pass: bondedCount >= minValidators && publicPeers >= minPublicPeers,
+      validators: [],
     },
     routes: {
       total: routeTotal,
@@ -398,6 +407,7 @@ function buildPublicOperations(validatorSnapshot, bridge) {
             : "Checking automatic release and watcher coverage",
       },
     ],
+    errors: [],
   };
 }
 
@@ -922,6 +932,17 @@ async function fetchValidatorsSnapshot() {
   };
 }
 
+async function fetchPublicPeerCount() {
+  try {
+    const netInfo = await rpcRequest("/net_info");
+    const raw = netInfo?.result?.n_peers ?? netInfo?.n_peers ?? 0;
+    const count = Number(raw);
+    return Number.isFinite(count) ? count : 0;
+  } catch {
+    return 0;
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
@@ -978,11 +999,12 @@ const server = http.createServer(async (req, res) => {
     const bridge = await loadBridgeOverview();
     const ai_runtime = await loadAiOverview();
     const validator_snapshot = await fetchValidatorsSnapshot();
+    const public_peer_count = await fetchPublicPeerCount();
     const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
     const headline_metrics = buildHeadlineMetrics(bridge, ai_runtime, state.last_height || 0, latestSeenHeight || 0);
     const next_step = buildNextStepSummary(execution_backlog);
     const readiness_scorecard = buildReadinessScorecard(bridge, ai_runtime);
-    const public_operations = buildPublicOperations(validator_snapshot, bridge);
+    const public_operations = buildPublicOperations(validator_snapshot, bridge, public_peer_count);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -1074,6 +1096,16 @@ const server = http.createServer(async (req, res) => {
       headline_metrics,
       next_step,
       readiness_scorecard,
+    });
+  }
+
+  if (url.pathname === "/ynx/public-operations") {
+    const bridge = await loadBridgeOverview();
+    const validator_snapshot = await fetchValidatorsSnapshot();
+    const public_peer_count = await fetchPublicPeerCount();
+    return json(res, 200, {
+      ok: true,
+      ...buildPublicOperations(validator_snapshot, bridge, public_peer_count),
     });
   }
 

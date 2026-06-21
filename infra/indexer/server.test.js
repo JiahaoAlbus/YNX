@@ -28,6 +28,14 @@ function startMockRpcServer(port) {
       }));
     }
 
+    if (url.pathname === "/net_info") {
+      return res.end(JSON.stringify({
+        result: {
+          n_peers: "2",
+        },
+      }));
+    }
+
     if (url.pathname === "/validators") {
       return res.end(JSON.stringify({
         result: {
@@ -312,8 +320,11 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.headline_metrics.ai_configured_checks, 2);
   assert.equal(overview.headline_metrics.ai_total_checks, 4);
   assert.equal(overview.public_operations.title, "The shortest live proof board");
+  assert.equal(overview.public_operations.chain_id, "ynx_9102-1");
   assert.equal(overview.public_operations.validator.bonded_count, 1);
   assert.equal(overview.public_operations.validator.signed_count, 1);
+  assert.equal(overview.public_operations.validator.public_peers, 2);
+  assert.equal(overview.public_operations.validator.peer_gate_pass, true);
   assert.equal(overview.public_operations.routes.deposit_tested, 4);
   assert.equal(overview.public_operations.routes.release_observed, 5);
   assert.equal(overview.public_operations.routes.deposit_watchers_live, 1);
@@ -334,4 +345,11 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.readiness_scorecard.ai_runtime.configuration.configured, 2);
   assert.equal(overview.readiness_scorecard.ai_runtime.configuration.total, 4);
   assert.equal(overview.readiness_scorecard.ai_runtime.configuration.items.find((item) => item.key === "signer_configured").configured, false);
+
+  const publicOps = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/ynx/public-operations`), 200);
+  assert.equal(publicOps.ok, true);
+  assert.equal(publicOps.title, "The shortest live proof board");
+  assert.equal(publicOps.validator.public_peers, 2);
+  assert.equal(publicOps.routes.deposit_tested, 4);
+  assert.equal(publicOps.cards[2].value, "5/5");
 });

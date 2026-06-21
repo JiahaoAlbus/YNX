@@ -192,6 +192,22 @@ async function loadBridgeOverview() {
         summary: routeReadiness?.summary || null,
         blockers: routeReadiness?.blockers || null,
         requirements: routeReadiness?.requirements || null,
+        items: Array.isArray(routeReadiness?.items)
+          ? routeReadiness.items.map((item) => ({
+              routeId: item.routeId || "",
+              displayName: item.displayName || item.routeId || "",
+              phase: item.phase || "",
+              automatic_loop_ready: item.automatic_loop_ready === true,
+              blockers: item.blockers || [],
+              required_configuration: item.required_configuration || [],
+              recommended_action: item.recommended_action || "",
+              source_live: item?.source?.live_check === true,
+              evidence: {
+                minted_deposits: Number(item?.evidence?.minted_deposits || 0),
+                released_withdrawals: Number(item?.evidence?.released_withdrawals || 0),
+              },
+            }))
+          : [],
         actions: Array.isArray(routeReadiness?.actions)
           ? routeReadiness.actions.map((item) => ({
               blocker_class: item.blocker_class,
@@ -303,6 +319,83 @@ async function loadAiOverview() {
       intelligence: null,
     };
   }
+}
+
+function buildPublicOperations(validatorSnapshot, bridge) {
+  const summary = bridge?.route_readiness?.summary || {};
+  const items = bridge?.route_readiness?.items || [];
+  const routeTotal = Number(summary.routes || 0);
+  const bondedCount = Number(validatorSnapshot?.total || 0);
+  const signedCount = Number(validatorSnapshot?.signed_count || 0);
+  const minValidators = 4;
+  const depositTested = Number(summary.deposit_tested || 0);
+  const releaseObserved = Number(summary.release_evidence_observed || 0);
+  const automaticReady = Number(summary.automatic_loop_ready || 0);
+  const depositWatchersLive = items.filter((item) => item?.source_live === true).length;
+  const blockers = items
+    .filter((item) => Array.isArray(item?.blockers) && item.blockers.length > 0)
+    .map((item) => ({
+      routeId: item.routeId || "",
+      displayName: item.displayName || item.routeId || "",
+      depositStatus:
+        item.phase === "deposit_tested" || item.phase === "full_loop_tested"
+          ? "deposit tested"
+          : item.phase === "deposit_ready" || item.source_live
+            ? "watcher live"
+            : "waiting for deposit proof",
+      releaseStatus: item.automatic_loop_ready
+        ? "automatic ready"
+        : Number(item?.evidence?.released_withdrawals || 0) > 0
+          ? "release proof observed"
+          : "waiting for release automation",
+      blockers: item.blockers || [],
+      required_configuration: item.required_configuration || [],
+      recommended_action: item.recommended_action || "",
+    }));
+  return {
+    title: "The shortest live proof board",
+    validator: {
+      bonded_count: bondedCount,
+      signed_count: signedCount,
+      unjailed_count: bondedCount,
+      indexer_total: bondedCount,
+      min_validators: minValidators,
+    },
+    routes: {
+      total: routeTotal,
+      deposit_tested: depositTested,
+      release_observed: releaseObserved,
+      deposit_watchers_live: depositWatchersLive,
+      automatic_loop_ready: automaticReady,
+      blockers,
+    },
+    cards: [
+      {
+        key: "bonded_validators",
+        label: "Bonded validators",
+        value: `${bondedCount}/${minValidators}`,
+        detail: `${bondedCount} bonded visible, ${signedCount}/${Math.max(bondedCount, 1)} signed on the latest indexed block`,
+      },
+      {
+        key: "routes_with_deposit_proof",
+        label: "Routes with deposit proof",
+        value: routeTotal > 0 ? `${depositTested}/${routeTotal}` : "—/—",
+        detail:
+          routeTotal > 0
+            ? `${depositTested}/${routeTotal} routes already show deposit-tested evidence on the public bridge`
+            : "Checking public bridge route evidence",
+      },
+      {
+        key: "routes_with_release_proof",
+        label: "Routes with any release proof",
+        value: routeTotal > 0 ? `${releaseObserved}/${routeTotal}` : "—/—",
+        detail:
+          routeTotal > 0
+            ? `${automaticReady}/${routeTotal} routes are fully automatic today; ${depositWatchersLive}/${routeTotal} already have live deposit watchers. This proof bucket can include manual operator-marked release evidence.`
+            : "Checking automatic release and watcher coverage",
+      },
+    ],
+  };
 }
 
 function buildExecutionBacklog(bridge, aiRuntime) {
@@ -881,10 +974,12 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/ynx/overview") {
     const bridge = await loadBridgeOverview();
     const ai_runtime = await loadAiOverview();
+    const validator_snapshot = await fetchValidatorsSnapshot();
     const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
     const headline_metrics = buildHeadlineMetrics(bridge, ai_runtime, state.last_height || 0, latestSeenHeight || 0);
     const next_step = buildNextStepSummary(execution_backlog);
     const readiness_scorecard = buildReadinessScorecard(bridge, ai_runtime);
+    const public_operations = buildPublicOperations(validator_snapshot, bridge);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -970,6 +1065,8 @@ const server = http.createServer(async (req, res) => {
       },
       bridge,
       ai_runtime,
+      public_operations,
+      validator_snapshot,
       execution_backlog,
       headline_metrics,
       next_step,

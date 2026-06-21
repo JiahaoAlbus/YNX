@@ -162,12 +162,24 @@ function startMockRpcServer(port) {
           items: [
             {
               routeId: "eth-sepolia-eth",
+              displayName: "Sepolia ETH",
+              phase: "deposit_tested",
+              blockers: ["release_pending_signer"],
+              source: { live_check: true },
+              automatic_loop_ready: false,
+              evidence: { minted_deposits: 1, released_withdrawals: 1 },
               blocker_class: "service_config_missing",
               required_configuration: ["BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
               recommended_action: "Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ethereum-sepolia release for eth-sepolia-eth.",
             },
             {
               routeId: "bnb-testnet-bnb",
+              displayName: "BSC Testnet BNB",
+              phase: "mapped_route_only",
+              blockers: ["source_lockbox_unconfigured"],
+              source: { live_check: false },
+              automatic_loop_ready: false,
+              evidence: { minted_deposits: 0, released_withdrawals: 1 },
               blocker_class: "contract_deployment_missing",
               required_configuration: ["source lockbox deployment", "lockboxAddress", "BRIDGE_SOURCE_EVM_PRIVATE_KEY"],
               recommended_action: "Deploy bsc-testnet source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for bnb-testnet-bnb.",
@@ -280,6 +292,7 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.bridge.ok, true);
   assert.equal(overview.bridge.route_readiness.summary.deposit_tested, 4);
   assert.equal(overview.bridge.route_readiness.summary.automatic_loop_ready, 2);
+  assert.equal(Array.isArray(overview.bridge.route_readiness.items), true);
   assert.equal(overview.bridge.onchain.configuration_status.source_relayer_configured, false);
   assert.equal(overview.bridge.onchain.gateway_signer_set.signers[0], "0xSignerA");
   assert.equal(overview.bridge.route_readiness.actions.length, 2);
@@ -298,6 +311,17 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.headline_metrics.ai_onchain_ready, false);
   assert.equal(overview.headline_metrics.ai_configured_checks, 2);
   assert.equal(overview.headline_metrics.ai_total_checks, 4);
+  assert.equal(overview.public_operations.title, "The shortest live proof board");
+  assert.equal(overview.public_operations.validator.bonded_count, 1);
+  assert.equal(overview.public_operations.validator.signed_count, 1);
+  assert.equal(overview.public_operations.routes.deposit_tested, 4);
+  assert.equal(overview.public_operations.routes.release_observed, 5);
+  assert.equal(overview.public_operations.routes.deposit_watchers_live, 1);
+  assert.equal(overview.public_operations.cards[1].label, "Routes with deposit proof");
+  assert.equal(overview.public_operations.cards[1].value, "4/5");
+  assert.equal(overview.public_operations.cards[2].label, "Routes with any release proof");
+  assert.equal(overview.public_operations.routes.blockers.some((item) => item.routeId === "bnb-testnet-bnb"), true);
+  assert.equal(overview.public_operations.routes.blockers.find((item) => item.routeId === "bnb-testnet-bnb").required_configuration.includes("lockboxAddress"), true);
   assert.equal(overview.next_step.area, "bridge");
   assert.equal(overview.next_step.priority, "high");
   assert.equal(overview.next_step.blocker_class, "service_config_missing");

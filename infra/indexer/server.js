@@ -298,6 +298,34 @@ async function loadAiOverview() {
   }
 }
 
+function buildExecutionBacklog(bridge, aiRuntime) {
+  const items = [];
+  for (const action of bridge?.route_readiness?.actions || []) {
+    items.push({
+      area: "bridge",
+      priority: action.priority || "medium",
+      blocker_class: action.blocker_class || "configuration_gap",
+      required_configuration: action.required_configuration || [],
+      routes: action.routes || [],
+      action: action.recommended_action || "",
+    });
+  }
+  const aiMissing = aiRuntime?.onchain?.missing_requirements || [];
+  if (aiMissing.length > 0) {
+    items.push({
+      area: "ai_runtime",
+      priority: aiMissing.includes("onchain_private_key_required") ? "high" : "medium",
+      blocker_class: "service_config_missing",
+      required_configuration: aiMissing,
+      routes: [],
+      action: "Enable AI onchain settlement by loading the missing AI onchain configuration on the gateway service.",
+    });
+  }
+  const order = { high: 0, medium: 1, low: 2 };
+  items.sort((a, b) => (order[a.priority] ?? 9) - (order[b.priority] ?? 9));
+  return items;
+}
+
 function txHashFromBase64(base64) {
   const bytes = Buffer.from(base64, "base64");
   const hash = crypto.createHash("sha256").update(bytes).digest("hex").toUpperCase();
@@ -729,6 +757,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/ynx/overview") {
     const bridge = await loadBridgeOverview();
     const ai_runtime = await loadAiOverview();
+    const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -814,6 +843,7 @@ const server = http.createServer(async (req, res) => {
       },
       bridge,
       ai_runtime,
+      execution_backlog,
     });
   }
 

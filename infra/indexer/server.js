@@ -347,6 +347,23 @@ function buildHeadlineMetrics(bridge, aiRuntime, lastIndexed, latestSeen) {
   };
 }
 
+function buildReadinessScorecard(bridge, aiRuntime) {
+  const summary = bridge?.route_readiness?.summary || {};
+  const routes = Number(summary.routes || 0);
+  const depositTested = Number(summary.deposit_tested || 0);
+  const automaticReady = Number(summary.automatic_loop_ready || 0);
+  return {
+    bridge: {
+      deposit_tested: { completed: depositTested, total: routes },
+      automatic_ready: { completed: automaticReady, total: routes },
+    },
+    ai_runtime: {
+      onchain_ready: Boolean(aiRuntime?.onchain?.ready),
+      missing_requirements: aiRuntime?.onchain?.missing_requirements || [],
+    },
+  };
+}
+
 function buildNextStepSummary(executionBacklog) {
   const next = Array.isArray(executionBacklog) ? executionBacklog[0] : null;
   if (!next) {
@@ -799,6 +816,7 @@ const server = http.createServer(async (req, res) => {
     const execution_backlog = buildExecutionBacklog(bridge, ai_runtime);
     const headline_metrics = buildHeadlineMetrics(bridge, ai_runtime, state.last_height || 0, latestSeenHeight || 0);
     const next_step = buildNextStepSummary(execution_backlog);
+    const readiness_scorecard = buildReadinessScorecard(bridge, ai_runtime);
     return json(res, 200, {
       ok: true,
       chain_id: chainId,
@@ -887,6 +905,7 @@ const server = http.createServer(async (req, res) => {
       execution_backlog,
       headline_metrics,
       next_step,
+      readiness_scorecard,
     });
   }
 

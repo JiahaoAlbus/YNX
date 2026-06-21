@@ -279,4 +279,6 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.headline_metrics.ai_onchain_ready, false);
   assert.equal(overview.next_step.area, "bridge");
   assert.equal(overview.next_step.priority, "high");
+  assert.equal(overview.readiness_scorecard.bridge.deposit_tested.completed, 4);
+  assert.equal(overview.readiness_scorecard.ai_runtime.onchain_ready, false);
 });

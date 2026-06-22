@@ -335,10 +335,12 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.headline_metrics.ai_total_checks, 4);
   assert.equal(overview.public_operations.title, "The shortest live proof board");
   assert.equal(overview.public_operations.chain_id, "ynx_9102-1");
+  assert.equal(overview.public_operations.validator.chain_id, "ynx_9102-1");
   assert.equal(overview.public_operations.validator.bonded_count, 1);
   assert.equal(overview.public_operations.validator.signed_count, 1);
   assert.equal(overview.public_operations.validator.public_peers, 2);
   assert.equal(overview.public_operations.validator.peer_gate_pass, true);
+  assert.deepEqual(overview.public_operations.validator.errors, []);
   assert.equal(overview.public_operations.validator.validators[0].moniker, "Alpha");
   assert.equal(overview.public_operations.validator.validators[0].operator, "ynxvaloper1alpha");
   assert.equal(overview.public_operations.routes.deposit_tested, 4);
@@ -365,6 +367,7 @@ test("supports validator detail and unified search", async (t) => {
   const publicOps = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/ynx/public-operations`), 200);
   assert.equal(publicOps.ok, true);
   assert.equal(publicOps.title, "The shortest live proof board");
+  assert.equal(publicOps.validator.chain_id, "ynx_9102-1");
   assert.equal(publicOps.validator.public_peers, 2);
   assert.equal(publicOps.validator.validators[0].moniker, "Alpha");
   assert.equal(publicOps.routes.deposit_tested, 4);

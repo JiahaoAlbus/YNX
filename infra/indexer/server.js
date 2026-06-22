@@ -361,6 +361,8 @@ function buildPublicOperations(validatorSnapshot, validatorDetails, bridge, publ
     chain_id: chainId,
     title: "The shortest live proof board",
     validator: {
+      updated_at: new Date().toISOString(),
+      chain_id: chainId,
       bonded_count: bondedCount,
       signed_count: signedCount,
       unjailed_count: bondedCount,
@@ -372,6 +374,7 @@ function buildPublicOperations(validatorSnapshot, validatorDetails, bridge, publ
       peer_gate_pass: publicPeers >= minPublicPeers,
       overall_gate_pass: bondedCount >= minValidators && publicPeers >= minPublicPeers,
       validators: validatorDetails?.validators || [],
+      errors: validatorDetails?.errors || [],
     },
     routes: {
       total: routeTotal,

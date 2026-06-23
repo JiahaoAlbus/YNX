@@ -198,6 +198,48 @@ async function runSearch() {
         <div>Index: ${escapeHtml(t.index)}</div>
         <div>Code: ${escapeHtml(t.code)}</div>
         <div>Gas: ${escapeHtml(t.gas_used)}/${escapeHtml(t.gas_wanted)}</div>`;
+      return;
+    }
+    if (result.kind === "trace_address") {
+      const trace = result.trace;
+      const balances = (trace.balances || [])
+        .map((item) => {
+          const lots = (item.lots || [])
+            .map((lot) => `${lot.lot_id}: ${lot.amount} (${(lot.risk_basis_points / 100).toFixed(2)}% tainted)`)
+            .join("<br/>");
+          return `<div><strong>${escapeHtml(item.denom)}</strong> total ${escapeHtml(item.total_amount)} · tainted ${escapeHtml(item.tainted_amount)} · risk ${(item.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
+        })
+        .join("");
+      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}`;
+      return;
+    }
+    if (result.kind === "trace_lot") {
+      const lot = result.trace.lot;
+      const holders = (lot.holders || [])
+        .map((holder) => `${holder.address}: ${holder.amount} (${(holder.risk_basis_points / 100).toFixed(2)}% tainted)`)
+        .join("<br/>");
+      const parents = Array.isArray(lot.parent_lot_ids) && lot.parent_lot_ids.length ? lot.parent_lot_ids.join(", ") : "origin";
+      searchResult.innerHTML = `<div><strong>Lot ${escapeHtml(lot.lot_id)}</strong></div>
+        <div>Denom: ${escapeHtml(lot.denom)}</div>
+        <div>Root origin: ${escapeHtml(lot.root_origin_lot_id)}</div>
+        <div>Parents: ${escapeHtml(parents)}</div>
+        <div>Current amount: ${escapeHtml(lot.current_amount)}</div>
+        <div>Tainted amount: ${escapeHtml(lot.tainted_amount)}</div>
+        <div>Risk: ${(lot.risk_basis_points / 100).toFixed(2)}%</div>
+        <div class="muted">${holders}</div>`;
+      return;
+    }
+    if (result.kind === "trace_tx") {
+      const tx = result.trace.tx_effect;
+      const flows = (tx.flows || [])
+        .map((flow) => {
+          const lots = (flow.transferred_lots || [])
+            .map((lot) => `${lot.source_lot_id} → ${lot.child_lot_id}: ${lot.amount}`)
+            .join("<br/>");
+          return `<div><strong>${escapeHtml(flow.from)} → ${escapeHtml(flow.to)}</strong> ${escapeHtml(flow.amount)} ${escapeHtml(flow.denom)} · tainted ${escapeHtml(flow.tainted_amount)} · risk ${(flow.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
+        })
+        .join("");
+      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}`;
     }
   } catch (err) {
     searchResult.textContent = `Not found: ${err.message}`;
@@ -212,7 +254,7 @@ async function init() {
     indexerBase = "";
   }
   if (searchHint) {
-    searchHint.textContent = "Search block height, tx hash, or validator consensus address";
+    searchHint.textContent = "Search block height, tx hash, validator address, chain address, or lot_xxxxxxxx";
   }
   await refreshAll();
 }

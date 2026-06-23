@@ -375,3 +375,165 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(typeof publicOps.routes.blockers.find((item) => item.routeId === "bnb-testnet-bnb").signer_diagnostics, "object");
   assert.equal(publicOps.cards[2].value, "5/5");
 });
+
+test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
+  const rpcPort = await getFreePort();
+  const indexerPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-indexer-trace-");
+  const rpc = await startMockRpcServer(rpcPort);
+  t.after(() => new Promise((resolve) => rpc.close(resolve)));
+
+  await writeJson(path.join(dataDir, "state.json"), {
+    last_height: 100,
+    blocks_indexed: 5,
+    txs_indexed: 5,
+  });
+  await fs.writeFile(
+    path.join(dataDir, "blocks.jsonl"),
+    [
+      { height: 10, hash: "BLOCK10", time: "2026-06-20T00:00:00Z", proposer: "P", num_txs: 1, app_hash: "A" },
+      { height: 11, hash: "BLOCK11", time: "2026-06-20T00:01:00Z", proposer: "P", num_txs: 1, app_hash: "A" },
+      { height: 12, hash: "BLOCK12", time: "2026-06-20T00:02:00Z", proposer: "P", num_txs: 1, app_hash: "A" },
+      { height: 13, hash: "BLOCK13", time: "2026-06-20T00:03:00Z", proposer: "P", num_txs: 1, app_hash: "A" },
+      { height: 14, hash: "BLOCK14", time: "2026-06-20T00:04:00Z", proposer: "P", num_txs: 1, app_hash: "A" },
+    ].map((item) => JSON.stringify(item)).join("\n") + "\n",
+  );
+  const txFixtures = [
+    {
+      hash: "0xTRACE01",
+      height: 10,
+      index: 0,
+      code: 0,
+      gas_wanted: 1,
+      gas_used: 1,
+      messages: [
+        {
+          "@type": "/cosmos.bank.v1beta1.MsgSend",
+          from_address: "ynx1risky",
+          to_address: "ynx1alice",
+          amount: [{ denom: "anyxt", amount: "100" }],
+        },
+      ],
+      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1risky", to: "ynx1alice", denom: "anyxt", amount: "100" }],
+    },
+    {
+      hash: "0xTRACE02",
+      height: 11,
+      index: 0,
+      code: 0,
+      gas_wanted: 1,
+      gas_used: 1,
+      messages: [
+        {
+          "@type": "/cosmos.bank.v1beta1.MsgSend",
+          from_address: "ynx1alice",
+          to_address: "ynx1bob",
+          amount: [{ denom: "anyxt", amount: "40" }],
+        },
+      ],
+      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1alice", to: "ynx1bob", denom: "anyxt", amount: "40" }],
+    },
+    {
+      hash: "0xTRACE03",
+      height: 12,
+      index: 0,
+      code: 0,
+      gas_wanted: 1,
+      gas_used: 1,
+      messages: [
+        {
+          "@type": "/cosmos.bank.v1beta1.MsgSend",
+          from_address: "ynx1alice",
+          to_address: "ynx1carol",
+          amount: [{ denom: "anyxt", amount: "60" }],
+        },
+      ],
+      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1alice", to: "ynx1carol", denom: "anyxt", amount: "60" }],
+    },
+    {
+      hash: "0xTRACE04",
+      height: 13,
+      index: 0,
+      code: 0,
+      gas_wanted: 1,
+      gas_used: 1,
+      messages: [
+        {
+          "@type": "/cosmos.bank.v1beta1.MsgSend",
+          from_address: "ynx1clean",
+          to_address: "ynx1bob",
+          amount: [{ denom: "anyxt", amount: "60" }],
+        },
+      ],
+      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1clean", to: "ynx1bob", denom: "anyxt", amount: "60" }],
+    },
+    {
+      hash: "0xTRACE05",
+      height: 14,
+      index: 0,
+      code: 0,
+      gas_wanted: 1,
+      gas_used: 1,
+      messages: [
+        {
+          "@type": "/cosmos.bank.v1beta1.MsgSend",
+          from_address: "ynx1bob",
+          to_address: "ynx1dave",
+          amount: [{ denom: "anyxt", amount: "50" }],
+        },
+      ],
+      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1bob", to: "ynx1dave", denom: "anyxt", amount: "50" }],
+    },
+  ];
+  await fs.writeFile(path.join(dataDir, "txs.jsonl"), txFixtures.map((item) => JSON.stringify(item)).join("\n") + "\n");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      INDEXER_RPC: `http://127.0.0.1:${rpcPort}`,
+      INDEXER_PORT: String(indexerPort),
+      INDEXER_DATA_DIR: dataDir,
+      INDEXER_TRACE_DENOMS: "anyxt",
+      INDEXER_TRACE_RISKY_ADDRESSES: "ynx1risky",
+      YNX_PUBLIC_RPC: `http://127.0.0.1:${rpcPort}`,
+      YNX_PUBLIC_REST: `http://127.0.0.1:${rpcPort}`,
+      YNX_PUBLIC_BRIDGE_HEALTH: `http://127.0.0.1:${rpcPort}/bridge/health`,
+      YNX_PUBLIC_AI_GATEWAY: `http://127.0.0.1:${rpcPort}/ai`,
+      YNX_PUBLIC_AI_HEALTH: `http://127.0.0.1:${rpcPort}/ai/health`,
+    },
+    `http://127.0.0.1:${indexerPort}/health`,
+  );
+  t.after(async () => server.stop());
+
+  const bob = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/addresses/ynx1bob?denom=anyxt`), 200);
+  assert.equal(bob.address, "ynx1bob");
+  assert.equal(bob.balances[0].total_amount, "50");
+  assert.equal(bob.balances[0].tainted_amount, "20");
+  assert.equal(bob.balances[0].risk_basis_points, 4000);
+
+  const dave = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/addresses/ynx1dave?denom=anyxt`), 200);
+  assert.equal(dave.balances[0].total_amount, "50");
+  assert.equal(dave.balances[0].tainted_amount, "20");
+  assert.equal(dave.balances[0].risk_basis_points, 4000);
+  assert.equal(dave.balances[0].lots.length, 2);
+
+  const txTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/txs/0xTRACE05`), 200);
+  assert.equal(txTrace.tx_effect.flows[0].amount, "50");
+  assert.equal(txTrace.tx_effect.flows[0].tainted_amount, "20");
+  assert.equal(txTrace.tx_effect.flows[0].risk_basis_points, 4000);
+  assert.equal(txTrace.tx_effect.flows[0].transferred_lots.length, 2);
+
+  const lotId = dave.balances[0].lots[0].lot_id;
+  const lotTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/lots/${lotId}`), 200);
+  assert.equal(lotTrace.lot.owner, "ynx1dave");
+  assert.equal(Array.isArray(lotTrace.lot.parent_lot_ids), true);
+
+  const searchAddress = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=ynx1dave`), 200);
+  assert.equal(searchAddress.kind, "trace_address");
+
+  const searchLot = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=${lotId}`), 200);
+  assert.equal(searchLot.kind, "trace_lot");
+
+  const searchTx = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=0xTRACE05`), 200);
+  assert.equal(searchTx.kind, "trace_tx");
+});

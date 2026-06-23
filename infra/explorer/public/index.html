@@ -17,11 +17,19 @@
 
     <section class="card">
       <div class="search">
-        <input id="searchInput" type="text" placeholder="Search by block height or tx hash" />
+        <input id="searchInput" type="text" placeholder="Search by block, tx hash, address, or lot id" />
         <button id="searchBtn" class="btn">Search</button>
       </div>
       <div id="searchHint" class="muted search-hint"></div>
       <div id="searchResult" class="result"></div>
+    </section>
+
+    <section class="card">
+      <h2>Asset Traceability</h2>
+      <p class="muted">
+        Search an address to see lot composition and taint ratio, a lot id to inspect ancestry, or a tx hash to inspect
+        pro-rata lineage splits.
+      </p>
     </section>
 
     <section class="grid">

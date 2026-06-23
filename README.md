@@ -96,6 +96,47 @@ Docs:
 - ZH: [`docs/zh/公开资产状态.md`](docs/zh/公开资产状态.md)
 - ZH: [`docs/zh/极速优先多资产交易计划.md`](docs/zh/极速优先多资产交易计划.md)
 
+### 4.1) Asset traceability layer (V2 trace layer)
+
+YNX V2 now supports a traceability layer for selected fungible assets without
+changing the base coin model into a UTXO or NFT-style system.
+
+- model: `lot lineage + pro-rata taint tracking`
+- purpose: fraud tracing, source reconstruction, taint inheritance, and
+  operator-side risk review
+- scope: selected denoms only, configured by the indexer
+
+Runtime controls:
+
+- `INDEXER_TRACE_DENOMS=anyxt,YUSD.test`
+- `INDEXER_TRACE_RISKY_ADDRESSES=ynx1...,ynx1...`
+
+State persistence:
+
+- persisted at `infra/indexer/data/lineage-state.json` or the configured
+  `INDEXER_DATA_DIR`
+
+Public trace APIs:
+
+```bash
+curl -s https://indexer.ynxweb4.com/trace/addresses/ynx1... | jq
+curl -s https://indexer.ynxweb4.com/trace/lots/lot_00000001 | jq
+curl -s https://indexer.ynxweb4.com/trace/txs/0x... | jq
+```
+
+What the trace layer gives you:
+
+- address-level lot composition
+- tainted vs clean balance ratios
+- parent/child lot ancestry after splits
+- transaction-level pro-rata lineage fragments
+
+What it does not claim yet:
+
+- protocol-native per-unit serial numbers for every smallest coin fragment
+- a BTC-style UTXO base asset model
+- full bridge deposit-origin trace coverage for every route by default
+
 ### 4.5) Funding / grant / compliance packet
 
 Current funding boundary:

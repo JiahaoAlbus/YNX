@@ -51,6 +51,7 @@ const DATA_DIR = process.env.INDEXER_DATA_DIR || path.resolve(__dirname, "data")
 const STATE_PATH = path.join(DATA_DIR, "state.json");
 const BLOCKS_PATH = path.join(DATA_DIR, "blocks.jsonl");
 const TXS_PATH = path.join(DATA_DIR, "txs.jsonl");
+const LINEAGE_STATE_PATH = path.join(DATA_DIR, "lineage-state.json");
 const YNX_FOUNDER_ADDRESS = process.env.YNX_FOUNDER_ADDRESS || "";
 const YNX_TREASURY_ADDRESS = process.env.YNX_TREASURY_ADDRESS || "";
 const YNX_TEAM_BENEFICIARY = process.env.YNX_TEAM_BENEFICIARY || "";
@@ -89,6 +90,16 @@ const YNX_PERSISTENT_PEERS = process.env.YNX_PERSISTENT_PEERS || "";
 const YNX_BINARY_VERSION = process.env.YNX_BINARY_VERSION || "local-build";
 const YNX_RELEASE_URL = process.env.YNX_RELEASE_URL || "";
 const YNX_DESCRIPTOR_URL = process.env.YNX_DESCRIPTOR_URL || "";
+const INDEXER_TRACE_DENOMS = (process.env.INDEXER_TRACE_DENOMS || `${YNX_DENOM},YUSD.test`)
+  .split(",")
+  .map((item) => String(item || "").trim())
+  .filter(Boolean);
+const INDEXER_TRACE_RISKY_ADDRESSES = new Set(
+  (process.env.INDEXER_TRACE_RISKY_ADDRESSES || "")
+    .split(",")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean),
+);
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -156,6 +167,16 @@ function httpJsonRequest(target, timeoutMs = 8000) {
     req.on("error", reject);
     req.end();
   });
+}
+
+async function fetchDecodedTxsByHeight(height) {
+  const base = YNX_QUERY_REST.replace(/\/$/, "");
+  try {
+    const response = await httpJsonRequest(`${base}/cosmos/tx/v1beta1/txs/block/${height}`, 8000);
+    return Array.isArray(response?.txs) ? response.txs : [];
+  } catch {
+    return [];
+  }
 }
 
 function appendJsonLine(filePath, payload) {
@@ -572,6 +593,15 @@ const txsCache = [];
 let latestSeenHeight = 0;
 let indexing = false;
 let chainId = "";
+let lineageState = {
+  version: 1,
+  next_lot_seq: 1,
+  lots: {},
+  holdings: {},
+  tx_effects: {},
+  address_book: {},
+  updated_at: "",
+};
 let systemContractsMeta = {};
 let governanceMeta = {
   founder_address: YNX_FOUNDER_ADDRESS,
@@ -585,6 +615,439 @@ let governanceMeta = {
   no_base_fee: YNX_NO_BASE_FEE === undefined ? null : YNX_NO_BASE_FEE === "1" || YNX_NO_BASE_FEE === "true",
   base_fee: "",
 };
+
+loadPersistedLineage();
+loadRecentJsonlIntoCache(BLOCKS_PATH, blocksCache, INDEXER_CACHE_SIZE);
+loadRecentJsonlIntoCache(TXS_PATH, txsCache, INDEXER_TX_CACHE_SIZE);
+
+function safeJsonParse(value, fallback) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function loadPersistedLineage() {
+  if (!fs.existsSync(LINEAGE_STATE_PATH)) return;
+  const parsed = safeJsonParse(fs.readFileSync(LINEAGE_STATE_PATH, "utf8"), null);
+  if (!parsed || typeof parsed !== "object") return;
+  lineageState = {
+    version: parsed.version || 1,
+    next_lot_seq: Number(parsed.next_lot_seq || 1),
+    lots: parsed.lots || {},
+    holdings: parsed.holdings || {},
+    tx_effects: parsed.tx_effects || {},
+    address_book: parsed.address_book || {},
+    updated_at: parsed.updated_at || "",
+  };
+}
+
+function persistLineage() {
+  lineageState.updated_at = new Date().toISOString();
+  fs.writeFileSync(LINEAGE_STATE_PATH, JSON.stringify(lineageState, null, 2));
+}
+
+function loadRecentJsonlIntoCache(filePath, cache, limit) {
+  if (!fs.existsSync(filePath)) return;
+  const lines = fs
+    .readFileSync(filePath, "utf8")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .slice(-limit);
+  for (const line of lines) {
+    const parsed = safeJsonParse(line, null);
+    if (parsed) cache.push(parsed);
+  }
+}
+
+function normalizeAddress(value) {
+  return String(value || "").trim();
+}
+
+function normalizeDenom(value) {
+  return String(value || "").trim();
+}
+
+function amountToBigInt(value) {
+  try {
+    const raw = String(value ?? "0").trim();
+    if (!raw) return 0n;
+    return BigInt(raw);
+  } catch {
+    return 0n;
+  }
+}
+
+function bigIntToString(value) {
+  return amountToBigInt(value).toString();
+}
+
+function riskScoreFromParts(total, tainted) {
+  const totalValue = amountToBigInt(total);
+  if (totalValue <= 0n) return 0;
+  const taintedValue = amountToBigInt(tainted);
+  return Number((taintedValue * 10000n) / totalValue);
+}
+
+function ensureAddressBookEntry(address) {
+  const normalized = normalizeAddress(address);
+  if (!normalized) return;
+  if (!lineageState.address_book[normalized]) {
+    lineageState.address_book[normalized] = { first_seen_at: new Date().toISOString() };
+  }
+}
+
+function ensureHoldingBucket(address, denom) {
+  const normalizedAddress = normalizeAddress(address);
+  const normalizedDenom = normalizeDenom(denom);
+  if (!lineageState.holdings[normalizedAddress]) lineageState.holdings[normalizedAddress] = {};
+  if (!Array.isArray(lineageState.holdings[normalizedAddress][normalizedDenom])) {
+    lineageState.holdings[normalizedAddress][normalizedDenom] = [];
+  }
+  ensureAddressBookEntry(normalizedAddress);
+  return lineageState.holdings[normalizedAddress][normalizedDenom];
+}
+
+function getHoldingEntries(address, denom) {
+  return ensureHoldingBucket(address, denom);
+}
+
+function totalHoldingAmount(entries) {
+  return entries.reduce((sum, entry) => sum + amountToBigInt(entry.amount), 0n);
+}
+
+function createLot({
+  denom,
+  amount,
+  owner,
+  created_by_tx,
+  height,
+  source_type,
+  source_ref,
+  origin_ref,
+  root_origin_lot_id,
+  parent_lot_ids,
+  risk_basis_points,
+  tainted_amount,
+}) {
+  const lotId = `lot_${String(lineageState.next_lot_seq++).padStart(8, "0")}`;
+  const normalizedOwner = normalizeAddress(owner);
+  const normalizedDenom = normalizeDenom(denom);
+  const amountString = bigIntToString(amount);
+  const taintedString = bigIntToString(tainted_amount ?? amountToBigInt(amount) * BigInt(Number(risk_basis_points || 0)) / 10000n);
+  lineageState.lots[lotId] = {
+    lot_id: lotId,
+    denom: normalizedDenom,
+    amount: amountString,
+    current_amount: amountString,
+    owner: normalizedOwner,
+    created_by_tx: created_by_tx || "",
+    height: Number(height || 0),
+    source_type: source_type || "unknown",
+    source_ref: source_ref || "",
+    origin_ref: origin_ref || source_ref || "",
+    root_origin_lot_id: root_origin_lot_id || lotId,
+    parent_lot_ids: Array.isArray(parent_lot_ids) ? parent_lot_ids.filter(Boolean) : [],
+    risk_basis_points: Number(risk_basis_points || 0),
+    tainted_amount: taintedString,
+    created_at: new Date().toISOString(),
+  };
+  const bucket = ensureHoldingBucket(normalizedOwner, normalizedDenom);
+  bucket.push({
+    lot_id: lotId,
+    amount: amountString,
+    tainted_amount: taintedString,
+    risk_basis_points: Number(risk_basis_points || 0),
+    root_origin_lot_id: root_origin_lot_id || lotId,
+  });
+  return lineageState.lots[lotId];
+}
+
+function bootstrapSourceLiquidity(address, denom, amount, context = {}) {
+  const required = amountToBigInt(amount);
+  if (required <= 0n) return;
+  const risky = INDEXER_TRACE_RISKY_ADDRESSES.has(normalizeAddress(address));
+  createLot({
+    denom,
+    amount: required,
+    owner: address,
+    created_by_tx: context.created_by_tx || "",
+    height: context.height || 0,
+    source_type: context.source_type || "opening_balance_inferred",
+    source_ref: context.source_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
+    origin_ref: context.origin_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
+    risk_basis_points: Number(context.risk_basis_points ?? (risky ? 10000 : 0)),
+    tainted_amount: context.tainted_amount || (risky ? bigIntToString(required) : "0"),
+  });
+}
+
+function allocateConsumption(entries, amount) {
+  const target = amountToBigInt(amount);
+  const total = totalHoldingAmount(entries);
+  if (target <= 0n || total <= 0n) return [];
+  let remaining = target;
+  const plan = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    const available = amountToBigInt(entry.amount);
+    if (available <= 0n) continue;
+    let take = 0n;
+    if (index === entries.length - 1) {
+      take = remaining < available ? remaining : available;
+    } else {
+      take = (target * available) / total;
+      if (take > available) take = available;
+      if (take > remaining) take = remaining;
+    }
+    if (take > 0n) {
+      plan.push({ entry, amount: take });
+      remaining -= take;
+    }
+  }
+  for (const entry of entries) {
+    if (remaining <= 0n) break;
+    const already = plan.find((item) => item.entry === entry);
+    const used = already ? already.amount : 0n;
+    const available = amountToBigInt(entry.amount) - used;
+    if (available <= 0n) continue;
+    const extra = remaining < available ? remaining : available;
+    if (extra <= 0n) continue;
+    if (already) {
+      already.amount += extra;
+    } else {
+      plan.push({ entry, amount: extra });
+    }
+    remaining -= extra;
+  }
+  return plan.filter((item) => item.amount > 0n);
+}
+
+function transferWithLineage({ from, to, denom, amount, txHash, height, message_index }) {
+  const normalizedFrom = normalizeAddress(from);
+  const normalizedTo = normalizeAddress(to);
+  const normalizedDenom = normalizeDenom(denom);
+  const target = amountToBigInt(amount);
+  if (!normalizedFrom || !normalizedTo || !normalizedDenom || target <= 0n) return null;
+  const senderEntries = getHoldingEntries(normalizedFrom, normalizedDenom);
+  const senderTotal = totalHoldingAmount(senderEntries);
+  if (senderTotal < target) {
+    bootstrapSourceLiquidity(normalizedFrom, normalizedDenom, target - senderTotal, {
+      created_by_tx: txHash,
+      height,
+      source_ref: `${normalizedFrom}:${normalizedDenom}`,
+    });
+  }
+  const refreshedEntries = getHoldingEntries(normalizedFrom, normalizedDenom);
+  const plan = allocateConsumption(refreshedEntries, target);
+  const transferredLots = [];
+  for (const item of plan) {
+    const sourceEntry = item.entry;
+    const sourceLot = lineageState.lots[sourceEntry.lot_id];
+    if (!sourceLot) continue;
+    const moved = item.amount;
+    const sourceAmount = amountToBigInt(sourceEntry.amount);
+    const sourceTainted = amountToBigInt(sourceEntry.tainted_amount);
+    const movedTainted = sourceAmount > 0n ? (sourceTainted * moved) / sourceAmount : 0n;
+    sourceEntry.amount = bigIntToString(sourceAmount - moved);
+    sourceEntry.tainted_amount = bigIntToString(sourceTainted - movedTainted);
+    sourceEntry.risk_basis_points = riskScoreFromParts(sourceEntry.amount, sourceEntry.tainted_amount);
+    sourceLot.current_amount = sourceEntry.amount;
+    sourceLot.tainted_amount = sourceEntry.tainted_amount;
+    sourceLot.risk_basis_points = sourceEntry.risk_basis_points;
+
+    const childLot = createLot({
+      denom: normalizedDenom,
+      amount: moved,
+      owner: normalizedTo,
+      created_by_tx: txHash,
+      height,
+      source_type: "transfer_fragment",
+      source_ref: `${txHash}:${message_index}`,
+      origin_ref: sourceLot.origin_ref || sourceLot.source_ref || sourceLot.lot_id,
+      root_origin_lot_id: sourceLot.root_origin_lot_id || sourceLot.lot_id,
+      parent_lot_ids: [sourceLot.lot_id],
+      risk_basis_points: riskScoreFromParts(moved, movedTainted),
+      tainted_amount: movedTainted,
+    });
+    transferredLots.push({
+      source_lot_id: sourceLot.lot_id,
+      child_lot_id: childLot.lot_id,
+      amount: bigIntToString(moved),
+      tainted_amount: bigIntToString(movedTainted),
+      risk_basis_points: childLot.risk_basis_points,
+      root_origin_lot_id: childLot.root_origin_lot_id,
+    });
+  }
+  lineageState.holdings[normalizedFrom][normalizedDenom] = refreshedEntries.filter((entry) => amountToBigInt(entry.amount) > 0n);
+  return {
+    from: normalizedFrom,
+    to: normalizedTo,
+    denom: normalizedDenom,
+    amount: bigIntToString(target),
+    tainted_amount: bigIntToString(transferredLots.reduce((sum, item) => sum + amountToBigInt(item.tainted_amount), 0n)),
+    risk_basis_points: riskScoreFromParts(
+      target,
+      transferredLots.reduce((sum, item) => sum + amountToBigInt(item.tainted_amount), 0n),
+    ),
+    transferred_lots: transferredLots,
+  };
+}
+
+function extractSendFlowsFromMessages(messages) {
+  const flows = [];
+  for (let index = 0; index < (Array.isArray(messages) ? messages.length : 0); index += 1) {
+    const message = messages[index] || {};
+    if (message["@type"] !== "/cosmos.bank.v1beta1.MsgSend") continue;
+    const amounts = Array.isArray(message.amount) ? message.amount : [];
+    for (const coin of amounts) {
+      const denom = normalizeDenom(coin?.denom);
+      if (!INDEXER_TRACE_DENOMS.includes(denom)) continue;
+      const amount = amountToBigInt(coin?.amount);
+      if (amount <= 0n) continue;
+      flows.push({
+        message_index: index,
+        type: "bank_send",
+        from: normalizeAddress(message.from_address),
+        to: normalizeAddress(message.to_address),
+        denom,
+        amount: bigIntToString(amount),
+      });
+    }
+  }
+  return flows;
+}
+
+function rebuildLineageFromTxCache() {
+  lineageState = {
+    version: 1,
+    next_lot_seq: 1,
+    lots: {},
+    holdings: {},
+    tx_effects: {},
+    address_book: {},
+    updated_at: "",
+  };
+  const records = [];
+  if (fs.existsSync(TXS_PATH)) {
+    const lines = fs.readFileSync(TXS_PATH, "utf8").split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      const parsed = safeJsonParse(line, null);
+      if (parsed) records.push(parsed);
+    }
+  }
+  records.sort((a, b) => (Number(a.height || 0) - Number(b.height || 0)) || (Number(a.index || 0) - Number(b.index || 0)));
+  for (const record of records) {
+    const flows = Array.isArray(record.send_flows) ? record.send_flows : extractSendFlowsFromMessages(record.messages);
+    if (!flows.length) continue;
+    const effects = [];
+    for (const flow of flows) {
+      const effect = transferWithLineage({
+        from: flow.from,
+        to: flow.to,
+        denom: flow.denom,
+        amount: flow.amount,
+        txHash: record.hash,
+        height: record.height,
+        message_index: flow.message_index,
+      });
+      if (effect) effects.push(effect);
+    }
+    if (effects.length > 0) {
+      lineageState.tx_effects[record.hash] = {
+        hash: record.hash,
+        height: Number(record.height || 0),
+        index: Number(record.index || 0),
+        flows: effects,
+      };
+    }
+  }
+  persistLineage();
+}
+
+function summarizeAddressTrace(address, denomFilter = "") {
+  const normalizedAddress = normalizeAddress(address);
+  const addressHoldings = lineageState.holdings[normalizedAddress] || {};
+  const denoms = denomFilter ? [normalizeDenom(denomFilter)] : Object.keys(addressHoldings);
+  const balances = [];
+  for (const denom of denoms) {
+    const entries = (addressHoldings[denom] || []).filter((entry) => amountToBigInt(entry.amount) > 0n);
+    if (!entries.length) continue;
+    const total = entries.reduce((sum, entry) => sum + amountToBigInt(entry.amount), 0n);
+    const tainted = entries.reduce((sum, entry) => sum + amountToBigInt(entry.tainted_amount), 0n);
+    balances.push({
+      denom,
+      total_amount: bigIntToString(total),
+      tainted_amount: bigIntToString(tainted),
+      risk_basis_points: riskScoreFromParts(total, tainted),
+      lots: entries.map((entry) => {
+        const lot = lineageState.lots[entry.lot_id] || {};
+        return {
+          lot_id: entry.lot_id,
+          amount: entry.amount,
+          tainted_amount: entry.tainted_amount,
+          risk_basis_points: entry.risk_basis_points,
+          root_origin_lot_id: entry.root_origin_lot_id,
+          origin_ref: lot.origin_ref || "",
+          source_type: lot.source_type || "",
+          parent_lot_ids: lot.parent_lot_ids || [],
+        };
+      }),
+    });
+  }
+  return {
+    ok: balances.length > 0,
+    address: normalizedAddress,
+    balances,
+    updated_at: lineageState.updated_at || null,
+  };
+}
+
+function summarizeLotTrace(lotId) {
+  const lot = lineageState.lots[lotId];
+  if (!lot) return null;
+  const holders = [];
+  for (const [address, byDenom] of Object.entries(lineageState.holdings || {})) {
+    const entries = byDenom?.[lot.denom] || [];
+    const match = entries.find((entry) => entry.lot_id === lotId);
+    if (match && amountToBigInt(match.amount) > 0n) {
+      holders.push({
+        address,
+        amount: match.amount,
+        tainted_amount: match.tainted_amount,
+        risk_basis_points: match.risk_basis_points,
+      });
+    }
+  }
+  const children = Object.values(lineageState.lots)
+    .filter((item) => Array.isArray(item.parent_lot_ids) && item.parent_lot_ids.includes(lotId))
+    .map((item) => ({
+      lot_id: item.lot_id,
+      owner: item.owner,
+      amount: item.amount,
+      current_amount: item.current_amount,
+      created_by_tx: item.created_by_tx,
+      risk_basis_points: item.risk_basis_points,
+    }));
+  return {
+    ok: true,
+    lot: {
+      ...lot,
+      holders,
+      children,
+    },
+    updated_at: lineageState.updated_at || null,
+  };
+}
+
+function findTxEffectByHash(hash) {
+  const target = String(hash || "").trim().toUpperCase();
+  if (!target) return null;
+  for (const [storedHash, effect] of Object.entries(lineageState.tx_effects || {})) {
+    if (String(storedHash || "").trim().toUpperCase() === target) return effect;
+  }
+  return null;
+}
 
 async function initChainId() {
   try {
@@ -652,6 +1115,7 @@ async function initGovernanceMeta() {
 async function indexHeight(height) {
   const blockData = await rpcRequest(`/block?height=${height}`);
   const resultData = await rpcRequest(`/block_results?height=${height}`);
+  const decodedTxs = await fetchDecodedTxsByHeight(height);
 
   const block = blockData?.result?.block;
   if (!block) {
@@ -683,6 +1147,9 @@ async function indexHeight(height) {
     const base64 = txs[i];
     const hash = txHashFromBase64(base64);
     const result = txResults[i] || {};
+    const decoded = decodedTxs[i] || {};
+    const messages = Array.isArray(decoded?.body?.messages) ? decoded.body.messages : [];
+    const sendFlows = extractSendFlowsFromMessages(messages);
     const txRecord = {
       hash,
       height: record.height,
@@ -690,6 +1157,8 @@ async function indexHeight(height) {
       code: result.code || 0,
       gas_wanted: result.gas_wanted || 0,
       gas_used: result.gas_used || 0,
+      messages,
+      send_flows: sendFlows,
     };
     txRecords.push(txRecord);
     appendJsonLine(TXS_PATH, txRecord);
@@ -700,12 +1169,36 @@ async function indexHeight(height) {
     if (txsCache.length > INDEXER_TX_CACHE_SIZE) {
       txsCache.shift();
     }
+    if (Array.isArray(txRecord.send_flows) && txRecord.send_flows.length > 0) {
+      const effects = [];
+      for (const flow of txRecord.send_flows) {
+        const effect = transferWithLineage({
+          from: flow.from,
+          to: flow.to,
+          denom: flow.denom,
+          amount: flow.amount,
+          txHash: txRecord.hash,
+          height: txRecord.height,
+          message_index: flow.message_index,
+        });
+        if (effect) effects.push(effect);
+      }
+      if (effects.length > 0) {
+        lineageState.tx_effects[txRecord.hash] = {
+          hash: txRecord.hash,
+          height: txRecord.height,
+          index: txRecord.index,
+          flows: effects,
+        };
+      }
+    }
   }
 
   state.last_height = record.height;
   state.blocks_indexed += 1;
   state.txs_indexed += txRecords.length;
   saveState();
+  persistLineage();
 }
 
 async function poll() {
@@ -862,6 +1355,17 @@ async function searchIndex(query) {
 
   const validator = await findValidatorByAddress(raw);
   if (validator) return { ok: true, kind: "validator", ...validator };
+
+  const addressTrace = summarizeAddressTrace(raw);
+  if (addressTrace.ok) return { ok: true, kind: "trace_address", trace: addressTrace };
+
+  const lotTrace = summarizeLotTrace(raw);
+  if (lotTrace) return { ok: true, kind: "trace_lot", trace: lotTrace };
+
+  const txEffect = findTxEffectByHash(raw);
+  if (txEffect) {
+    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect } };
+  }
 
   const tx = await findTxByHash(raw);
   if (tx) return { ok: true, kind: "tx", tx };
@@ -1250,6 +1754,33 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, tx });
   }
 
+  if (url.pathname.startsWith("/trace/addresses/")) {
+    const address = decodeURIComponent(url.pathname.split("/")[3] || "");
+    if (!address) {
+      return json(res, 400, { ok: false, error: "invalid_address" });
+    }
+    const summary = summarizeAddressTrace(address, url.searchParams.get("denom") || "");
+    return json(res, summary.ok ? 200 : 404, summary.ok ? summary : { ...summary, error: "not_found" });
+  }
+
+  if (url.pathname.startsWith("/trace/lots/")) {
+    const lotId = decodeURIComponent(url.pathname.split("/")[3] || "");
+    if (!lotId) {
+      return json(res, 400, { ok: false, error: "invalid_lot_id" });
+    }
+    const summary = summarizeLotTrace(lotId);
+    return json(res, summary ? 200 : 404, summary || { ok: false, error: "not_found" });
+  }
+
+  if (url.pathname.startsWith("/trace/txs/")) {
+    const hash = decodeURIComponent(url.pathname.split("/")[3] || "");
+    if (!hash) {
+      return json(res, 400, { ok: false, error: "invalid_hash" });
+    }
+    const effect = findTxEffectByHash(hash);
+    return json(res, effect ? 200 : 404, effect ? { ok: true, tx_effect: effect, updated_at: lineageState.updated_at || null } : { ok: false, error: "not_found" });
+  }
+
   if (url.pathname === "/search") {
     const query = url.searchParams.get("q") || "";
     try {
@@ -1264,6 +1795,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 async function start() {
+  rebuildLineageFromTxCache();
   await initChainId();
   await initGovernanceMeta();
   server.listen(INDEXER_PORT, () => {

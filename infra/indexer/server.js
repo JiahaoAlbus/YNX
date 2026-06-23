@@ -201,6 +201,7 @@ async function loadBridgeOverview() {
               blockers: item.blockers || [],
               required_configuration: item.required_configuration || [],
               recommended_action: item.recommended_action || "",
+              signer_diagnostics: item.signer_diagnostics || null,
               source_live: item?.source?.live_check === true,
               evidence: {
                 minted_deposits: Number(item?.evidence?.minted_deposits || 0),
@@ -355,6 +356,7 @@ function buildPublicOperations(validatorSnapshot, validatorDetails, bridge, publ
       blockers: item.blockers || [],
       required_configuration: item.required_configuration || [],
       recommended_action: item.recommended_action || "",
+      signer_diagnostics: item.signer_diagnostics || null,
     }));
   return {
     updated_at: new Date().toISOString(),

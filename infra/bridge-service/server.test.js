@@ -91,6 +91,7 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(bsc.required_configuration.includes("source lockbox deployment"));
   assert.ok(bsc.required_configuration.includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY"));
   assert.match(bsc.recommended_action, /Deploy .* lockbox/i);
+  assert.equal(typeof bsc.signer_diagnostics, "object");
   assert.ok(health.route_readiness.actions.some((item) => item.blocker_class === "contract_deployment_missing"));
   assert.ok(health.route_readiness.actions.some((item) => item.priority === "high"));
   const sepoliaAction = health.route_readiness.actions.find((item) => item.routes.includes("eth-sepolia-eth"));
@@ -99,6 +100,8 @@ test("reports configured testnet routes and readiness in dry-run mode", async (t
   assert.ok(health.route_readiness.actions.some((item) => item.routes.includes("eth-sepolia-usdc")));
   const btc = health.route_readiness.items.find((item) => item.routeId === "btc-testnet-btc");
   assert.ok(btc.required_configuration.includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER"));
+  const sepolia = health.route_readiness.items.find((item) => item.routeId === "eth-sepolia-eth");
+  assert.equal(typeof sepolia.signer_diagnostics, "object");
 
   const routes = assertJson(await requestJson(`http://127.0.0.1:${port}/bridge/routes`), 200);
   assert.equal(routes.items.length, 5);

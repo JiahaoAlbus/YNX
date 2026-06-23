@@ -244,6 +244,7 @@ const GATEWAY_ABI = [
 
 const SOURCE_LOCKBOX_ABI = [
   "event DepositLocked(bytes32 indexed depositId,address indexed depositor,address indexed recipient,bytes32 sourceAssetId,address asset,uint256 amount,uint64 sourceChainId,uint256 nonce)",
+  "function owner() view returns (address)",
   "function releaseNative(bytes32 releaseId,address recipient,uint256 amount)",
   "function releaseERC20(bytes32 releaseId,bytes32 sourceAssetId,address recipient,uint256 amount)",
   "function processedReleases(bytes32 releaseId) view returns (bool)",
@@ -459,6 +460,15 @@ function releaseAdapterStatus(route) {
     };
   }
   return { status: "release_unsupported", configured: false, automatic: false };
+}
+
+function sourceRelayerAddress() {
+  if (!BRIDGE_SOURCE_EVM_PRIVATE_KEY) return "";
+  try {
+    return new ethers.Wallet(BRIDGE_SOURCE_EVM_PRIVATE_KEY).address;
+  } catch {
+    return "";
+  }
 }
 
 function depositWatcherStatus(route, watcher) {
@@ -692,11 +702,22 @@ async function fetchGatewaySignerSet() {
 
 async function routeReadiness(route, options = {}) {
   const includeSource = Boolean(options.includeSource);
-  const [gatewayCheck, source] = await Promise.all([
+  const [gatewayCheck, source, lockboxOwner] = await Promise.all([
     verifyGatewayRoute(route).catch((error) => ({ routeId: route.routeId, ok: false, error: error.message || String(error) })),
     includeSource
       ? sourceStatus(route).catch((error) => ({ routeId: route.routeId, ok: false, error: error.message || String(error) }))
       : Promise.resolve({ routeId: route.routeId, configured: Boolean(route.rpc), live_check: false }),
+    route.sourceKind === "evm" && route.lockboxAddress
+      ? (async () => {
+          try {
+            const provider = new ethers.JsonRpcProvider(route.rpc);
+            const lockbox = new ethers.Contract(route.lockboxAddress, SOURCE_LOCKBOX_ABI, provider);
+            return normalizeAddress(await lockbox.owner());
+          } catch {
+            return "";
+          }
+        })()
+      : Promise.resolve(""),
   ]);
   const depositWatcher = state.watchers[route.routeId] || null;
   const withdrawalWatcher = state.withdrawal_watchers[route.routeId] || null;
@@ -753,6 +774,11 @@ async function routeReadiness(route, options = {}) {
   else if (hasLockbox && mintedDeposits > 0) phase = "deposit_tested";
   else if (hasLockbox && depositWatcherLive) phase = "deposit_ready";
   const requiredConfiguration = blockerRequirements(route, blockers);
+  const sourceRelayer = sourceRelayerAddress();
+  const signerMatchesLockboxOwner =
+    Boolean(lockboxOwner) &&
+    Boolean(sourceRelayer) &&
+    String(lockboxOwner).toLowerCase() === String(sourceRelayer).toLowerCase();
 
   return {
     routeId: route.routeId,
@@ -771,7 +797,15 @@ async function routeReadiness(route, options = {}) {
     blockers,
     blocker_class: blockerClass(blockers),
     required_configuration: requiredConfiguration,
-    recommended_action: recommendedAction(route, blockers, requiredConfiguration),
+    recommended_action: recommendedAction(route, blockers, requiredConfiguration, {
+      lockbox_owner: lockboxOwner,
+      source_relayer_address: sourceRelayer,
+    }),
+    signer_diagnostics: {
+      lockbox_owner: lockboxOwner,
+      source_relayer_address: sourceRelayer,
+      signer_matches_lockbox_owner: signerMatchesLockboxOwner,
+    },
     source,
     gateway: gatewayCheck,
     evidence: {
@@ -913,14 +947,16 @@ function blockerClass(blockers) {
   return "ready";
 }
 
-function recommendedAction(route, blockers, requirements) {
+function recommendedAction(route, blockers, requirements, diagnostics = {}) {
   if ((blockers || []).includes("source_lockbox_unconfigured")) {
     return (requirements || []).includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")
       ? `Deploy ${route.sourceNetwork} source lockbox, set lockboxAddress, and load BRIDGE_SOURCE_EVM_PRIVATE_KEY for ${route.routeId}.`
       : `Deploy ${route.sourceNetwork} source lockbox, then set lockboxAddress for ${route.routeId}.`;
   }
   if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_EVM_PRIVATE_KEY")) {
-    return `Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ${route.sourceNetwork} release for ${route.routeId}.`;
+    return diagnostics.lockbox_owner
+      ? `Load the ${diagnostics.lockbox_owner} source lockbox owner key into BRIDGE_SOURCE_EVM_PRIVATE_KEY to enable automatic ${route.sourceNetwork} release for ${route.routeId}.`
+      : `Load BRIDGE_SOURCE_EVM_PRIVATE_KEY on bridge service to enable automatic ${route.sourceNetwork} release for ${route.routeId}.`;
   }
   if ((blockers || []).includes("release_pending_signer") && (requirements || []).includes("BRIDGE_SOURCE_BTC_TESTNET_SIGNER")) {
     return `Configure BRIDGE_SOURCE_BTC_TESTNET_SIGNER to enable automatic release for ${route.routeId}.`;

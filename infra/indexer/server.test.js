@@ -351,6 +351,7 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(overview.public_operations.cards[2].label, "Routes with any release proof");
   assert.equal(overview.public_operations.routes.blockers.some((item) => item.routeId === "bnb-testnet-bnb"), true);
   assert.equal(overview.public_operations.routes.blockers.find((item) => item.routeId === "bnb-testnet-bnb").required_configuration.includes("lockboxAddress"), true);
+  assert.equal(typeof overview.public_operations.routes.blockers.find((item) => item.routeId === "bnb-testnet-bnb").signer_diagnostics, "object");
   assert.equal(overview.next_step.area, "bridge");
   assert.equal(overview.next_step.priority, "high");
   assert.equal(overview.next_step.blocker_class, "service_config_missing");
@@ -371,5 +372,6 @@ test("supports validator detail and unified search", async (t) => {
   assert.equal(publicOps.validator.public_peers, 2);
   assert.equal(publicOps.validator.validators[0].moniker, "Alpha");
   assert.equal(publicOps.routes.deposit_tested, 4);
+  assert.equal(typeof publicOps.routes.blockers.find((item) => item.routeId === "bnb-testnet-bnb").signer_diagnostics, "object");
   assert.equal(publicOps.cards[2].value, "5/5");
 });

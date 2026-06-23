@@ -90,10 +90,19 @@ The first structured case flow returns:
 - `case_id`
 - `subject`
 - `trace`
+- `taint_models`
 - `risk`
 - `evidence_chain`
 - `recommended_next_actions`
 - `guardrails`
+
+Current comparative taint output includes:
+
+- `poison`
+- `proRata`
+- `fifo`
+- `lifo`
+- `specificTrace`
 
 ## Suggested next build steps
 

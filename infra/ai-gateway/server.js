@@ -92,6 +92,16 @@ function toNumber(value, fallback = 0) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function amountToBigInt(value) {
+  try {
+    const raw = String(value ?? "0").trim();
+    if (!raw) return 0n;
+    return BigInt(raw);
+  } catch {
+    return 0n;
+  }
+}
+
 function uniqueStrings(items) {
   return [...new Set((Array.isArray(items) ? items : []).filter((item) => typeof item === "string" && item.trim()))];
 }
@@ -940,6 +950,79 @@ function buildTraceRisk(traceResult) {
   };
 }
 
+function lotsFromTraceResult(traceResult) {
+  if (!traceResult?.ok) return [];
+  if (traceResult.kind === "address") {
+    return (traceResult.data.balances || []).flatMap((balance) =>
+      (balance.lots || []).map((lot) => ({
+        ...lot,
+        denom: balance.denom,
+      })),
+    );
+  }
+  if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot || {};
+    return [
+      {
+        lot_id: lot.lot_id,
+        denom: lot.denom,
+        amount: lot.current_amount || lot.amount || "0",
+        tainted_amount: lot.tainted_amount || "0",
+        risk_basis_points: lot.risk_basis_points || 0,
+        root_origin_lot_id: lot.root_origin_lot_id || lot.lot_id,
+      },
+    ];
+  }
+  return (traceResult.data.tx_effect?.flows || []).flatMap((flow) =>
+    (flow.transferred_lots || []).map((lot) => ({
+      ...lot,
+      denom: flow.denom,
+      lot_id: lot.child_lot_id,
+      amount: lot.amount,
+    })),
+  );
+}
+
+function buildComparativeTaintModels(traceResult) {
+  const lots = lotsFromTraceResult(traceResult);
+  const total = lots.reduce((sum, lot) => sum + amountToBigInt(lot.amount), 0n);
+  const tainted = lots.reduce((sum, lot) => sum + amountToBigInt(lot.tainted_amount), 0n);
+  const taintedLots = lots.filter((lot) => amountToBigInt(lot.tainted_amount) > 0n);
+  const poison = tainted > 0n;
+  const sortedAsc = [...lots].sort((a, b) => String(a.lot_id || "").localeCompare(String(b.lot_id || "")));
+  const sortedDesc = [...sortedAsc].reverse();
+  return {
+    poison: {
+      tainted: poison,
+      risk: poison ? "critical" : "low",
+      matchedTaintedLots: taintedLots.map((lot) => lot.lot_id),
+    },
+    proRata: {
+      taintRatio: total > 0n ? Number(tainted * 10000n / total) / 10000 : 0,
+      taintedLots: taintedLots.map((lot) => ({
+        lot_id: lot.lot_id,
+        tainted_amount: lot.tainted_amount,
+      })),
+    },
+    fifo: {
+      matchedTaintedLots: sortedAsc.filter((lot) => amountToBigInt(lot.tainted_amount) > 0n).map((lot) => lot.lot_id),
+      note: "Earliest sorted lots are treated as spent/exposed first in this comparative view.",
+    },
+    lifo: {
+      matchedTaintedLots: sortedDesc.filter((lot) => amountToBigInt(lot.tainted_amount) > 0n).map((lot) => lot.lot_id),
+      note: "Latest sorted lots are treated as spent/exposed first in this comparative view.",
+    },
+    specificTrace: {
+      exactLineageAvailable: taintedLots.length > 0,
+      matchedLots: taintedLots.map((lot) => ({
+        lot_id: lot.lot_id,
+        root_origin_lot_id: lot.root_origin_lot_id,
+        tainted_amount: lot.tainted_amount,
+      })),
+    },
+  };
+}
+
 function buildTraceRecommendedActions(risk) {
   if (!risk || risk.score <= 0) return ["no action required"];
   if (risk.score >= 80) return ["manual review required", "escalate to compliance", "freeze internal account"];
@@ -951,6 +1034,7 @@ function buildTraceRecommendedActions(risk) {
 function createForensicsCase(body, traceResult, summary) {
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
+  const taint_models = buildComparativeTaintModels(traceResult);
   return {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
@@ -960,6 +1044,7 @@ function createForensicsCase(body, traceResult, summary) {
       end: body.endTime || "",
     },
     trace: traceResult.data,
+    taint_models,
     risk,
     evidence_chain,
     final_summary: summary,

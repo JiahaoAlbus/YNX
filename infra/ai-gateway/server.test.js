@@ -1160,6 +1160,11 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.subject, "ynx1victim");
   assert.equal(forensicCase.case.risk.score, 40);
   assert.equal(forensicCase.case.risk.severity, "medium");
+  assert.equal(forensicCase.case.taint_models.poison.tainted, true);
+  assert.equal(forensicCase.case.taint_models.proRata.taintRatio, 0.4);
+  assert.ok(Array.isArray(forensicCase.case.taint_models.fifo.matchedTaintedLots));
+  assert.ok(Array.isArray(forensicCase.case.taint_models.lifo.matchedTaintedLots));
+  assert.equal(forensicCase.case.taint_models.specificTrace.exactLineageAvailable, true);
   assert.ok(Array.isArray(forensicCase.case.evidence_chain));
   assert.ok(forensicCase.case.evidence_chain.length > 0);
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));

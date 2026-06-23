@@ -1137,6 +1137,120 @@ function buildSuspiciousPatterns(traceResult) {
   return patterns;
 }
 
+function inferEntityLabel(context, subject, traceResult) {
+  const raw = String(subject || "").trim();
+  if (!raw) return { entity_type: "unknown", confidence: 0.1, reasons: ["empty_subject"] };
+  if (traceResult?.kind === "address") {
+    const balanceLots = (traceResult.data.balances || []).flatMap((item) => item.lots || []);
+    const routeAssets = bridgeAssets(context).assets || [];
+    const matchedWrapped = routeAssets.filter(
+      (asset) => asset.routeId && balanceLots.some((lot) => normalizeSymbol(asset.symbol) === itemDenomLike(lot, itemDenomLike(asset, ""))),
+    );
+    if (matchedWrapped.length > 0) {
+      return {
+        entity_type: "bridge_exposed_account",
+        confidence: 0.82,
+        reasons: matchedWrapped.map((asset) => `holds traced wrapped route asset ${asset.symbol}`),
+      };
+    }
+    if (balanceLots.some((lot) => amountToBigInt(lot.tainted_amount) > 0n)) {
+      return {
+        entity_type: "taint_exposed_wallet",
+        confidence: 0.88,
+        reasons: ["wallet balance contains tainted traced lots"],
+      };
+    }
+    return {
+      entity_type: "wallet",
+      confidence: 0.65,
+      reasons: ["trace subject is an address with lot balances but no stronger attribution yet"],
+    };
+  }
+  if (traceResult?.kind === "lot") {
+    const lot = traceResult.data.lot || {};
+    return {
+      entity_type: amountToBigInt(lot.tainted_amount) > 0n ? "tainted_lot_fragment" : "lot_fragment",
+      confidence: 0.92,
+      reasons: [`lot lineage record for ${lot.denom || "asset"}`],
+    };
+  }
+  if (traceResult?.kind === "tx") {
+    return {
+      entity_type: "transaction",
+      confidence: 0.9,
+      reasons: ["trace subject is a transaction-level lineage split record"],
+    };
+  }
+  return { entity_type: "unknown", confidence: 0.2, reasons: ["no attribution rule matched"] };
+}
+
+function itemDenomLike(item, fallback = "") {
+  return normalizeSymbol(item?.denom || item?.symbol || fallback);
+}
+
+function buildAddressClusters(traceResult) {
+  if (!traceResult?.ok) return [];
+  if (traceResult.kind === "address") {
+    const address = traceResult.data.address;
+    const balances = traceResult.data.balances || [];
+    const roots = [...new Set(balances.flatMap((item) => (item.lots || []).map((lot) => lot.root_origin_lot_id).filter(Boolean)))];
+    if (roots.length === 0) return [];
+    return [
+      {
+        cluster_id: `cluster_${Buffer.from(`${address}:${roots.join(",")}`).toString("hex").slice(0, 16)}`,
+        addresses: [address],
+        reasons: [
+          {
+            type: "shared_root_origins",
+            detail: `Address balance is composed from ${roots.length} shared root origins`,
+          },
+        ],
+        confidence: roots.length >= 2 ? 0.78 : 0.62,
+        root_origin_lot_ids: roots,
+      },
+    ];
+  }
+  if (traceResult.kind === "tx") {
+    const tx = traceResult.data.tx_effect;
+    const addresses = [...new Set((tx.flows || []).flatMap((flow) => [flow.from, flow.to]).filter(Boolean))];
+    if (addresses.length < 2) return [];
+    return [
+      {
+        cluster_id: `cluster_${Buffer.from(`${tx.hash}:${addresses.join(",")}`).toString("hex").slice(0, 16)}`,
+        addresses,
+        reasons: [
+          {
+            type: "same_transaction_lineage",
+            detail: `Addresses co-appear in traced lineage transfer ${tx.hash}`,
+          },
+        ],
+        confidence: 0.71,
+        transaction_hashes: [tx.hash],
+      },
+    ];
+  }
+  if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot || {};
+    const addresses = [...new Set((lot.holders || []).map((holder) => holder.address).filter(Boolean))];
+    if (addresses.length === 0) return [];
+    return [
+      {
+        cluster_id: `cluster_${Buffer.from(`${lot.lot_id}:${addresses.join(",")}`).toString("hex").slice(0, 16)}`,
+        addresses,
+        reasons: [
+          {
+            type: "shared_lot_lineage",
+            detail: `Addresses are current holders of child fragments tied to lot ${lot.lot_id}`,
+          },
+        ],
+        confidence: 0.69,
+        root_origin_lot_ids: [lot.root_origin_lot_id || lot.lot_id],
+      },
+    ];
+  }
+  return [];
+}
+
 function buildTraceRecommendedActions(risk) {
   if (!risk || risk.score <= 0) return ["no action required"];
   if (risk.score >= 80) return ["manual review required", "escalate to compliance", "freeze internal account"];
@@ -1145,11 +1259,13 @@ function buildTraceRecommendedActions(risk) {
   return ["monitor account activity"];
 }
 
-function createForensicsCase(body, traceResult, summary) {
+function createForensicsCase(body, traceResult, summary, context) {
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
   const taint_models = buildComparativeTaintModels(traceResult);
   const suspicious_patterns = buildSuspiciousPatterns(traceResult);
+  const entity = inferEntityLabel(context || {}, body.target || body.address || body.lot_id || body.tx_hash || "", traceResult);
+  const clusters = buildAddressClusters(traceResult);
   return {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
@@ -1163,6 +1279,8 @@ function createForensicsCase(body, traceResult, summary) {
     risk,
     evidence_chain,
     suspicious_patterns,
+    entity_attribution: entity,
+    address_clusters: clusters,
     final_summary: summary,
     recommended_next_actions: buildTraceRecommendedActions(risk),
     guardrails: {
@@ -2487,7 +2605,7 @@ async function runAiAction(req, body, context) {
       return { status: traceResult.status || 404, payload: { ok: false, error: traceResult.error, action } };
     }
     const summary = deterministicTraceAnswer(traceResult, body);
-    const forensicCase = createForensicsCase(body, traceResult, summary);
+    const forensicCase = createForensicsCase(body, traceResult, summary, context);
     forensicCase.policy_id = auth.policy_id;
     state.forensic_cases.unshift(forensicCase);
     addAudit("action.forensics.case.created", {

@@ -94,6 +94,8 @@ The first structured case flow returns:
 - `risk`
 - `evidence_chain`
 - `suspicious_patterns`
+- `entity_attribution`
+- `address_clusters`
 - `recommended_next_actions`
 - `guardrails`
 

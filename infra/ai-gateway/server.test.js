@@ -1169,6 +1169,9 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.ok(forensicCase.case.evidence_chain.length > 0);
   assert.ok(Array.isArray(forensicCase.case.suspicious_patterns));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "mixed_exposure"));
+  assert.equal(forensicCase.case.entity_attribution.entity_type, "bridge_exposed_account");
+  assert.ok(Array.isArray(forensicCase.case.address_clusters));
+  assert.ok(forensicCase.case.address_clusters.length > 0);
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
 

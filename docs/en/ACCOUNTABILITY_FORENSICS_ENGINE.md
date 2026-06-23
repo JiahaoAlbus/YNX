@@ -60,6 +60,7 @@ Recommended enforcement flow:
 The AI gateway now supports:
 
 - `ai.trace.report`
+- `ai.forensics.case.create`
 
 This action is designed to be called with:
 
@@ -83,6 +84,16 @@ The response returns:
 - a human-readable summary
 - the raw trace payload
 - explicit guardrails showing this is observation-only
+
+The first structured case flow returns:
+
+- `case_id`
+- `subject`
+- `trace`
+- `risk`
+- `evidence_chain`
+- `recommended_next_actions`
+- `guardrails`
 
 ## Suggested next build steps
 

@@ -132,6 +132,7 @@ function normalizeState(loaded) {
       jobs: loaded,
       vaults: [],
       payments: [],
+      forensic_cases: [],
       audit_logs: [],
     };
   }
@@ -141,6 +142,7 @@ function normalizeState(loaded) {
     jobs: Array.isArray(source.jobs) ? source.jobs : [],
     vaults: Array.isArray(source.vaults) ? source.vaults : [],
     payments: Array.isArray(source.payments) ? source.payments : [],
+    forensic_cases: Array.isArray(source.forensic_cases) ? source.forensic_cases : [],
     audit_logs: Array.isArray(source.audit_logs) ? source.audit_logs : [],
   };
 }
@@ -256,6 +258,7 @@ const AI_AUDIT_LIMIT = parseInt(process.env.AI_AUDIT_LIMIT || "5000", 10);
 const AI_MAX_JOBS = parseInt(process.env.AI_MAX_JOBS || "200000", 10);
 const AI_MAX_VAULTS = parseInt(process.env.AI_MAX_VAULTS || "50000", 10);
 const AI_MAX_PAYMENTS = parseInt(process.env.AI_MAX_PAYMENTS || "200000", 10);
+const AI_MAX_CASES = parseInt(process.env.AI_MAX_CASES || "50000", 10);
 const AI_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.AI_PERSIST_DEBOUNCE_MS || "200", 10));
 const AI_ONCHAIN_ENABLED = process.env.AI_ONCHAIN_ENABLED === "1";
 const AI_ONCHAIN_RPC_URL = process.env.AI_ONCHAIN_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "";
@@ -308,6 +311,7 @@ let state = {
   jobs: [],
   vaults: [],
   payments: [],
+  forensic_cases: [],
   audit_logs: [],
 };
 
@@ -517,6 +521,7 @@ function trimStateForRetention() {
   if (AI_MAX_JOBS > 0 && state.jobs.length > AI_MAX_JOBS) state.jobs = state.jobs.slice(0, AI_MAX_JOBS);
   if (AI_MAX_VAULTS > 0 && state.vaults.length > AI_MAX_VAULTS) state.vaults = state.vaults.slice(0, AI_MAX_VAULTS);
   if (AI_MAX_PAYMENTS > 0 && state.payments.length > AI_MAX_PAYMENTS) state.payments = state.payments.slice(0, AI_MAX_PAYMENTS);
+  if (AI_MAX_CASES > 0 && state.forensic_cases.length > AI_MAX_CASES) state.forensic_cases = state.forensic_cases.slice(0, AI_MAX_CASES);
   if (AI_AUDIT_LIMIT > 0 && state.audit_logs.length > AI_AUDIT_LIMIT) state.audit_logs = state.audit_logs.slice(0, AI_AUDIT_LIMIT);
 }
 
@@ -687,6 +692,7 @@ function summarizeStats() {
     total_jobs: state.jobs.length,
     total_vaults: state.vaults.length,
     total_payments: state.payments.length,
+    total_forensic_cases: state.forensic_cases.length,
     by_status: byStatus,
   };
 }
@@ -836,6 +842,136 @@ function deterministicTraceAnswer(traceResult, body = {}) {
   return zh
     ? `交易 ${tx.hash} 的追踪摘要：\n${flows}\n这说明资金血缘如何拆分，并不代表任何人可未经授权私自转出。`
     : `Trace summary for tx ${tx.hash}:\n${flows}\nThis shows lineage splits only; it does not authorize anyone to privately move funds.`;
+}
+
+function classifySeverity(score) {
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 30) return "medium";
+  return "low";
+}
+
+function buildTraceEvidence(traceResult) {
+  if (!traceResult?.ok) return [];
+  if (traceResult.kind === "address") {
+    const trace = traceResult.data;
+    return (trace.balances || []).map((balance) => ({
+      claim: `Address ${trace.address} holds ${balance.denom} with traceable taint exposure`,
+      evidence: (balance.lots || []).map((lot) => ({
+        lot_id: lot.lot_id,
+        asset: balance.denom,
+        amount: lot.amount,
+        tainted_amount: lot.tainted_amount,
+        root_origin_lot_id: lot.root_origin_lot_id,
+        reason: "Current balance composition includes this traced lot fragment",
+      })),
+      confidence: 0.9,
+    }));
+  }
+  if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot;
+    return [
+      {
+        claim: `Lot ${lot.lot_id} preserves parent lineage and current holder evidence`,
+        evidence: [
+          {
+            lot_id: lot.lot_id,
+            asset: lot.denom,
+            amount: lot.current_amount,
+            tainted_amount: lot.tainted_amount,
+            parent_lot_ids: lot.parent_lot_ids || [],
+            holders: lot.holders || [],
+            reason: "Lot lineage record and current-holdings snapshot",
+          },
+        ],
+        confidence: 0.95,
+      },
+    ];
+  }
+  const tx = traceResult.data.tx_effect;
+  return (tx.flows || []).map((flow) => ({
+    claim: `Transaction ${tx.hash} split lineage from ${flow.from} to ${flow.to}`,
+    evidence: (flow.transferred_lots || []).map((lot) => ({
+      txHash: tx.hash,
+      from: flow.from,
+      to: flow.to,
+      asset: flow.denom,
+      amount: lot.amount,
+      tainted_amount: lot.tainted_amount,
+      source_lot_id: lot.source_lot_id,
+      child_lot_id: lot.child_lot_id,
+      reason: "Recorded pro-rata lineage fragment in traced transaction",
+    })),
+    confidence: 0.92,
+  }));
+}
+
+function buildTraceRisk(traceResult) {
+  if (!traceResult?.ok) {
+    return { score: 0, severity: "low", confidence: 0, reasons: ["no_trace_result"] };
+  }
+  if (traceResult.kind === "address") {
+    const balances = traceResult.data.balances || [];
+    const maxRisk = balances.reduce((max, item) => Math.max(max, Number(item.risk_basis_points || 0)), 0);
+    const score = Math.min(100, Math.round(maxRisk / 100));
+    const reasons = balances
+      .filter((item) => Number(item.tainted_amount || 0) > 0)
+      .map((item) => `${item.denom} taint ${(Number(item.risk_basis_points || 0) / 100).toFixed(2)}%`);
+    return { score, severity: classifySeverity(score), confidence: balances.length > 0 ? 0.9 : 0.2, reasons };
+  }
+  if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot;
+    const score = Math.min(100, Math.round(Number(lot.risk_basis_points || 0) / 100));
+    return {
+      score,
+      severity: classifySeverity(score),
+      confidence: 0.95,
+      reasons: [`lot taint ${(Number(lot.risk_basis_points || 0) / 100).toFixed(2)}%`, `root origin ${lot.root_origin_lot_id}`],
+    };
+  }
+  const tx = traceResult.data.tx_effect;
+  const maxRisk = (tx.flows || []).reduce((max, flow) => Math.max(max, Number(flow.risk_basis_points || 0)), 0);
+  const score = Math.min(100, Math.round(maxRisk / 100));
+  return {
+    score,
+    severity: classifySeverity(score),
+    confidence: (tx.flows || []).length > 0 ? 0.92 : 0.2,
+    reasons: (tx.flows || []).map((flow) => `${flow.denom} transfer taint ${(Number(flow.risk_basis_points || 0) / 100).toFixed(2)}%`),
+  };
+}
+
+function buildTraceRecommendedActions(risk) {
+  if (!risk || risk.score <= 0) return ["no action required"];
+  if (risk.score >= 80) return ["manual review required", "escalate to compliance", "freeze internal account"];
+  if (risk.score >= 60) return ["manual review required", "escalate to compliance"];
+  if (risk.score >= 30) return ["manual review required"];
+  return ["monitor account activity"];
+}
+
+function createForensicsCase(body, traceResult, summary) {
+  const risk = buildTraceRisk(traceResult);
+  const evidence_chain = buildTraceEvidence(traceResult);
+  return {
+    case_id: body.case_id || randomId("case"),
+    subject: body.target || body.address || body.lot_id || body.tx_hash || "",
+    kind: traceResult.kind,
+    time_range: {
+      start: body.startTime || "",
+      end: body.endTime || "",
+    },
+    trace: traceResult.data,
+    risk,
+    evidence_chain,
+    final_summary: summary,
+    recommended_next_actions: buildTraceRecommendedActions(risk),
+    guardrails: {
+      observation_only: true,
+      transfer_authority_granted: false,
+      freeze_authority_granted: false,
+    },
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
 }
 
 function routeReadinessCounts(context) {
@@ -1532,6 +1668,13 @@ function aiActionCatalog() {
       description: "Builds a victim-friendly trace explanation for an address, lot, or tx while preserving policy/session gating and internal trace-indexer authorization.",
     },
     {
+      action: "ai.forensics.case.create",
+      title: "Create a structured forensics case",
+      mode: "protected-read",
+      auth: "web4-session + trace-indexer-token",
+      description: "Builds a reusable evidence-backed case with trace data, risk summary, evidence chain, and recommended next actions.",
+    },
+    {
       action: "bridge.watchers.scan",
       title: "Trigger bridge deposit watcher scan",
       mode: "operator",
@@ -2132,6 +2275,32 @@ async function runAiAction(req, body, context) {
     return { status: 200, payload: { ok: true, action, report } };
   }
 
+  if (action === "ai.forensics.case.create") {
+    const auth = await requireActionAuthorization(req, "ai.forensics.case.create", body, {
+      resource: "ai/action/forensics/case/create",
+      reason: "ai-forensics-case-create",
+    });
+    if (!auth.ok) return { status: auth.status, payload: { ok: false, error: auth.error } };
+    const traceResult = await fetchTraceResource(body.kind || "", body.target || body.address || body.lot_id || body.tx_hash || "", body.denom || "");
+    if (!traceResult.ok) {
+      return { status: traceResult.status || 404, payload: { ok: false, error: traceResult.error, action } };
+    }
+    const summary = deterministicTraceAnswer(traceResult, body);
+    const forensicCase = createForensicsCase(body, traceResult, summary);
+    forensicCase.policy_id = auth.policy_id;
+    state.forensic_cases.unshift(forensicCase);
+    addAudit("action.forensics.case.created", {
+      case_id: forensicCase.case_id,
+      policy_id: auth.policy_id,
+      target: forensicCase.subject,
+      kind: forensicCase.kind,
+      severity: forensicCase.risk.severity,
+      score: forensicCase.risk.score,
+    });
+    persist();
+    return { status: 201, payload: { ok: true, action, case: forensicCase } };
+  }
+
   if (action === "bridge.watchers.scan" || action === "bridge.withdrawals.scan") {
     const web4Action = action === "bridge.watchers.scan" ? "ai.bridge.watchers.scan" : "ai.bridge.withdrawals.scan";
     const auth = await requireActionAuthorization(req, web4Action, body, {
@@ -2298,8 +2467,8 @@ const server = http.createServer(async (req, res) => {
       actions: aiActionCatalog(),
       boundary: {
         public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest", "trade.quote", "trade.preflight", "trade.prepare"],
-        protected_actions: ["ai.monitor.create", "ai.trace.report", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
-        protected_actions_require: "Web4 policy/session; ai.trace.report also expects internal trace-indexer authorization when the trace indexer is locked; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
+        protected_actions: ["ai.monitor.create", "ai.trace.report", "ai.forensics.case.create", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
+        protected_actions_require: "Web4 policy/session; ai.trace.report and ai.forensics.case.create also expect internal trace-indexer authorization when the trace indexer is locked; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
         disabled_actions: [],
         trade_execution_boundary: "trade.prepare returns wallet transaction parameters. trade.execute can submit only with Web4 policy/session and a configured testnet agent signer; it never returns private key, mnemonic, or signer material.",
       },
@@ -2358,6 +2527,11 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/ai/jobs") {
     return json(res, 200, { ok: true, items: state.jobs });
+  }
+
+  if (req.method === "GET" && url.pathname === "/ai/forensics/cases") {
+    const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
+    return json(res, 200, { ok: true, items: state.forensic_cases.slice(0, limit) });
   }
 
   if (req.method === "POST" && url.pathname === "/ai/jobs") {

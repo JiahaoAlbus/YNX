@@ -1077,6 +1077,99 @@ test("builds protected AI trace reports through Web4 policy and internal trace t
   assert.match(report.report.summary, /not authorize|不代表/i);
 });
 
+test("creates protected structured forensics cases with risk and evidence", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-forensics-case-");
+  const web4Dir = await makeTempDir("ynx-web4-forensics-case-");
+  const internalToken = "test-internal-token-forensics";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_TRACE_INDEXER_TOKEN: "trace-token-test",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-case",
+        allowed_actions: ["ai.forensics.case.create"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.forensics.case.create"],
+        ttl_sec: 600,
+        max_ops: 3,
+      },
+    }),
+    201
+  );
+
+  const forensicCase = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "ai.forensics.case.create",
+        policy_id: policy.policy.policy_id,
+        target: "ynx1victim",
+        kind: "address",
+      },
+    }),
+    201
+  );
+  assert.equal(forensicCase.ok, true);
+  assert.equal(forensicCase.case.subject, "ynx1victim");
+  assert.equal(forensicCase.case.risk.score, 40);
+  assert.equal(forensicCase.case.risk.severity, "medium");
+  assert.ok(Array.isArray(forensicCase.case.evidence_chain));
+  assert.ok(forensicCase.case.evidence_chain.length > 0);
+  assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
+  assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
+
+  const listed = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases`), 200);
+  assert.equal(listed.items.length, 1);
+  assert.equal(listed.items[0].case_id, forensicCase.case.case_id);
+});
+
 test("answers intelligence chat through configured Ollama provider", async (t) => {
   const aiPort = await getFreePort();
   const mockPort = await getFreePort();

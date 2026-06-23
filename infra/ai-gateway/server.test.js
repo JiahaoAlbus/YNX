@@ -82,6 +82,28 @@ function startMockIntelligenceUpstreams(port) {
         ],
       }));
     }
+    if (url.pathname === "/trace/addresses/ynx1victim") {
+      if (req.headers["x-ynx-trace-token"] !== "trace-token-test") {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ ok: false, error: "trace_token_required" }));
+      }
+      return res.end(JSON.stringify({
+        ok: true,
+        address: "ynx1victim",
+        balances: [
+          {
+            denom: "anyxt",
+            total_amount: "50",
+            tainted_amount: "20",
+            risk_basis_points: 4000,
+            lots: [
+              { lot_id: "lot_00000009", amount: "20", tainted_amount: "20", risk_basis_points: 10000, root_origin_lot_id: "lot_00000001" },
+              { lot_id: "lot_00000010", amount: "30", tainted_amount: "0", risk_basis_points: 0, root_origin_lot_id: "lot_00000008" },
+            ],
+          },
+        ],
+      }));
+    }
     res.statusCode = 404;
     return res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
@@ -958,6 +980,101 @@ test("protects AI action writes with Web4 policy sessions", async (t) => {
   assert.equal(trade.result.mode, "testnet-agent-mock");
   assert.match(trade.result.swap_tx_hash, /^0x[0-9a-f]{64}$/);
   assert.doesNotMatch(JSON.stringify(trade), /private[_-]?key|mnemonic|seed phrase|raw signer/i);
+});
+
+test("builds protected AI trace reports through Web4 policy and internal trace token", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-trace-");
+  const web4Dir = await makeTempDir("ynx-web4-trace-");
+  const internalToken = "test-internal-token-trace";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_TRACE_INDEXER_TOKEN: "trace-token-test",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const denied = await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+    method: "POST",
+    body: { action: "ai.trace.report", target: "ynx1victim" },
+  });
+  assert.equal(denied.status, 400);
+  assert.equal(denied.body.error, "policy_required");
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-trace",
+        allowed_actions: ["ai.trace.report"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.trace.report"],
+        ttl_sec: 600,
+        max_ops: 3,
+      },
+    }),
+    201
+  );
+
+  const report = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "ai.trace.report",
+        policy_id: policy.policy.policy_id,
+        target: "ynx1victim",
+        kind: "address",
+      },
+    }),
+    200
+  );
+  assert.equal(report.ok, true);
+  assert.equal(report.report.kind, "address");
+  assert.equal(report.report.trace.address, "ynx1victim");
+  assert.equal(report.report.trace.balances[0].tainted_amount, "20");
+  assert.equal(report.report.guardrails.observation_only, true);
+  assert.equal(report.report.guardrails.transfer_authority_granted, false);
+  assert.match(report.report.summary, /not authorize|不代表/i);
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {

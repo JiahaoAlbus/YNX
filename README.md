@@ -137,6 +137,10 @@ What it does not claim yet:
 - a BTC-style UTXO base asset model
 - full bridge deposit-origin trace coverage for every route by default
 
+Next architecture note:
+
+- EN: [`docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md`](docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md)
+
 ### 4.5) Funding / grant / compliance packet
 
 Current funding boundary:

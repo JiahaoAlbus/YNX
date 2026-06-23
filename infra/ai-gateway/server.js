@@ -281,6 +281,7 @@ const AI_PUBLIC_BRIDGE_URL = (process.env.AI_PUBLIC_BRIDGE_URL || "https://rpc.y
 const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL || "https://web4.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_INDEXER_URL = (process.env.AI_PUBLIC_INDEXER_URL || "https://indexer.ynxweb4.com").replace(/\/$/, "");
+const AI_TRACE_INDEXER_TOKEN = process.env.AI_TRACE_INDEXER_TOKEN || "";
 const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
 const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
 const AI_BRIDGE_OPERATOR_TOKEN = process.env.AI_BRIDGE_OPERATOR_TOKEN || process.env.BRIDGE_OPERATOR_TOKEN || "";
@@ -762,6 +763,79 @@ function summarizeBacklog(context) {
     .slice(0, 3)
     .map((item) => `${item.area}:${item.priority}:${item.action}`)
     .join(" | ");
+}
+
+function inferTraceKind(target) {
+  const raw = String(target || "").trim();
+  if (!raw) return "";
+  if (/^lot_\d+$/i.test(raw)) return "lot";
+  if (/^0x[0-9a-f]{6,}$/i.test(raw)) return "tx";
+  return "address";
+}
+
+async function fetchTraceResource(kind, target, denom = "") {
+  const normalizedKind = kind || inferTraceKind(target);
+  if (!normalizedKind) return { ok: false, error: "trace_target_required" };
+  const headers = AI_TRACE_INDEXER_TOKEN ? { "x-ynx-trace-token": AI_TRACE_INDEXER_TOKEN } : {};
+  const suffix =
+    normalizedKind === "address"
+      ? `/trace/addresses/${encodeURIComponent(target)}${denom ? `?denom=${encodeURIComponent(denom)}` : ""}`
+      : normalizedKind === "lot"
+        ? `/trace/lots/${encodeURIComponent(target)}`
+        : `/trace/txs/${encodeURIComponent(target)}`;
+  const response = await getJson(`${AI_PUBLIC_INDEXER_URL}${suffix}`, { headers, timeout_ms: 8000 });
+  if (response.status < 200 || response.status >= 300 || response.payload?.ok !== true) {
+    return {
+      ok: false,
+      status: response.status || 502,
+      error: response.payload?.error || "trace_lookup_failed",
+      kind: normalizedKind,
+    };
+  }
+  return { ok: true, kind: normalizedKind, data: response.payload };
+}
+
+function deterministicTraceAnswer(traceResult, body = {}) {
+  const zh = hasChinese(body.language || body.prompt || body.note || body.target || "");
+  if (!traceResult?.ok) {
+    return zh ? "没有找到可用的追踪结果。" : "No trace result was found.";
+  }
+  if (traceResult.kind === "address") {
+    const trace = traceResult.data;
+    const balances = Array.isArray(trace.balances) ? trace.balances : [];
+    if (balances.length === 0) {
+      return zh ? `地址 ${trace.address} 当前没有可追踪 lot 余额。` : `Address ${trace.address} has no traceable lot balances right now.`;
+    }
+    const lines = balances.map((item) => {
+      const lots = (item.lots || [])
+        .slice(0, 5)
+        .map((lot) => `${lot.lot_id}=${lot.amount}`)
+        .join(", ");
+      return zh
+        ? `${item.denom} 总量 ${item.total_amount}，污染量 ${item.tainted_amount}，污染比例 ${(item.risk_basis_points / 100).toFixed(2)}%，主要 lot：${lots || "无"}。`
+        : `${item.denom} total ${item.total_amount}, tainted ${item.tainted_amount}, risk ${(item.risk_basis_points / 100).toFixed(2)}%, top lots: ${lots || "none"}.`;
+    });
+    return zh
+      ? `这是地址 ${trace.address} 的追踪摘要：\n${lines.join("\n")}\n说明：这只是追踪和风险说明，不代表你可以私自划转、冻结或处置这些资产。`
+      : `Trace summary for address ${trace.address}:\n${lines.join("\n")}\nThis is a tracing and risk explanation only; it does not authorize private transfer, seizure, or disposal.`;
+  }
+  if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot;
+    return zh
+      ? `Lot ${lot.lot_id} 属于 ${lot.denom}，当前量 ${lot.current_amount}，污染量 ${lot.tainted_amount}，污染比例 ${(lot.risk_basis_points / 100).toFixed(2)}%，根来源是 ${lot.root_origin_lot_id}。`
+      : `Lot ${lot.lot_id} is ${lot.denom}, current amount ${lot.current_amount}, tainted ${lot.tainted_amount}, risk ${(lot.risk_basis_points / 100).toFixed(2)}%, root origin ${lot.root_origin_lot_id}.`;
+  }
+  const tx = traceResult.data.tx_effect;
+  const flows = (tx.flows || [])
+    .map((flow) =>
+      zh
+        ? `${flow.from} -> ${flow.to} 转了 ${flow.amount} ${flow.denom}，其中污染量 ${flow.tainted_amount}，污染比例 ${(flow.risk_basis_points / 100).toFixed(2)}%。`
+        : `${flow.from} -> ${flow.to} moved ${flow.amount} ${flow.denom}, tainted ${flow.tainted_amount}, risk ${(flow.risk_basis_points / 100).toFixed(2)}%.`,
+    )
+    .join("\n");
+  return zh
+    ? `交易 ${tx.hash} 的追踪摘要：\n${flows}\n这说明资金血缘如何拆分，并不代表任何人可未经授权私自转出。`
+    : `Trace summary for tx ${tx.hash}:\n${flows}\nThis shows lineage splits only; it does not authorize anyone to privately move funds.`;
 }
 
 function routeReadinessCounts(context) {
@@ -1451,6 +1525,13 @@ function aiActionCatalog() {
       description: "Creates an auditable AI job for monitoring a YNX route, validator set, asset, or service.",
     },
     {
+      action: "ai.trace.report",
+      title: "Create an AI trace report",
+      mode: "protected-read",
+      auth: "web4-session + trace-indexer-token",
+      description: "Builds a victim-friendly trace explanation for an address, lot, or tx while preserving policy/session gating and internal trace-indexer authorization.",
+    },
+    {
       action: "bridge.watchers.scan",
       title: "Trigger bridge deposit watcher scan",
       mode: "operator",
@@ -2016,6 +2097,41 @@ async function runAiAction(req, body, context) {
     return { status: 201, payload: { ok: true, action, job } };
   }
 
+  if (action === "ai.trace.report") {
+    const auth = await requireActionAuthorization(req, "ai.trace.report", body, {
+      resource: "ai/action/trace/report",
+      reason: "ai-trace-report",
+    });
+    if (!auth.ok) return { status: auth.status, payload: { ok: false, error: auth.error } };
+    const traceResult = await fetchTraceResource(body.kind || "", body.target || body.address || body.lot_id || body.tx_hash || "", body.denom || "");
+    if (!traceResult.ok) {
+      return { status: traceResult.status || 404, payload: { ok: false, error: traceResult.error, action } };
+    }
+    const answer = deterministicTraceAnswer(traceResult, body);
+    const report = {
+      report_id: body.report_id || randomId("trace_report"),
+      policy_id: auth.policy_id,
+      target: body.target || body.address || body.lot_id || body.tx_hash || "",
+      kind: traceResult.kind,
+      summary: answer,
+      trace: traceResult.data,
+      guardrails: {
+        observation_only: true,
+        transfer_authority_granted: false,
+        freeze_authority_granted: false,
+      },
+      created_at: nowIso(),
+    };
+    addAudit("action.trace.report.created", {
+      report_id: report.report_id,
+      policy_id: auth.policy_id,
+      target: report.target,
+      kind: report.kind,
+    });
+    persist();
+    return { status: 200, payload: { ok: true, action, report } };
+  }
+
   if (action === "bridge.watchers.scan" || action === "bridge.withdrawals.scan") {
     const web4Action = action === "bridge.watchers.scan" ? "ai.bridge.watchers.scan" : "ai.bridge.withdrawals.scan";
     const auth = await requireActionAuthorization(req, web4Action, body, {
@@ -2182,8 +2298,8 @@ const server = http.createServer(async (req, res) => {
       actions: aiActionCatalog(),
       boundary: {
         public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest", "trade.quote", "trade.preflight", "trade.prepare"],
-        protected_actions: ["ai.monitor.create", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
-        protected_actions_require: "Web4 policy/session; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
+        protected_actions: ["ai.monitor.create", "ai.trace.report", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
+        protected_actions_require: "Web4 policy/session; ai.trace.report also expects internal trace-indexer authorization when the trace indexer is locked; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
         disabled_actions: [],
         trade_execution_boundary: "trade.prepare returns wallet transaction parameters. trade.execute can submit only with Web4 policy/session and a configured testnet agent signer; it never returns private key, mnemonic, or signer material.",
       },

@@ -100,6 +100,7 @@ const INDEXER_TRACE_RISKY_ADDRESSES = new Set(
     .map((item) => String(item || "").trim())
     .filter(Boolean),
 );
+const INDEXER_TRACE_INTERNAL_TOKEN = process.env.INDEXER_TRACE_INTERNAL_TOKEN || "";
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1251,6 +1252,11 @@ function json(res, statusCode, payload) {
   res.end(body);
 }
 
+function traceAuthorized(req) {
+  if (!INDEXER_TRACE_INTERNAL_TOKEN) return true;
+  return String(req.headers["x-ynx-trace-token"] || "") === INDEXER_TRACE_INTERNAL_TOKEN;
+}
+
 async function findBlockByHeight(height) {
   const cached = blocksCache.find((b) => b.height === height);
   if (cached) return cached;
@@ -1755,6 +1761,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith("/trace/addresses/")) {
+    if (!traceAuthorized(req)) {
+      return json(res, 401, { ok: false, error: "trace_token_required" });
+    }
     const address = decodeURIComponent(url.pathname.split("/")[3] || "");
     if (!address) {
       return json(res, 400, { ok: false, error: "invalid_address" });
@@ -1764,6 +1773,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith("/trace/lots/")) {
+    if (!traceAuthorized(req)) {
+      return json(res, 401, { ok: false, error: "trace_token_required" });
+    }
     const lotId = decodeURIComponent(url.pathname.split("/")[3] || "");
     if (!lotId) {
       return json(res, 400, { ok: false, error: "invalid_lot_id" });
@@ -1773,6 +1785,9 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname.startsWith("/trace/txs/")) {
+    if (!traceAuthorized(req)) {
+      return json(res, 401, { ok: false, error: "trace_token_required" });
+    }
     const hash = decodeURIComponent(url.pathname.split("/")[3] || "");
     if (!hash) {
       return json(res, 400, { ok: false, error: "invalid_hash" });

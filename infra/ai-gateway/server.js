@@ -1023,6 +1023,120 @@ function buildComparativeTaintModels(traceResult) {
   };
 }
 
+function buildSuspiciousPatterns(traceResult) {
+  if (!traceResult?.ok) return [];
+  const patterns = [];
+  if (traceResult.kind === "address") {
+    const balances = traceResult.data.balances || [];
+    for (const balance of balances) {
+      const lots = balance.lots || [];
+      const total = amountToBigInt(balance.total_amount);
+      const tainted = amountToBigInt(balance.tainted_amount);
+      if (total > 0n && tainted > 0n && tainted < total) {
+        patterns.push({
+          pattern_type: "mixed_exposure",
+          severity: "medium",
+          confidence: 0.9,
+          reason: `${balance.denom} balance contains both tainted and clean lot fragments`,
+          affected_addresses: [traceResult.data.address],
+          evidence: lots
+            .filter((lot) => amountToBigInt(lot.amount) > 0n)
+            .map((lot) => ({
+              lot_id: lot.lot_id,
+              root_origin_lot_id: lot.root_origin_lot_id,
+              amount: lot.amount,
+              tainted_amount: lot.tainted_amount,
+            })),
+        });
+      }
+      const uniqueRoots = [...new Set(lots.map((lot) => lot.root_origin_lot_id).filter(Boolean))];
+      if (uniqueRoots.length >= 3) {
+        patterns.push({
+          pattern_type: "fan_in_consolidation",
+          severity: "medium",
+          confidence: 0.82,
+          reason: `${balance.denom} balance consolidates ${uniqueRoots.length} root origins`,
+          affected_addresses: [traceResult.data.address],
+          evidence: uniqueRoots.map((root) => ({ root_origin_lot_id: root })),
+        });
+      }
+      const dominant = lots.reduce((best, lot) => {
+        const amount = amountToBigInt(lot.amount);
+        if (!best || amount > best.amount) return { root: lot.root_origin_lot_id, amount };
+        return best;
+      }, null);
+      if (dominant && total > 0n && dominant.amount * 100n >= total * 80n) {
+        patterns.push({
+          pattern_type: "root_origin_concentration",
+          severity: amountToBigInt(balance.tainted_amount) > 0n ? "high" : "low",
+          confidence: 0.85,
+          reason: `${balance.denom} balance is heavily concentrated in one root origin`,
+          affected_addresses: [traceResult.data.address],
+          evidence: [
+            {
+              root_origin_lot_id: dominant.root,
+              dominant_amount: dominant.amount.toString(),
+              total_amount: balance.total_amount,
+            },
+          ],
+        });
+      }
+    }
+  } else if (traceResult.kind === "tx") {
+    const tx = traceResult.data.tx_effect;
+    const flows = tx.flows || [];
+    if (flows.length >= 3) {
+      patterns.push({
+        pattern_type: "fan_out_split",
+        severity: "high",
+        confidence: 0.86,
+        reason: `Transaction ${tx.hash} splits lineage across ${flows.length} traced flows`,
+        affected_transactions: [tx.hash],
+        evidence: flows.map((flow) => ({
+          from: flow.from,
+          to: flow.to,
+          asset: flow.denom,
+          amount: flow.amount,
+        })),
+      });
+    }
+    const taintedFlows = flows.filter((flow) => amountToBigInt(flow.tainted_amount) > 0n);
+    if (taintedFlows.length > 0 && taintedFlows.length === flows.length) {
+      patterns.push({
+        pattern_type: "pass_through_tainted_transfer",
+        severity: "high",
+        confidence: 0.88,
+        reason: `Every traced flow in ${tx.hash} carries tainted exposure`,
+        affected_transactions: [tx.hash],
+        evidence: taintedFlows.map((flow) => ({
+          from: flow.from,
+          to: flow.to,
+          asset: flow.denom,
+          tainted_amount: flow.tainted_amount,
+        })),
+      });
+    }
+  } else if (traceResult.kind === "lot") {
+    const lot = traceResult.data.lot;
+    const childCount = Array.isArray(lot.children) ? lot.children.length : 0;
+    if (childCount >= 3) {
+      patterns.push({
+        pattern_type: "lot_fan_out",
+        severity: "high",
+        confidence: 0.87,
+        reason: `Lot ${lot.lot_id} split into ${childCount} child lots`,
+        affected_lots: [lot.lot_id],
+        evidence: (lot.children || []).map((child) => ({
+          lot_id: child.lot_id,
+          owner: child.owner,
+          amount: child.amount,
+        })),
+      });
+    }
+  }
+  return patterns;
+}
+
 function buildTraceRecommendedActions(risk) {
   if (!risk || risk.score <= 0) return ["no action required"];
   if (risk.score >= 80) return ["manual review required", "escalate to compliance", "freeze internal account"];
@@ -1035,6 +1149,7 @@ function createForensicsCase(body, traceResult, summary) {
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
   const taint_models = buildComparativeTaintModels(traceResult);
+  const suspicious_patterns = buildSuspiciousPatterns(traceResult);
   return {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
@@ -1047,6 +1162,7 @@ function createForensicsCase(body, traceResult, summary) {
     taint_models,
     risk,
     evidence_chain,
+    suspicious_patterns,
     final_summary: summary,
     recommended_next_actions: buildTraceRecommendedActions(risk),
     guardrails: {

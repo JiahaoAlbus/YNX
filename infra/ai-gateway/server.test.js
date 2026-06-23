@@ -1167,6 +1167,8 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.taint_models.specificTrace.exactLineageAvailable, true);
   assert.ok(Array.isArray(forensicCase.case.evidence_chain));
   assert.ok(forensicCase.case.evidence_chain.length > 0);
+  assert.ok(Array.isArray(forensicCase.case.suspicious_patterns));
+  assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "mixed_exposure"));
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
 

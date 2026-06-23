@@ -93,6 +93,7 @@ The first structured case flow returns:
 - `taint_models`
 - `risk`
 - `evidence_chain`
+- `suspicious_patterns`
 - `recommended_next_actions`
 - `guardrails`
 

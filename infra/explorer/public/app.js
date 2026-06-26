@@ -61,6 +61,18 @@ function renderTraceGraph(graph) {
     .filter((value, index, arr) => arr.indexOf(value) === index)
     .slice(0, 6)
     .join(", ");
+  const paths = (graph.paths || [])
+    .slice(0, 6)
+    .map((path) => {
+      const addresses = (path.addresses || []).slice(0, 6).join(" → ");
+      const txs = (path.tx_hashes || []).slice(0, 4).join(", ");
+      return `<div class="trace-path">
+        <div><strong>${escapeHtml(path.direction)} path</strong> · depth ${escapeHtml(path.depth)}</div>
+        <div class="muted">${escapeHtml(addresses || "no address chain")}</div>
+        <div class="muted">txs: ${escapeHtml(txs || "none")}</div>
+      </div>`;
+    })
+    .join("");
   return `<div class="trace-graph">
     <div class="trace-graph-header"><strong>Flow graph</strong></div>
     <div class="trace-graph-stats">
@@ -71,6 +83,7 @@ function renderTraceGraph(graph) {
       <span class="pill">depth ${escapeHtml(stats.max_depth_reached)}</span>
     </div>
     ${roots ? `<div class="muted">Root origins: ${escapeHtml(roots)}</div>` : ""}
+    ${paths ? `<div class="trace-paths">${paths}</div>` : ""}
     <div class="trace-graph-edges">${edges || '<div class="muted">No linked edges found.</div>'}</div>
   </div>`;
 }

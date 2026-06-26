@@ -1103,6 +1103,93 @@ function applyGraphFilters(edge, options) {
   return true;
 }
 
+function buildGraphPathPayload(edgePath, direction) {
+  const lotIds = [];
+  const addresses = [];
+  const txHashes = [];
+  const denoms = [];
+  for (const edge of edgePath) {
+    if (direction === "upstream") {
+      lotIds.push(edge.child_lot_id);
+      if (edge.source_lot_id) lotIds.push(edge.source_lot_id);
+      if (edge.to) addresses.push(edge.to);
+      if (edge.from) addresses.push(edge.from);
+    } else {
+      lotIds.push(edge.source_lot_id);
+      if (edge.child_lot_id) lotIds.push(edge.child_lot_id);
+      if (edge.from) addresses.push(edge.from);
+      if (edge.to) addresses.push(edge.to);
+    }
+    if (edge.tx_hash) txHashes.push(edge.tx_hash);
+    if (edge.denom) denoms.push(edge.denom);
+  }
+  const unique = (items) => [...new Set(items.filter(Boolean))];
+  return {
+    direction,
+    depth: edgePath.length,
+    tx_hashes: unique(txHashes),
+    lot_ids: unique(lotIds),
+    addresses: unique(addresses),
+    denoms: unique(denoms),
+    start_lot_id: direction === "upstream" ? edgePath[0]?.child_lot_id || "" : edgePath[0]?.source_lot_id || "",
+    end_lot_id:
+      direction === "upstream"
+        ? edgePath[edgePath.length - 1]?.source_lot_id || ""
+        : edgePath[edgePath.length - 1]?.child_lot_id || "",
+    edges: edgePath.map((edge) => ({
+      tx_hash: edge.tx_hash,
+      from: edge.from,
+      to: edge.to,
+      denom: edge.denom,
+      amount: edge.amount,
+      tainted_amount: edge.tainted_amount,
+      source_lot_id: edge.source_lot_id,
+      child_lot_id: edge.child_lot_id,
+      height: edge.height,
+    })),
+  };
+}
+
+function enumerateGraphPaths(seedLots, byChildLot, bySourceLot, options) {
+  const maxPaths = Math.max(1, Math.min(24, Number(options.max_paths || options.maxPaths || 12) || 12));
+  const results = [];
+  const pushPath = (edgePath, direction) => {
+    if (edgePath.length === 0) return;
+    results.push(buildGraphPathPayload(edgePath, direction));
+  };
+  const dfs = (currentLotId, direction, depth, edgePath, seenLots) => {
+    if (results.length >= maxPaths) return;
+    const nextEdges =
+      direction === "upstream" ? (byChildLot.get(currentLotId) || []) : (bySourceLot.get(currentLotId) || []);
+    const available = nextEdges.filter((edge) => {
+      const nextLotId = direction === "upstream" ? edge.source_lot_id : edge.child_lot_id;
+      return nextLotId && !seenLots.has(nextLotId);
+    });
+    if (depth >= options.max_depth || available.length === 0) {
+      pushPath(edgePath, direction);
+      return;
+    }
+    for (const edge of available) {
+      if (results.length >= maxPaths) break;
+      const nextLotId = direction === "upstream" ? edge.source_lot_id : edge.child_lot_id;
+      seenLots.add(nextLotId);
+      dfs(nextLotId, direction, depth + 1, [...edgePath, edge], seenLots);
+      seenLots.delete(nextLotId);
+    }
+  };
+  for (const lotId of seedLots) {
+    if (results.length >= maxPaths) break;
+    if (options.direction === "upstream" || options.direction === "both") {
+      dfs(lotId, "upstream", 0, [], new Set([lotId]));
+    }
+    if (results.length >= maxPaths) break;
+    if (options.direction === "downstream" || options.direction === "both") {
+      dfs(lotId, "downstream", 0, [], new Set([lotId]));
+    }
+  }
+  return results;
+}
+
 function traceGraph(kind, target, rawOptions = {}) {
   const normalizedKind = kind || inferTraceKind(target);
   const options = {
@@ -1226,6 +1313,7 @@ function traceGraph(kind, target, rawOptions = {}) {
       min_tainted_amount: options.min_tainted_amount.toString(),
       since_height: options.since_height,
       until_height: options.until_height,
+      max_paths: Math.max(1, Math.min(24, Number(rawOptions.max_paths || rawOptions.maxPaths || 12) || 12)),
     },
     nodes: {
       addresses: addressNodes,
@@ -1233,6 +1321,11 @@ function traceGraph(kind, target, rawOptions = {}) {
       txs: txNodes,
     },
     edges: edgeResults.sort((a, b) => (a.depth - b.depth) || (a.height - b.height) || String(a.tx_hash).localeCompare(String(b.tx_hash))),
+    paths: enumerateGraphPaths(seedLots, byChildLot, bySourceLot, {
+      direction: options.direction,
+      max_depth: options.max_depth,
+      max_paths: rawOptions.max_paths || rawOptions.maxPaths || 12,
+    }),
     stats: {
       address_count: addressNodes.length,
       lot_count: lotNodes.length,

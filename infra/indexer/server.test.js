@@ -533,6 +533,9 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(graphUpstream.nodes.addresses.some((item) => item.address === "ynx1risky"), true);
   assert.equal(graphUpstream.edges.some((item) => item.tx_hash === "0xTRACE05"), true);
   assert.equal(graphUpstream.edges.some((item) => item.traversal_direction === "upstream"), true);
+  assert.equal(Array.isArray(graphUpstream.paths), true);
+  assert.equal(graphUpstream.paths.some((item) => item.direction === "upstream"), true);
+  assert.equal(graphUpstream.paths.some((item) => (item.tx_hashes || []).includes("0xTRACE01")), true);
 
   const graphDownstream = assertJson(
     await requestJson(`http://127.0.0.1:${indexerPort}/trace/graph?kind=address&target=ynx1alice&direction=downstream&max_depth=4&denom=anyxt`),
@@ -541,6 +544,8 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(graphDownstream.stats.edge_count >= 3, true);
   assert.equal(graphDownstream.nodes.addresses.some((item) => item.address === "ynx1dave"), true);
   assert.equal(graphDownstream.edges.some((item) => item.traversal_direction === "downstream"), true);
+  assert.equal(graphDownstream.paths.some((item) => item.direction === "downstream"), true);
+  assert.equal(graphDownstream.paths.some((item) => (item.addresses || []).includes("ynx1dave")), true);
 
   const lotId = dave.balances[0].lots[0].lot_id;
   const lotTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/lots/${lotId}`), 200);
@@ -551,6 +556,7 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(searchAddress.kind, "trace_address");
   assert.equal(searchAddress.graph.stats.edge_count >= 1, true);
   assert.equal(searchAddress.graph.nodes.addresses.some((item) => item.address === "ynx1risky"), true);
+  assert.equal(Array.isArray(searchAddress.graph.paths), true);
 
   const searchLot = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=${lotId}`), 200);
   assert.equal(searchLot.kind, "trace_lot");

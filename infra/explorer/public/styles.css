@@ -113,6 +113,19 @@ h2 {
   margin-top: 10px;
 }
 
+.trace-paths {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.trace-path {
+  padding: 10px;
+  border-radius: 10px;
+  background: #10192d;
+  border: 1px dashed #2c3a5e;
+}
+
 .trace-edge {
   padding: 10px;
   border-radius: 10px;

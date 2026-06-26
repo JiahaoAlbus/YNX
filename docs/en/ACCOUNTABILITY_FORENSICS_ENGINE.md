@@ -142,6 +142,8 @@ This graph view returns:
 - lot nodes
 - tx nodes
 - lineage edges with `source_lot_id`, `child_lot_id`, amount, taint, and depth
+- path-level traversals that summarize upstream/downstream routes across those
+  edges
 
 So the case layer can now include actual traced paths instead of only a flat
 balance or transaction snapshot.

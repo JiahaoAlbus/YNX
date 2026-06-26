@@ -159,7 +159,8 @@ Suspicious pattern detection is now split across:
 
 - direct trace-state detectors such as mixed exposure and root concentration
 - graph-driven detectors such as rapid multi-hop transfers, amount-preserving
-  hops, bridge-hop exposure, and pass-through wallet behavior
+  hops, bridge-hop exposure, pass-through wallet behavior, time-correlated
+  routing, and dormant-wallet reactivation
 
 That makes the case layer materially better at explaining suspicious routing
 instead of only flagging end-state balances.
@@ -193,8 +194,7 @@ instead of a loose bundle of raw analysis fields.
 ## Suggested next build steps
 
 1. add broader transaction-graph traversal beyond current trace targets
-2. add more suspicious detectors such as time correlation and dormant activation
-3. keep the enforcement boundary separate from evidence generation
+2. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

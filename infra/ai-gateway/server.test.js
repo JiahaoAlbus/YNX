@@ -124,24 +124,43 @@ function startMockIntelligenceUpstreams(port) {
         },
         nodes: {
           addresses: [
+            { id: "ynx1origin", type: "address", address: "ynx1origin" },
             { id: "ynx1source", type: "address", address: "ynx1source" },
             { id: "ynx1bridgea", type: "address", address: "ynx1bridgea" },
             { id: "ynx1bridgeb", type: "address", address: "ynx1bridgeb" },
             { id: "ynx1victim", type: "address", address: "ynx1victim" },
           ],
           lots: [
+            { id: "lot_00000000", type: "lot", lot_id: "lot_00000000", owner: "ynx1origin", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000000" },
             { id: "lot_00000001", type: "lot", lot_id: "lot_00000001", owner: "ynx1source", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
             { id: "lot_00000005", type: "lot", lot_id: "lot_00000005", owner: "ynx1bridgea", denom: "wETH.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
             { id: "lot_00000007", type: "lot", lot_id: "lot_00000007", owner: "ynx1bridgeb", denom: "wUSDC.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
             { id: "lot_00000009", type: "lot", lot_id: "lot_00000009", owner: "ynx1victim", denom: "anyxt", current_amount: "20", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
           ],
           txs: [
+            { id: "0xTRACECASEPRE", type: "tx", tx_hash: "0xTRACECASEPRE", height: 10, index: 0 },
             { id: "0xTRACECASE00", type: "tx", tx_hash: "0xTRACECASE00", height: 75, index: 0 },
             { id: "0xTRACECASE00B", type: "tx", tx_hash: "0xTRACECASE00B", height: 76, index: 0 },
             { id: "0xTRACECASE01", type: "tx", tx_hash: "0xTRACECASE01", height: 77, index: 0 },
           ],
         },
         edges: [
+          {
+            tx_hash: "0xTRACECASEPRE",
+            height: 10,
+            index: 0,
+            from: "ynx1origin",
+            to: "ynx1source",
+            denom: "anyxt",
+            amount: "20",
+            tainted_amount: "20",
+            risk_basis_points: 10000,
+            source_lot_id: "lot_00000000",
+            child_lot_id: "lot_00000001",
+            root_origin_lot_id: "lot_00000001",
+            traversal_direction: "upstream",
+            depth: 4,
+          },
           {
             tx_hash: "0xTRACECASE00",
             height: 75,
@@ -192,11 +211,11 @@ function startMockIntelligenceUpstreams(port) {
           },
         ],
         stats: {
-          address_count: 4,
-          lot_count: 4,
-          tx_count: 3,
-          edge_count: 3,
-          max_depth_reached: 3,
+          address_count: 5,
+          lot_count: 5,
+          tx_count: 4,
+          edge_count: 4,
+          max_depth_reached: 4,
         },
         updated_at: "2026-06-26T00:00:00.000Z",
       }));
@@ -1266,10 +1285,12 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.ok(forensicCase.case.evidence_chain.length > 0);
   assert.ok(Array.isArray(forensicCase.case.traced_paths));
   assert.ok(forensicCase.case.traced_paths.some((item) => item.tx_hash === "0xTRACECASE01"));
-  assert.equal(forensicCase.case.flow_graph.stats.edge_count, 3);
+  assert.equal(forensicCase.case.flow_graph.stats.edge_count, 4);
   assert.ok(Array.isArray(forensicCase.case.suspicious_patterns));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "mixed_exposure"));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "rapid_multi_hop_transfers"));
+  assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "time_correlated_routing"));
+  assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "dormant_wallet_reactivated"));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "bridge_hop_exposure"));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "pass_through_wallet_behavior"));
   assert.equal(forensicCase.case.entity_attribution.entity_type, "bridge_exposed_account");

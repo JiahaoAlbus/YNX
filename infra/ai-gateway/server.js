@@ -1064,17 +1064,25 @@ function buildGraphSuspiciousPatterns(context, flowGraph) {
   const edges = graphEdges(flowGraph);
   if (edges.length === 0) return patterns;
 
-  const heights = edges.map((edge) => Number(edge.height || 0)).filter((value) => value > 0);
-  const minHeight = heights.length ? Math.min(...heights) : 0;
-  const maxHeight = heights.length ? Math.max(...heights) : 0;
-  if (edges.length >= 3 && minHeight > 0 && maxHeight > 0 && maxHeight - minHeight <= 3) {
+  const heights = edges.map((edge) => Number(edge.height || 0)).filter((value) => value > 0).sort((a, b) => a - b);
+  let rapidWindow = null;
+  for (let index = 0; index <= heights.length - 3; index += 1) {
+    const start = heights[index];
+    const end = heights[index + 2];
+    if (start > 0 && end > 0 && end - start <= 3) {
+      rapidWindow = { start, end };
+      break;
+    }
+  }
+  if (rapidWindow) {
+    const rapidEdges = edges.filter((edge) => Number(edge.height || 0) >= rapidWindow.start && Number(edge.height || 0) <= rapidWindow.end);
     patterns.push({
       pattern_type: "rapid_multi_hop_transfers",
       severity: "high",
       confidence: 0.84,
-      reason: `Trace graph moves through ${edges.length} linked hops within ${maxHeight - minHeight} blocks`,
-      affected_transactions: [...new Set(edges.map((edge) => edge.tx_hash).filter(Boolean))],
-      evidence: edges.map((edge) => ({
+      reason: `Trace graph moves through ${rapidEdges.length} linked hops within ${rapidWindow.end - rapidWindow.start} blocks`,
+      affected_transactions: [...new Set(rapidEdges.map((edge) => edge.tx_hash).filter(Boolean))],
+      evidence: rapidEdges.map((edge) => ({
         tx_hash: edge.tx_hash,
         from: edge.from,
         to: edge.to,
@@ -1110,6 +1118,78 @@ function buildGraphSuspiciousPatterns(context, flowGraph) {
       });
       break;
     }
+  }
+
+  const sortedEdges = edges
+    .map((edge) => ({ ...edge, height_number: Number(edge.height || 0) }))
+    .filter((edge) => edge.height_number > 0)
+    .sort((a, b) => a.height_number - b.height_number);
+  if (sortedEdges.length >= 3) {
+    let clusterStartIndex = sortedEdges.length - 1;
+    while (
+      clusterStartIndex > 0 &&
+      sortedEdges[clusterStartIndex].height_number - sortedEdges[clusterStartIndex - 1].height_number <= 1
+    ) {
+      clusterStartIndex -= 1;
+    }
+    const latestCluster = sortedEdges.slice(clusterStartIndex);
+    const prior = clusterStartIndex > 0 ? sortedEdges[clusterStartIndex - 1] : null;
+    if (latestCluster.length >= 2 && prior) {
+      const clusterSpan = latestCluster[latestCluster.length - 1].height_number - latestCluster[0].height_number;
+      const dormantGap = latestCluster[0].height_number - prior.height_number;
+      if (clusterSpan <= 2 && dormantGap >= 24) {
+        const activatedAddresses = [...new Set(latestCluster.flatMap((edge) => [edge.from, edge.to]).filter(Boolean))];
+        patterns.push({
+          pattern_type: "dormant_wallet_reactivated",
+          severity: "medium",
+          confidence: 0.77,
+          reason: `Trace graph stays quiet for ${dormantGap} blocks, then resumes concentrated activity within ${clusterSpan} block`,
+          affected_addresses: activatedAddresses,
+          evidence: latestCluster.map((edge) => ({
+            tx_hash: edge.tx_hash,
+            from: edge.from,
+            to: edge.to,
+            amount: edge.amount,
+            denom: edge.denom,
+            height: edge.height,
+          })),
+        });
+      }
+    }
+  }
+
+  const correlatedEdges = [];
+  for (let index = 1; index < sortedEdges.length; index += 1) {
+    const previous = sortedEdges[index - 1];
+    const current = sortedEdges[index];
+    if (current.height_number - previous.height_number <= 1 && current.amount === previous.amount) {
+      correlatedEdges.push(previous, current);
+    }
+  }
+  if (correlatedEdges.length >= 2) {
+    const unique = [];
+    const seen = new Set();
+    for (const edge of correlatedEdges) {
+      const key = `${edge.tx_hash}:${edge.from}:${edge.to}:${edge.amount}:${edge.denom}:${edge.height_number}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(edge);
+    }
+    patterns.push({
+      pattern_type: "time_correlated_routing",
+      severity: "medium",
+      confidence: 0.8,
+      reason: `${unique.length} trace edges move closely in time with matching amounts`,
+      affected_transactions: [...new Set(unique.map((edge) => edge.tx_hash).filter(Boolean))],
+      evidence: unique.map((edge) => ({
+        tx_hash: edge.tx_hash,
+        from: edge.from,
+        to: edge.to,
+        amount: edge.amount,
+        denom: edge.denom,
+        height: edge.height,
+      })),
+    });
   }
 
   const routeAssets = bridgeAssets(context).assets || [];

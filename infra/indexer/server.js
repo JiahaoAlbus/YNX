@@ -1244,6 +1244,15 @@ function traceGraph(kind, target, rawOptions = {}) {
   };
 }
 
+function searchGraphPayload(kind, target) {
+  const graph = traceGraph(kind, target, {
+    direction: "both",
+    max_depth: 4,
+  });
+  if (!graph.ok) return null;
+  return graph;
+}
+
 async function initChainId() {
   try {
     const status = await rpcRequest("/status");
@@ -1557,14 +1566,14 @@ async function searchIndex(query) {
   if (validator) return { ok: true, kind: "validator", ...validator };
 
   const addressTrace = summarizeAddressTrace(raw);
-  if (addressTrace.ok) return { ok: true, kind: "trace_address", trace: addressTrace };
+  if (addressTrace.ok) return { ok: true, kind: "trace_address", trace: addressTrace, graph: searchGraphPayload("address", raw) };
 
   const lotTrace = summarizeLotTrace(raw);
-  if (lotTrace) return { ok: true, kind: "trace_lot", trace: lotTrace };
+  if (lotTrace) return { ok: true, kind: "trace_lot", trace: lotTrace, graph: searchGraphPayload("lot", raw) };
 
   const txEffect = findTxEffectByHash(raw);
   if (txEffect) {
-    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect } };
+    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect }, graph: searchGraphPayload("tx", raw) };
   }
 
   const tx = await findTxByHash(raw);

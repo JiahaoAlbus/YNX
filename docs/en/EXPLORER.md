@@ -1,7 +1,7 @@
 # YNX Testnet Explorer (v0)
 
-Status: v0  
-Last updated: 2026-02-12  
+Status: v0+  
+Last updated: 2026-06-26  
 Canonical language: English
 
 ## 1. Overview
@@ -31,5 +31,21 @@ Key variables:
 
 ## 4. Usage
 
-Open the explorer in a browser at the configured port.  
-Search supports block heights and transaction hashes.
+Open the explorer in a browser at the configured port.
+
+Search supports:
+
+- block heights
+- validator consensus addresses
+- transaction hashes
+- chain addresses with lot/taint trace
+- lot ids such as `lot_00000001`
+
+Trace search results now also surface a public graph summary:
+
+- linked address / lot / tx counts
+- root-origin summary
+- visible upstream/downstream lineage edges
+
+This keeps the public explorer aligned with the underlying trace and forensics
+layer instead of limiting the UI to flat trace snapshots.

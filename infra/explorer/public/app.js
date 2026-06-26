@@ -41,6 +41,40 @@ function renderLines(container, lines) {
   container.innerHTML = lines.map((line) => `<div>${escapeHtml(line)}</div>`).join("");
 }
 
+function renderTraceGraph(graph) {
+  if (!graph || !graph.stats) return "";
+  const stats = graph.stats || {};
+  const edges = (graph.edges || [])
+    .slice(0, 12)
+    .map((edge) => {
+      const direction = edge.traversal_direction === "upstream" ? "upstream" : edge.traversal_direction === "downstream" ? "downstream" : "linked";
+      return `<div class="trace-edge">
+        <div><strong>${escapeHtml(edge.from || "unknown")} → ${escapeHtml(edge.to || "unknown")}</strong></div>
+        <div class="muted">${escapeHtml(edge.tx_hash)} · ${escapeHtml(edge.amount)} ${escapeHtml(edge.denom)} · tainted ${escapeHtml(edge.tainted_amount)} · ${direction} · depth ${escapeHtml(edge.depth)}</div>
+        <div class="muted">lot ${escapeHtml(edge.source_lot_id)} → ${escapeHtml(edge.child_lot_id)}</div>
+      </div>`;
+    })
+    .join("");
+  const roots = (graph.nodes?.lots || [])
+    .map((lot) => lot.root_origin_lot_id)
+    .filter(Boolean)
+    .filter((value, index, arr) => arr.indexOf(value) === index)
+    .slice(0, 6)
+    .join(", ");
+  return `<div class="trace-graph">
+    <div class="trace-graph-header"><strong>Flow graph</strong></div>
+    <div class="trace-graph-stats">
+      <span class="pill">addresses ${escapeHtml(stats.address_count)}</span>
+      <span class="pill">lots ${escapeHtml(stats.lot_count)}</span>
+      <span class="pill">txs ${escapeHtml(stats.tx_count)}</span>
+      <span class="pill">edges ${escapeHtml(stats.edge_count)}</span>
+      <span class="pill">depth ${escapeHtml(stats.max_depth_reached)}</span>
+    </div>
+    ${roots ? `<div class="muted">Root origins: ${escapeHtml(roots)}</div>` : ""}
+    <div class="trace-graph-edges">${edges || '<div class="muted">No linked edges found.</div>'}</div>
+  </div>`;
+}
+
 function renderTable(container, rows, columns) {
   if (!rows.length) {
     container.innerHTML = "<p class=\"muted\">No data</p>";
@@ -210,7 +244,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(item.denom)}</strong> total ${escapeHtml(item.total_amount)} · tainted ${escapeHtml(item.tainted_amount)} · risk ${(item.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}`;
+      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}${renderTraceGraph(result.graph)}`;
       return;
     }
     if (result.kind === "trace_lot") {
@@ -226,7 +260,8 @@ async function runSearch() {
         <div>Current amount: ${escapeHtml(lot.current_amount)}</div>
         <div>Tainted amount: ${escapeHtml(lot.tainted_amount)}</div>
         <div>Risk: ${(lot.risk_basis_points / 100).toFixed(2)}%</div>
-        <div class="muted">${holders}</div>`;
+        <div class="muted">${holders}</div>
+        ${renderTraceGraph(result.graph)}`;
       return;
     }
     if (result.kind === "trace_tx") {
@@ -239,7 +274,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(flow.from)} → ${escapeHtml(flow.to)}</strong> ${escapeHtml(flow.amount)} ${escapeHtml(flow.denom)} · tainted ${escapeHtml(flow.tainted_amount)} · risk ${(flow.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}`;
+      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}${renderTraceGraph(result.graph)}`;
     }
   } catch (err) {
     searchResult.textContent = `Not found: ${err.message}`;
@@ -254,7 +289,7 @@ async function init() {
     indexerBase = "";
   }
   if (searchHint) {
-    searchHint.textContent = "Search block height, tx hash, validator address, chain address, or lot_xxxxxxxx";
+    searchHint.textContent = "Search block height, tx hash, validator address, chain address, or lot_xxxxxxxx. Trace results now include linked flow graph paths.";
   }
   await refreshAll();
 }

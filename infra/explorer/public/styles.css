@@ -79,6 +79,47 @@ h2 {
   color: #c5d2ea;
 }
 
+.trace-graph {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #1f2a44;
+}
+
+.trace-graph-header {
+  margin-bottom: 10px;
+}
+
+.trace-graph-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #0f1527;
+  border: 1px solid #2c3a5e;
+  color: #c5d2ea;
+  font-size: 12px;
+}
+
+.trace-graph-edges {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.trace-edge {
+  padding: 10px;
+  border-radius: 10px;
+  background: #0f1527;
+  border: 1px solid #1f2a44;
+}
+
 .search-hint {
   margin-top: 10px;
   font-size: 12px;

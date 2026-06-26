@@ -549,10 +549,14 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
 
   const searchAddress = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=ynx1dave`), 200);
   assert.equal(searchAddress.kind, "trace_address");
+  assert.equal(searchAddress.graph.stats.edge_count >= 1, true);
+  assert.equal(searchAddress.graph.nodes.addresses.some((item) => item.address === "ynx1risky"), true);
 
   const searchLot = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=${lotId}`), 200);
   assert.equal(searchLot.kind, "trace_lot");
+  assert.equal(searchLot.graph.stats.lot_count >= 1, true);
 
   const searchTx = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=0xTRACE05`), 200);
   assert.equal(searchTx.kind, "trace_tx");
+  assert.equal(searchTx.graph.stats.tx_count >= 1, true);
 });

@@ -27,7 +27,7 @@
     "@eslint/js": "^10.0.1",
     "@nomicfoundation/hardhat-ethers": "^4.0.5",
     "@nomicfoundation/hardhat-mocha": "^3.0.9",
-    "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.10",
     "@types/node": "^26.0.0",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
     "@typescript-eslint/parser": "^8.33.0",

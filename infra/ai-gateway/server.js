@@ -295,6 +295,8 @@ const AI_PUBLIC_WEB4_URL = (process.env.AI_PUBLIC_WEB4_URL || AI_WEB4_HUB_URL ||
 const AI_PUBLIC_SITE_URL = (process.env.AI_PUBLIC_SITE_URL || "https://www.ynxweb4.com").replace(/\/$/, "");
 const AI_PUBLIC_INDEXER_URL = (process.env.AI_PUBLIC_INDEXER_URL || "https://indexer.ynxweb4.com").replace(/\/$/, "");
 const AI_TRACE_INDEXER_TOKEN = process.env.AI_TRACE_INDEXER_TOKEN || "";
+const AI_ENTITY_LABELS_FILE = process.env.AI_ENTITY_LABELS_FILE || "";
+const AI_ENTITY_LABELS_JSON = process.env.AI_ENTITY_LABELS_JSON || "";
 const AI_PUBLIC_EVM_RPC_URL = (process.env.AI_PUBLIC_EVM_RPC_URL || process.env.YNX_PUBLIC_EVM_RPC || "https://evm.ynxweb4.com").replace(/\/$/, "");
 const AI_EVM_RPC_TIMEOUT_MS = Math.max(500, parseInt(process.env.AI_EVM_RPC_TIMEOUT_MS || "2500", 10) || 2500);
 const AI_BRIDGE_OPERATOR_TOKEN = process.env.AI_BRIDGE_OPERATOR_TOKEN || process.env.BRIDGE_OPERATOR_TOKEN || "";
@@ -1164,9 +1166,87 @@ function buildSuspiciousPatterns(traceResult) {
   return patterns;
 }
 
-function inferEntityLabel(context, subject, traceResult) {
+function collectTraceSubjects(subject, traceResult) {
+  const addresses = new Set();
+  const txHashes = new Set();
+  const lotIds = new Set();
+  const rootOrigins = new Set();
+  const denoms = new Set();
   const raw = String(subject || "").trim();
-  if (!raw) return { entity_type: "unknown", confidence: 0.1, reasons: ["empty_subject"] };
+  if (raw) {
+    if (inferTraceKind(raw) === "address") addresses.add(raw);
+    if (inferTraceKind(raw) === "tx") txHashes.add(raw);
+    if (inferTraceKind(raw) === "lot") lotIds.add(raw);
+  }
+  if (traceResult?.kind === "address") {
+    if (traceResult.data?.address) addresses.add(traceResult.data.address);
+    for (const balance of traceResult.data?.balances || []) {
+      if (balance?.denom) denoms.add(balance.denom);
+      for (const lot of balance?.lots || []) {
+        if (lot?.lot_id) lotIds.add(lot.lot_id);
+        if (lot?.root_origin_lot_id) rootOrigins.add(lot.root_origin_lot_id);
+      }
+    }
+  } else if (traceResult?.kind === "lot") {
+    const lot = traceResult.data?.lot || {};
+    if (lot?.lot_id) lotIds.add(lot.lot_id);
+    if (lot?.root_origin_lot_id) rootOrigins.add(lot.root_origin_lot_id);
+    if (lot?.owner) addresses.add(lot.owner);
+    if (lot?.denom) denoms.add(lot.denom);
+    for (const holder of lot?.holders || []) {
+      if (holder?.address) addresses.add(holder.address);
+    }
+  } else if (traceResult?.kind === "tx") {
+    const tx = traceResult.data?.tx_effect || {};
+    if (tx?.hash) txHashes.add(tx.hash);
+    for (const flow of tx?.flows || []) {
+      if (flow?.from) addresses.add(flow.from);
+      if (flow?.to) addresses.add(flow.to);
+      if (flow?.denom) denoms.add(flow.denom);
+      for (const lot of flow?.transferred_lots || []) {
+        if (lot?.source_lot_id) lotIds.add(lot.source_lot_id);
+        if (lot?.child_lot_id) lotIds.add(lot.child_lot_id);
+        if (lot?.root_origin_lot_id) rootOrigins.add(lot.root_origin_lot_id);
+      }
+    }
+  }
+  return {
+    raw,
+    addresses: [...addresses],
+    tx_hashes: [...txHashes],
+    lot_ids: [...lotIds],
+    root_origin_lot_ids: [...rootOrigins],
+    denoms: [...denoms],
+  };
+}
+
+function staticEntityLabelProvider(subjects) {
+  const labels = Array.isArray(ENTITY_LABEL_FIXTURES?.labels) ? ENTITY_LABEL_FIXTURES.labels : [];
+  for (const item of labels) {
+    const match = item?.match || {};
+    const matched =
+      (match.address && subjects.addresses.includes(match.address)) ||
+      (match.tx_hash && subjects.tx_hashes.includes(match.tx_hash)) ||
+      (match.lot_id && subjects.lot_ids.includes(match.lot_id)) ||
+      (match.root_origin_lot_id && subjects.root_origin_lot_ids.includes(match.root_origin_lot_id)) ||
+      (match.denom && subjects.denoms.includes(match.denom));
+    if (!matched) continue;
+    return {
+      entity_type: item.entity_type || "known_entity",
+      label: item.label || item.entity_type || "known_entity",
+      provider: "static_labels",
+      confidence: Number(item.confidence || 0.95),
+      reasons: Array.isArray(item.reasons) && item.reasons.length > 0 ? item.reasons : ["matched configured entity label fixture"],
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      match,
+    };
+  }
+  return null;
+}
+
+function inferredEntityLabelProvider(context, subject, traceResult) {
+  const raw = String(subject || "").trim();
+  if (!raw) return { entity_type: "unknown", label: "unknown", provider: "inferred", confidence: 0.1, reasons: ["empty_subject"], tags: [] };
   if (traceResult?.kind === "address") {
     const balanceLots = (traceResult.data.balances || []).flatMap((item) => item.lots || []);
     const routeAssets = bridgeAssets(context).assets || [];
@@ -1176,39 +1256,69 @@ function inferEntityLabel(context, subject, traceResult) {
     if (matchedWrapped.length > 0) {
       return {
         entity_type: "bridge_exposed_account",
+        label: "bridge_exposed_account",
+        provider: "inferred",
         confidence: 0.82,
         reasons: matchedWrapped.map((asset) => `holds traced wrapped route asset ${asset.symbol}`),
+        tags: matchedWrapped.map((asset) => asset.routeId).filter(Boolean),
       };
     }
     if (balanceLots.some((lot) => amountToBigInt(lot.tainted_amount) > 0n)) {
       return {
         entity_type: "taint_exposed_wallet",
+        label: "taint_exposed_wallet",
+        provider: "inferred",
         confidence: 0.88,
         reasons: ["wallet balance contains tainted traced lots"],
+        tags: ["taint_exposed"],
       };
     }
     return {
       entity_type: "wallet",
+      label: "wallet",
+      provider: "inferred",
       confidence: 0.65,
       reasons: ["trace subject is an address with lot balances but no stronger attribution yet"],
+      tags: [],
     };
   }
   if (traceResult?.kind === "lot") {
     const lot = traceResult.data.lot || {};
     return {
       entity_type: amountToBigInt(lot.tainted_amount) > 0n ? "tainted_lot_fragment" : "lot_fragment",
+      label: amountToBigInt(lot.tainted_amount) > 0n ? "tainted_lot_fragment" : "lot_fragment",
+      provider: "inferred",
       confidence: 0.92,
       reasons: [`lot lineage record for ${lot.denom || "asset"}`],
+      tags: amountToBigInt(lot.tainted_amount) > 0n ? ["taint_exposed"] : [],
     };
   }
   if (traceResult?.kind === "tx") {
     return {
       entity_type: "transaction",
+      label: "transaction",
+      provider: "inferred",
       confidence: 0.9,
       reasons: ["trace subject is a transaction-level lineage split record"],
+      tags: [],
     };
   }
-  return { entity_type: "unknown", confidence: 0.2, reasons: ["no attribution rule matched"] };
+  return { entity_type: "unknown", label: "unknown", provider: "inferred", confidence: 0.2, reasons: ["no attribution rule matched"], tags: [] };
+}
+
+function inferEntityLabel(context, subject, traceResult) {
+  const subjects = collectTraceSubjects(subject, traceResult);
+  const staticMatch = staticEntityLabelProvider(subjects);
+  if (staticMatch) {
+    return {
+      ...staticMatch,
+      matched_subjects: subjects,
+    };
+  }
+  return {
+    ...inferredEntityLabelProvider(context, subject, traceResult),
+    matched_subjects: subjects,
+  };
 }
 
 function itemDenomLike(item, fallback = "") {
@@ -1386,6 +1496,39 @@ function bridgeAssets(context) {
 function normalizeSymbol(value) {
   return String(value || "").trim().toLowerCase();
 }
+
+function loadJsonFileIfPresent(filePath, fallback) {
+  if (!filePath) return fallback;
+  try {
+    if (!fs.existsSync(filePath)) return fallback;
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+function loadEntityLabelFixtures() {
+  let inline = {};
+  if (AI_ENTITY_LABELS_JSON) {
+    try {
+      inline = JSON.parse(AI_ENTITY_LABELS_JSON);
+    } catch {
+      inline = {};
+    }
+  }
+  const fromFile = loadJsonFileIfPresent(AI_ENTITY_LABELS_FILE, {});
+  const merged = Array.isArray(fromFile?.labels)
+    ? fromFile
+    : Array.isArray(inline?.labels)
+      ? inline
+      : { labels: [] };
+  if (Array.isArray(fromFile?.labels) && Array.isArray(inline?.labels)) {
+    merged.labels = [...fromFile.labels, ...inline.labels];
+  }
+  return merged;
+}
+
+const ENTITY_LABEL_FIXTURES = loadEntityLabelFixtures();
 
 function assetBySymbol(context, symbol) {
   const { assets } = bridgeAssets(context);

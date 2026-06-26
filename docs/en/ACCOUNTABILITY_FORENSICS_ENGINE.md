@@ -144,13 +144,21 @@ This graph view returns:
 So the case layer can now include actual traced paths instead of only a flat
 balance or transaction snapshot.
 
+Entity attribution is now split into provider layers:
+
+- configured static labels from `AI_ENTITY_LABELS_JSON` or `AI_ENTITY_LABELS_FILE`
+- inferred fallback labels from current live trace/context rules
+
+This means YNX can keep the current self-contained behavior while gaining a
+clean path to richer local datasets or future external label sources without
+rewriting case logic.
+
 ## Suggested next build steps
 
 1. add broader transaction-graph traversal beyond current trace targets
 2. expand clustering heuristics beyond shared lot/root-lineage signals
-3. add pluggable entity label providers instead of first-pass inferred labels
-4. add more suspicious detectors such as bridge hopping and time correlation
-5. keep the enforcement boundary separate from evidence generation
+3. add more suspicious detectors such as bridge hopping and time correlation
+4. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

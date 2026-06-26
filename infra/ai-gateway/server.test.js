@@ -1180,6 +1180,115 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(listed.items[0].case_id, forensicCase.case.case_id);
 });
 
+test("reviews and escalates forensics cases through protected operator flow", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-forensics-review-");
+  const web4Dir = await makeTempDir("ynx-web4-forensics-review-");
+  const internalToken = "test-internal-token-forensics-review";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_TRACE_INDEXER_TOKEN: "trace-token-test",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-case-review",
+        allowed_actions: ["ai.forensics.case.create", "ai.forensics.case.review"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.forensics.case.create", "ai.forensics.case.review"],
+        ttl_sec: 600,
+        max_ops: 5,
+      },
+    }),
+    201
+  );
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        action: "ai.forensics.case.create",
+        policy_id: policy.policy.policy_id,
+        target: "ynx1victim",
+        kind: "address",
+      },
+    }),
+    201
+  );
+
+  const reviewed = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}/review`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        policy_id: policy.policy.policy_id,
+        reviewer: "ops-1",
+        review_action: "manual_review",
+        next_status: "escalated",
+        escalation_status: "compliance_queue",
+        note: "High confidence taint exposure and bridge-linked flow.",
+      },
+    }),
+    200
+  );
+
+  assert.equal(reviewed.ok, true);
+  assert.equal(reviewed.case.review_status, "escalated");
+  assert.equal(reviewed.case.escalation_status, "compliance_queue");
+  assert.ok(Array.isArray(reviewed.case.review_logs));
+  assert.equal(reviewed.case.review_logs[0].reviewer, "ops-1");
+  assert.equal(reviewed.case.review_logs[0].next_status, "escalated");
+
+  const fetched = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}`), 200);
+  assert.equal(fetched.case.case_id, created.case.case_id);
+  assert.equal(fetched.case.review_status, "escalated");
+  assert.equal(fetched.case.guardrails.freeze_authority_granted, false);
+});
+
 test("answers intelligence chat through configured Ollama provider", async (t) => {
   const aiPort = await getFreePort();
   const mockPort = await getFreePort();

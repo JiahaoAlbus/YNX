@@ -1283,6 +1283,9 @@ function createForensicsCase(body, traceResult, summary, context) {
     address_clusters: clusters,
     final_summary: summary,
     recommended_next_actions: buildTraceRecommendedActions(risk),
+    review_status: "open",
+    review_logs: [],
+    escalation_status: "none",
     guardrails: {
       observation_only: true,
       transfer_authority_granted: false,
@@ -1291,6 +1294,30 @@ function createForensicsCase(body, traceResult, summary, context) {
     created_at: nowIso(),
     updated_at: nowIso(),
   };
+}
+
+function findForensicsCase(caseId) {
+  return state.forensic_cases.find((item) => item.case_id === caseId);
+}
+
+function allowedCaseReviewStatuses() {
+  return ["open", "under_review", "escalated", "freeze_requested", "closed_no_action", "closed_confirmed"];
+}
+
+function appendCaseReview(forensicCase, entry) {
+  forensicCase.review_logs = Array.isArray(forensicCase.review_logs) ? forensicCase.review_logs : [];
+  forensicCase.review_logs.unshift({
+    review_id: entry.review_id || randomId("review"),
+    action: entry.action || "",
+    note: entry.note || "",
+    reviewer: entry.reviewer || "",
+    previous_status: entry.previous_status || forensicCase.review_status || "open",
+    next_status: entry.next_status || forensicCase.review_status || "open",
+    created_at: nowIso(),
+  });
+  forensicCase.review_status = entry.next_status || forensicCase.review_status || "open";
+  forensicCase.escalation_status = entry.escalation_status || forensicCase.escalation_status || "none";
+  forensicCase.updated_at = nowIso();
 }
 
 function routeReadinessCounts(context) {
@@ -1994,6 +2021,13 @@ function aiActionCatalog() {
       description: "Builds a reusable evidence-backed case with trace data, risk summary, evidence chain, and recommended next actions.",
     },
     {
+      action: "ai.forensics.case.review",
+      title: "Review or escalate a forensics case",
+      mode: "operator",
+      auth: "web4-session",
+      description: "Appends an auditable operator review log, updates case review status, and records escalation state without granting any transfer or freeze authority.",
+    },
+    {
       action: "bridge.watchers.scan",
       title: "Trigger bridge deposit watcher scan",
       mode: "operator",
@@ -2620,6 +2654,40 @@ async function runAiAction(req, body, context) {
     return { status: 201, payload: { ok: true, action, case: forensicCase } };
   }
 
+  if (action === "ai.forensics.case.review") {
+    const auth = await requireActionAuthorization(req, "ai.forensics.case.review", body, {
+      resource: "ai/action/forensics/case/review",
+      reason: "ai-forensics-case-review",
+    });
+    if (!auth.ok) return { status: auth.status, payload: { ok: false, error: auth.error } };
+    const caseId = String(body.case_id || body.caseId || "").trim();
+    if (!caseId) return { status: 400, payload: { ok: false, error: "case_id_required", action } };
+    const forensicCase = findForensicsCase(caseId);
+    if (!forensicCase) return { status: 404, payload: { ok: false, error: "case_not_found", action } };
+    const nextStatus = String(body.next_status || body.nextStatus || forensicCase.review_status || "open").trim();
+    if (!allowedCaseReviewStatuses().includes(nextStatus)) {
+      return { status: 400, payload: { ok: false, error: "invalid_review_status", action, allowed_statuses: allowedCaseReviewStatuses() } };
+    }
+    const escalationStatus = String(body.escalation_status || body.escalationStatus || forensicCase.escalation_status || "none").trim() || "none";
+    appendCaseReview(forensicCase, {
+      review_id: body.review_id || body.reviewId || "",
+      action: body.review_action || body.action_name || "case_review",
+      note: body.note || "",
+      reviewer: body.reviewer || auth.policy_id || "",
+      previous_status: forensicCase.review_status || "open",
+      next_status: nextStatus,
+      escalation_status: escalationStatus,
+    });
+    addAudit("action.forensics.case.reviewed", {
+      case_id: forensicCase.case_id,
+      policy_id: auth.policy_id,
+      review_status: forensicCase.review_status,
+      escalation_status: forensicCase.escalation_status,
+    });
+    persist();
+    return { status: 200, payload: { ok: true, action, case: forensicCase } };
+  }
+
   if (action === "bridge.watchers.scan" || action === "bridge.withdrawals.scan") {
     const web4Action = action === "bridge.watchers.scan" ? "ai.bridge.watchers.scan" : "ai.bridge.withdrawals.scan";
     const auth = await requireActionAuthorization(req, web4Action, body, {
@@ -2786,8 +2854,8 @@ const server = http.createServer(async (req, res) => {
       actions: aiActionCatalog(),
       boundary: {
         public_read_actions: ["chain.status", "validators.status", "assets.list", "bridge.readiness", "tx.latest", "trade.quote", "trade.preflight", "trade.prepare"],
-        protected_actions: ["ai.monitor.create", "ai.trace.report", "ai.forensics.case.create", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
-        protected_actions_require: "Web4 policy/session; ai.trace.report and ai.forensics.case.create also expect internal trace-indexer authorization when the trace indexer is locked; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
+        protected_actions: ["ai.monitor.create", "ai.trace.report", "ai.forensics.case.create", "ai.forensics.case.review", "bridge.watchers.scan", "bridge.withdrawals.scan", "trade.execute"],
+        protected_actions_require: "Web4 policy/session; ai.trace.report and ai.forensics.case.create also expect internal trace-indexer authorization when the trace indexer is locked; ai.forensics.case.review records operator review and escalation state but does not grant transfer or freeze authority; bridge scans also require a server-side bridge operator token; trade.execute also requires an explicitly configured public-testnet agent signer and amount/slippage limits.",
         disabled_actions: [],
         trade_execution_boundary: "trade.prepare returns wallet transaction parameters. trade.execute can submit only with Web4 policy/session and a configured testnet agent signer; it never returns private key, mnemonic, or signer material.",
       },
@@ -2851,6 +2919,23 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/ai/forensics/cases") {
     const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
     return json(res, 200, { ok: true, items: state.forensic_cases.slice(0, limit) });
+  }
+
+  if (req.method === "GET" && segments[0] === "ai" && segments[1] === "forensics" && segments[2] === "cases" && segments[3]) {
+    const forensicCase = findForensicsCase(decodeURIComponent(segments[3]));
+    if (!forensicCase) return json(res, 404, { ok: false, error: "case_not_found" });
+    return json(res, 200, { ok: true, case: forensicCase });
+  }
+
+  if (req.method === "POST" && segments[0] === "ai" && segments[1] === "forensics" && segments[2] === "cases" && segments[3] && segments[4] === "review") {
+    const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const result = await runAiAction(req, {
+      ...body,
+      action: "ai.forensics.case.review",
+      case_id: body.case_id || body.caseId || decodeURIComponent(segments[3]),
+    }, await collectIntelligenceContext());
+    return json(res, result.status, result.payload);
   }
 
   if (req.method === "POST" && url.pathname === "/ai/jobs") {

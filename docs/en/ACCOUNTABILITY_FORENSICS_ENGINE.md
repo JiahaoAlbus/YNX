@@ -10,11 +10,20 @@ We adopt the following split:
 - base layer in V2: `lot lineage + pro-rata taint tracking`
 - protected operator/victim access: AI-assisted trace reports behind Web4
   policy/session
-- future expansion: graph tracing, clustering, entity attribution, suspicious
-  pattern detection, evidence chains, and case reports
+- accountability layer on top of V2: structured case reports, review logs, and
+  operator escalation state
+- future expansion: broader graph tracing and pluggable label providers
 
-This is better than stopping at a raw trace API because it gives YNX a path
-from simple balance provenance toward evidence-backed accountability review.
+This means the strategy should be implemented as a strengthening of V2 rather
+than as a disconnected V3. The lot-lineage layer remains the deterministic
+source-of-truth, while the forensics layer explains, scores, clusters, and
+escalates around that evidence.
+
+This is better than stopping at a raw trace API or trying to assign a rigid
+"serial number" to every post-merge coin fragment, because YNX needs to handle
+splits, merges, and mixed balances without pretending that exact one-note
+identity always survives. Lot lineage plus comparative taint models preserves
+truth better than a fake exact-coin story.
 
 ## Why this strategy is better
 
@@ -61,6 +70,7 @@ The AI gateway now supports:
 
 - `ai.trace.report`
 - `ai.forensics.case.create`
+- `ai.forensics.case.review`
 
 This action is designed to be called with:
 
@@ -97,6 +107,9 @@ The first structured case flow returns:
 - `entity_attribution`
 - `address_clusters`
 - `recommended_next_actions`
+- `review_status`
+- `review_logs`
+- `escalation_status`
 - `guardrails`
 
 Current comparative taint output includes:
@@ -107,14 +120,21 @@ Current comparative taint output includes:
 - `lifo`
 - `specificTrace`
 
+The case review flow now allows operators to:
+
+- fetch a single case by id
+- append manual review notes
+- move a case through `open`, `under_review`, `escalated`,
+  `freeze_requested`, `closed_no_action`, or `closed_confirmed`
+- record escalation state without granting direct transfer/freeze authority
+
 ## Suggested next build steps
 
-1. add a first-class case object and case repository
-2. add evidence-chain generation for every claim
-3. add multiple taint models: poison, FIFO, LIFO, specific-trace
-4. add suspicious-pattern detectors
-5. add risk scoring with explainable factors
-6. add operator-only escalation actions as a separate path from tracing
+1. add broader transaction-graph traversal beyond current trace targets
+2. expand clustering heuristics beyond shared lot/root-lineage signals
+3. add pluggable entity label providers instead of first-pass inferred labels
+4. add more suspicious detectors such as bridge hopping and time correlation
+5. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 
@@ -125,5 +145,5 @@ Today the system is strongest for:
 - victim-friendly explanation through AI
 
 It is not yet a complete multi-chain forensic platform and should not be
-described that way until the graph, attribution, pattern, and evidence layers
-are fully implemented.
+described that way until the graph, attribution-provider, and broader
+cross-network evidence layers are fully implemented.

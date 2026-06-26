@@ -523,6 +523,25 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(txTrace.tx_effect.flows[0].risk_basis_points, 4000);
   assert.equal(txTrace.tx_effect.flows[0].transferred_lots.length, 2);
 
+  const graphUpstream = assertJson(
+    await requestJson(`http://127.0.0.1:${indexerPort}/trace/graph?kind=address&target=ynx1dave&direction=upstream&max_depth=4&denom=anyxt`),
+    200
+  );
+  assert.equal(graphUpstream.kind, "address");
+  assert.equal(graphUpstream.target, "ynx1dave");
+  assert.equal(graphUpstream.stats.edge_count >= 4, true);
+  assert.equal(graphUpstream.nodes.addresses.some((item) => item.address === "ynx1risky"), true);
+  assert.equal(graphUpstream.edges.some((item) => item.tx_hash === "0xTRACE05"), true);
+  assert.equal(graphUpstream.edges.some((item) => item.traversal_direction === "upstream"), true);
+
+  const graphDownstream = assertJson(
+    await requestJson(`http://127.0.0.1:${indexerPort}/trace/graph?kind=address&target=ynx1alice&direction=downstream&max_depth=4&denom=anyxt`),
+    200
+  );
+  assert.equal(graphDownstream.stats.edge_count >= 3, true);
+  assert.equal(graphDownstream.nodes.addresses.some((item) => item.address === "ynx1dave"), true);
+  assert.equal(graphDownstream.edges.some((item) => item.traversal_direction === "downstream"), true);
+
   const lotId = dave.balances[0].lots[0].lot_id;
   const lotTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/lots/${lotId}`), 200);
   assert.equal(lotTrace.lot.owner, "ynx1dave");

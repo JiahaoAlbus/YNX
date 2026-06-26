@@ -811,6 +811,33 @@ async function fetchTraceResource(kind, target, denom = "") {
   return { ok: true, kind: normalizedKind, data: response.payload };
 }
 
+async function fetchTraceGraph(kind, target, options = {}) {
+  const normalizedKind = kind || inferTraceKind(target);
+  if (!normalizedKind) return { ok: false, error: "trace_target_required" };
+  const headers = AI_TRACE_INDEXER_TOKEN ? { "x-ynx-trace-token": AI_TRACE_INDEXER_TOKEN } : {};
+  const params = new URLSearchParams({
+    kind: normalizedKind,
+    target: String(target || ""),
+    direction: String(options.direction || "both"),
+    max_depth: String(options.max_depth || options.maxDepth || 4),
+  });
+  if (options.denom) params.set("denom", String(options.denom));
+  if (options.min_amount || options.minAmount) params.set("min_amount", String(options.min_amount || options.minAmount));
+  if (options.min_tainted_amount || options.minTaintedAmount) params.set("min_tainted_amount", String(options.min_tainted_amount || options.minTaintedAmount));
+  if (options.since_height || options.sinceHeight) params.set("since_height", String(options.since_height || options.sinceHeight));
+  if (options.until_height || options.untilHeight) params.set("until_height", String(options.until_height || options.untilHeight));
+  const response = await getJson(`${AI_PUBLIC_INDEXER_URL}/trace/graph?${params.toString()}`, { headers, timeout_ms: 8000 });
+  if (response.status < 200 || response.status >= 300 || response.payload?.ok !== true) {
+    return {
+      ok: false,
+      status: response.status || 502,
+      error: response.payload?.error || "trace_graph_lookup_failed",
+      kind: normalizedKind,
+    };
+  }
+  return { ok: true, kind: normalizedKind, data: response.payload };
+}
+
 function deterministicTraceAnswer(traceResult, body = {}) {
   const zh = hasChinese(body.language || body.prompt || body.note || body.target || "");
   if (!traceResult?.ok) {
@@ -1259,7 +1286,7 @@ function buildTraceRecommendedActions(risk) {
   return ["monitor account activity"];
 }
 
-function createForensicsCase(body, traceResult, summary, context) {
+function createForensicsCase(body, traceResult, summary, context, flowGraph = null) {
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
   const taint_models = buildComparativeTaintModels(traceResult);
@@ -1275,6 +1302,8 @@ function createForensicsCase(body, traceResult, summary, context) {
       end: body.endTime || "",
     },
     trace: traceResult.data,
+    traced_paths: flowGraph?.data?.edges || [],
+    flow_graph: flowGraph?.data || null,
     taint_models,
     risk,
     evidence_chain,
@@ -2638,8 +2667,17 @@ async function runAiAction(req, body, context) {
     if (!traceResult.ok) {
       return { status: traceResult.status || 404, payload: { ok: false, error: traceResult.error, action } };
     }
+    const flowGraph = await fetchTraceGraph(body.kind || "", body.target || body.address || body.lot_id || body.tx_hash || "", {
+      direction: body.direction || "both",
+      max_depth: body.max_depth || body.maxDepth || 4,
+      denom: body.denom || "",
+      min_amount: body.min_amount || body.minAmount || "",
+      min_tainted_amount: body.min_tainted_amount || body.minTaintedAmount || "",
+      since_height: body.since_height || body.sinceHeight || "",
+      until_height: body.until_height || body.untilHeight || "",
+    });
     const summary = deterministicTraceAnswer(traceResult, body);
-    const forensicCase = createForensicsCase(body, traceResult, summary, context);
+    const forensicCase = createForensicsCase(body, traceResult, summary, context, flowGraph.ok ? flowGraph : null);
     forensicCase.policy_id = auth.policy_id;
     state.forensic_cases.unshift(forensicCase);
     addAudit("action.forensics.case.created", {

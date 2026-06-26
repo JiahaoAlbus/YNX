@@ -104,6 +104,65 @@ function startMockIntelligenceUpstreams(port) {
         ],
       }));
     }
+    if (url.pathname === "/trace/graph" && url.searchParams.get("target") === "ynx1victim") {
+      if (req.headers["x-ynx-trace-token"] !== "trace-token-test") {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ ok: false, error: "trace_token_required" }));
+      }
+      return res.end(JSON.stringify({
+        ok: true,
+        kind: "address",
+        target: "ynx1victim",
+        options: {
+          direction: url.searchParams.get("direction") || "both",
+          max_depth: Number(url.searchParams.get("max_depth") || 4),
+          denom: url.searchParams.get("denom") || "",
+          min_amount: "0",
+          min_tainted_amount: "0",
+          since_height: 0,
+          until_height: 0,
+        },
+        nodes: {
+          addresses: [
+            { id: "ynx1source", type: "address", address: "ynx1source" },
+            { id: "ynx1victim", type: "address", address: "ynx1victim" },
+          ],
+          lots: [
+            { id: "lot_00000001", type: "lot", lot_id: "lot_00000001", owner: "ynx1source", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
+            { id: "lot_00000009", type: "lot", lot_id: "lot_00000009", owner: "ynx1victim", denom: "anyxt", current_amount: "20", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
+          ],
+          txs: [
+            { id: "0xTRACECASE01", type: "tx", tx_hash: "0xTRACECASE01", height: 77, index: 0 },
+          ],
+        },
+        edges: [
+          {
+            tx_hash: "0xTRACECASE01",
+            height: 77,
+            index: 0,
+            from: "ynx1source",
+            to: "ynx1victim",
+            denom: "anyxt",
+            amount: "20",
+            tainted_amount: "20",
+            risk_basis_points: 10000,
+            source_lot_id: "lot_00000001",
+            child_lot_id: "lot_00000009",
+            root_origin_lot_id: "lot_00000001",
+            traversal_direction: "upstream",
+            depth: 1,
+          },
+        ],
+        stats: {
+          address_count: 2,
+          lot_count: 2,
+          tx_count: 1,
+          edge_count: 1,
+          max_depth_reached: 1,
+        },
+        updated_at: "2026-06-26T00:00:00.000Z",
+      }));
+    }
     res.statusCode = 404;
     return res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
@@ -1167,6 +1226,9 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.taint_models.specificTrace.exactLineageAvailable, true);
   assert.ok(Array.isArray(forensicCase.case.evidence_chain));
   assert.ok(forensicCase.case.evidence_chain.length > 0);
+  assert.ok(Array.isArray(forensicCase.case.traced_paths));
+  assert.equal(forensicCase.case.traced_paths[0].tx_hash, "0xTRACECASE01");
+  assert.equal(forensicCase.case.flow_graph.stats.edge_count, 1);
   assert.ok(Array.isArray(forensicCase.case.suspicious_patterns));
   assert.ok(forensicCase.case.suspicious_patterns.some((item) => item.pattern_type === "mixed_exposure"));
   assert.equal(forensicCase.case.entity_attribution.entity_type, "bridge_exposed_account");

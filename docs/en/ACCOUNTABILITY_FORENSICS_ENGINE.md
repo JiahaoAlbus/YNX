@@ -100,6 +100,8 @@ The first structured case flow returns:
 - `case_id`
 - `subject`
 - `trace`
+- `traced_paths`
+- `flow_graph`
 - `taint_models`
 - `risk`
 - `evidence_chain`
@@ -127,6 +129,20 @@ The case review flow now allows operators to:
 - move a case through `open`, `under_review`, `escalated`,
   `freeze_requested`, `closed_no_action`, or `closed_confirmed`
 - record escalation state without granting direct transfer/freeze authority
+
+The trace indexer now also exposes a graph endpoint:
+
+- `GET /trace/graph?kind=address&target=ynx1...&direction=both&max_depth=4`
+
+This graph view returns:
+
+- address nodes
+- lot nodes
+- tx nodes
+- lineage edges with `source_lot_id`, `child_lot_id`, amount, taint, and depth
+
+So the case layer can now include actual traced paths instead of only a flat
+balance or transaction snapshot.
 
 ## Suggested next build steps
 

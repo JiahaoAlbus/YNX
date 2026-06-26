@@ -122,6 +122,7 @@ Public trace APIs:
 curl -s https://indexer.ynxweb4.com/trace/addresses/ynx1... | jq
 curl -s https://indexer.ynxweb4.com/trace/lots/lot_00000001 | jq
 curl -s https://indexer.ynxweb4.com/trace/txs/0x... | jq
+curl -s "https://indexer.ynxweb4.com/trace/graph?kind=address&target=ynx1...&direction=both&max_depth=4" | jq
 ```
 
 What the trace layer gives you:

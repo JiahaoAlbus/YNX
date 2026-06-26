@@ -1050,6 +1050,200 @@ function findTxEffectByHash(hash) {
   return null;
 }
 
+function buildLotTransferEdges() {
+  const edges = [];
+  for (const effect of Object.values(lineageState.tx_effects || {})) {
+    for (const flow of effect?.flows || []) {
+      for (const lot of flow.transferred_lots || []) {
+        edges.push({
+          tx_hash: effect.hash,
+          height: Number(effect.height || 0),
+          index: Number(effect.index || 0),
+          from: flow.from,
+          to: flow.to,
+          denom: flow.denom,
+          amount: lot.amount,
+          tainted_amount: lot.tainted_amount,
+          risk_basis_points: Number(lot.risk_basis_points || flow.risk_basis_points || 0),
+          source_lot_id: lot.source_lot_id,
+          child_lot_id: lot.child_lot_id,
+          root_origin_lot_id: lot.root_origin_lot_id || "",
+        });
+      }
+    }
+  }
+  return edges;
+}
+
+function lotIdsForAddress(address, denom = "") {
+  const normalizedAddress = normalizeAddress(address);
+  const normalizedDenom = normalizeDenom(denom);
+  const ids = new Set();
+  const current = lineageState.holdings?.[normalizedAddress] || {};
+  const denoms = normalizedDenom ? [normalizedDenom] : Object.keys(current);
+  for (const itemDenom of denoms) {
+    for (const entry of current[itemDenom] || []) {
+      if (entry?.lot_id) ids.add(entry.lot_id);
+    }
+  }
+  for (const lot of Object.values(lineageState.lots || {})) {
+    if (lot?.owner !== normalizedAddress) continue;
+    if (normalizedDenom && lot?.denom !== normalizedDenom) continue;
+    if (lot?.lot_id) ids.add(lot.lot_id);
+  }
+  return [...ids];
+}
+
+function applyGraphFilters(edge, options) {
+  if (options.denom && edge.denom !== options.denom) return false;
+  if (options.min_amount > 0n && amountToBigInt(edge.amount) < options.min_amount) return false;
+  if (options.min_tainted_amount > 0n && amountToBigInt(edge.tainted_amount) < options.min_tainted_amount) return false;
+  if (options.since_height > 0 && Number(edge.height || 0) < options.since_height) return false;
+  if (options.until_height > 0 && Number(edge.height || 0) > options.until_height) return false;
+  return true;
+}
+
+function traceGraph(kind, target, rawOptions = {}) {
+  const normalizedKind = kind || inferTraceKind(target);
+  const options = {
+    direction: ["upstream", "downstream", "both"].includes(String(rawOptions.direction || "").trim()) ? String(rawOptions.direction).trim() : "both",
+    max_depth: Math.max(1, Math.min(12, Number(rawOptions.max_depth || rawOptions.maxDepth || 4) || 4)),
+    denom: normalizeDenom(rawOptions.denom || ""),
+    min_amount: amountToBigInt(rawOptions.min_amount || rawOptions.minAmount || "0"),
+    min_tainted_amount: amountToBigInt(rawOptions.min_tainted_amount || rawOptions.minTaintedAmount || "0"),
+    since_height: Math.max(0, Number(rawOptions.since_height || rawOptions.sinceHeight || 0) || 0),
+    until_height: Math.max(0, Number(rawOptions.until_height || rawOptions.untilHeight || 0) || 0),
+  };
+  const allEdges = buildLotTransferEdges().filter((edge) => applyGraphFilters(edge, options));
+  const byChildLot = new Map();
+  const bySourceLot = new Map();
+  for (const edge of allEdges) {
+    if (!byChildLot.has(edge.child_lot_id)) byChildLot.set(edge.child_lot_id, []);
+    if (!bySourceLot.has(edge.source_lot_id)) bySourceLot.set(edge.source_lot_id, []);
+    byChildLot.get(edge.child_lot_id).push(edge);
+    bySourceLot.get(edge.source_lot_id).push(edge);
+  }
+
+  const queue = [];
+  const seenLots = new Set();
+  const seenEdges = new Set();
+  const edgeResults = [];
+  const seedLots = new Set();
+
+  if (normalizedKind === "address") {
+    for (const lotId of lotIdsForAddress(target, options.denom)) seedLots.add(lotId);
+  } else if (normalizedKind === "lot") {
+    seedLots.add(String(target || "").trim());
+  } else if (normalizedKind === "tx") {
+    const effect = findTxEffectByHash(target);
+    for (const flow of effect?.flows || []) {
+      for (const lot of flow.transferred_lots || []) {
+        if (lot.source_lot_id) seedLots.add(lot.source_lot_id);
+        if (lot.child_lot_id) seedLots.add(lot.child_lot_id);
+      }
+    }
+  }
+
+  for (const lotId of seedLots) {
+    if (!lotId) continue;
+    seenLots.add(lotId);
+    queue.push({ lot_id: lotId, depth: 0 });
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const upstreamEdges = options.direction === "downstream" ? [] : (byChildLot.get(current.lot_id) || []);
+    const downstreamEdges = options.direction === "upstream" ? [] : (bySourceLot.get(current.lot_id) || []);
+    for (const edge of [...upstreamEdges, ...downstreamEdges]) {
+      const edgeKey = `${edge.tx_hash}:${edge.source_lot_id}:${edge.child_lot_id}`;
+      if (!seenEdges.has(edgeKey)) {
+        seenEdges.add(edgeKey);
+        edgeResults.push({
+          ...edge,
+          traversal_direction: upstreamEdges.includes(edge) ? "upstream" : "downstream",
+          depth: current.depth + 1,
+        });
+      }
+      if (current.depth + 1 >= options.max_depth) continue;
+      const nextLotId = upstreamEdges.includes(edge) ? edge.source_lot_id : edge.child_lot_id;
+      if (!nextLotId || seenLots.has(nextLotId)) continue;
+      seenLots.add(nextLotId);
+      queue.push({ lot_id: nextLotId, depth: current.depth + 1 });
+    }
+  }
+
+  const nodeAddresses = new Set();
+  const nodeLots = new Set(seedLots);
+  const nodeTxs = new Set();
+  for (const edge of edgeResults) {
+    nodeTxs.add(edge.tx_hash);
+    nodeLots.add(edge.source_lot_id);
+    nodeLots.add(edge.child_lot_id);
+    if (edge.from) nodeAddresses.add(edge.from);
+    if (edge.to) nodeAddresses.add(edge.to);
+  }
+
+  const addressNodes = [...nodeAddresses].map((address) => ({
+    id: address,
+    type: "address",
+    address,
+  }));
+  const lotNodes = [...nodeLots]
+    .filter(Boolean)
+    .map((lotId) => {
+      const lot = lineageState.lots?.[lotId] || {};
+      return {
+        id: lotId,
+        type: "lot",
+        lot_id: lotId,
+        owner: lot.owner || "",
+        denom: lot.denom || "",
+        current_amount: lot.current_amount || lot.amount || "0",
+        tainted_amount: lot.tainted_amount || "0",
+        root_origin_lot_id: lot.root_origin_lot_id || lotId,
+      };
+    });
+  const txNodes = [...nodeTxs].map((hash) => {
+    const effect = findTxEffectByHash(hash) || {};
+    return {
+      id: hash,
+      type: "tx",
+      tx_hash: hash,
+      height: Number(effect.height || 0),
+      index: Number(effect.index || 0),
+    };
+  });
+
+  return {
+    ok: edgeResults.length > 0 || seedLots.size > 0,
+    kind: normalizedKind,
+    target: normalizedKind === "address" ? normalizeAddress(target) : String(target || "").trim(),
+    options: {
+      direction: options.direction,
+      max_depth: options.max_depth,
+      denom: options.denom || "",
+      min_amount: options.min_amount.toString(),
+      min_tainted_amount: options.min_tainted_amount.toString(),
+      since_height: options.since_height,
+      until_height: options.until_height,
+    },
+    nodes: {
+      addresses: addressNodes,
+      lots: lotNodes,
+      txs: txNodes,
+    },
+    edges: edgeResults.sort((a, b) => (a.depth - b.depth) || (a.height - b.height) || String(a.tx_hash).localeCompare(String(b.tx_hash))),
+    stats: {
+      address_count: addressNodes.length,
+      lot_count: lotNodes.length,
+      tx_count: txNodes.length,
+      edge_count: edgeResults.length,
+      max_depth_reached: edgeResults.reduce((max, edge) => Math.max(max, Number(edge.depth || 0)), 0),
+    },
+    updated_at: lineageState.updated_at || null,
+  };
+}
+
 async function initChainId() {
   try {
     const status = await rpcRequest("/status");
@@ -1794,6 +1988,27 @@ const server = http.createServer(async (req, res) => {
     }
     const effect = findTxEffectByHash(hash);
     return json(res, effect ? 200 : 404, effect ? { ok: true, tx_effect: effect, updated_at: lineageState.updated_at || null } : { ok: false, error: "not_found" });
+  }
+
+  if (url.pathname === "/trace/graph") {
+    if (!traceAuthorized(req)) {
+      return json(res, 401, { ok: false, error: "trace_token_required" });
+    }
+    const target = String(url.searchParams.get("target") || "").trim();
+    const kind = String(url.searchParams.get("kind") || "").trim();
+    if (!target) {
+      return json(res, 400, { ok: false, error: "trace_target_required" });
+    }
+    const graph = traceGraph(kind, target, {
+      direction: url.searchParams.get("direction") || "both",
+      max_depth: url.searchParams.get("max_depth") || "4",
+      denom: url.searchParams.get("denom") || "",
+      min_amount: url.searchParams.get("min_amount") || "0",
+      min_tainted_amount: url.searchParams.get("min_tainted_amount") || "0",
+      since_height: url.searchParams.get("since_height") || "0",
+      until_height: url.searchParams.get("until_height") || "0",
+    });
+    return json(res, graph.ok ? 200 : 404, graph.ok ? graph : { ...graph, error: "not_found" });
   }
 
   if (url.pathname === "/search") {

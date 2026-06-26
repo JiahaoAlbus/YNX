@@ -153,6 +153,15 @@ This means YNX can keep the current self-contained behavior while gaining a
 clean path to richer local datasets or future external label sources without
 rewriting case logic.
 
+Suspicious pattern detection is now split across:
+
+- direct trace-state detectors such as mixed exposure and root concentration
+- graph-driven detectors such as rapid multi-hop transfers, amount-preserving
+  hops, bridge-hop exposure, and pass-through wallet behavior
+
+That makes the case layer materially better at explaining suspicious routing
+instead of only flagging end-state balances.
+
 ## Suggested next build steps
 
 1. add broader transaction-graph traversal beyond current trace targets

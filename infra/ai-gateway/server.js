@@ -1052,7 +1052,124 @@ function buildComparativeTaintModels(traceResult) {
   };
 }
 
-function buildSuspiciousPatterns(traceResult) {
+function graphEdges(flowGraph) {
+  if (!flowGraph) return [];
+  if (Array.isArray(flowGraph.edges)) return flowGraph.edges;
+  if (Array.isArray(flowGraph.data?.edges)) return flowGraph.data.edges;
+  return [];
+}
+
+function buildGraphSuspiciousPatterns(context, flowGraph) {
+  const patterns = [];
+  const edges = graphEdges(flowGraph);
+  if (edges.length === 0) return patterns;
+
+  const heights = edges.map((edge) => Number(edge.height || 0)).filter((value) => value > 0);
+  const minHeight = heights.length ? Math.min(...heights) : 0;
+  const maxHeight = heights.length ? Math.max(...heights) : 0;
+  if (edges.length >= 3 && minHeight > 0 && maxHeight > 0 && maxHeight - minHeight <= 3) {
+    patterns.push({
+      pattern_type: "rapid_multi_hop_transfers",
+      severity: "high",
+      confidence: 0.84,
+      reason: `Trace graph moves through ${edges.length} linked hops within ${maxHeight - minHeight} blocks`,
+      affected_transactions: [...new Set(edges.map((edge) => edge.tx_hash).filter(Boolean))],
+      evidence: edges.map((edge) => ({
+        tx_hash: edge.tx_hash,
+        from: edge.from,
+        to: edge.to,
+        amount: edge.amount,
+        denom: edge.denom,
+        height: edge.height,
+      })),
+    });
+  }
+
+  const amountGroups = new Map();
+  for (const edge of edges) {
+    const key = `${edge.denom}:${edge.amount}`;
+    if (!amountGroups.has(key)) amountGroups.set(key, []);
+    amountGroups.get(key).push(edge);
+  }
+  for (const [key, grouped] of amountGroups.entries()) {
+    if (grouped.length >= 2) {
+      const [denom, amount] = key.split(":");
+      patterns.push({
+        pattern_type: "amount_preserving_hops",
+        severity: "medium",
+        confidence: 0.79,
+        reason: `${grouped.length} linked hops preserve amount ${amount} ${denom}`,
+        affected_transactions: [...new Set(grouped.map((edge) => edge.tx_hash).filter(Boolean))],
+        evidence: grouped.map((edge) => ({
+          tx_hash: edge.tx_hash,
+          from: edge.from,
+          to: edge.to,
+          amount: edge.amount,
+          denom: edge.denom,
+        })),
+      });
+      break;
+    }
+  }
+
+  const routeAssets = bridgeAssets(context).assets || [];
+  const routeSymbols = new Set(routeAssets.filter((asset) => asset.routeId).map((asset) => normalizeSymbol(asset.symbol)));
+  const matchedRouteEdges = edges.filter((edge) => routeSymbols.has(normalizeSymbol(edge.denom)));
+  const matchedRouteDenoms = [...new Set(matchedRouteEdges.map((edge) => edge.denom))];
+  if (matchedRouteDenoms.length >= 2) {
+    patterns.push({
+      pattern_type: "bridge_hop_exposure",
+      severity: "high",
+      confidence: 0.83,
+      reason: `Trace graph traverses multiple bridge-wrapped route assets: ${matchedRouteDenoms.join(", ")}`,
+      affected_transactions: [...new Set(matchedRouteEdges.map((edge) => edge.tx_hash).filter(Boolean))],
+      evidence: matchedRouteEdges.map((edge) => ({
+        tx_hash: edge.tx_hash,
+        from: edge.from,
+        to: edge.to,
+        denom: edge.denom,
+        amount: edge.amount,
+      })),
+    });
+  }
+
+  const addressIn = new Map();
+  const addressOut = new Map();
+  for (const edge of edges) {
+    if (edge.to) addressIn.set(edge.to, (addressIn.get(edge.to) || 0n) + amountToBigInt(edge.amount));
+    if (edge.from) addressOut.set(edge.from, (addressOut.get(edge.from) || 0n) + amountToBigInt(edge.amount));
+  }
+  for (const address of new Set([...addressIn.keys(), ...addressOut.keys()])) {
+    const incoming = addressIn.get(address) || 0n;
+    const outgoing = addressOut.get(address) || 0n;
+    if (incoming <= 0n || outgoing <= 0n) continue;
+    const larger = incoming > outgoing ? incoming : outgoing;
+    const smaller = incoming > outgoing ? outgoing : incoming;
+    if (larger > 0n && smaller * 100n >= larger * 90n) {
+      patterns.push({
+        pattern_type: "pass_through_wallet_behavior",
+        severity: "medium",
+        confidence: 0.8,
+        reason: `Address ${address} forwards nearly the same value it receives across linked trace edges`,
+        affected_addresses: [address],
+        evidence: edges
+          .filter((edge) => edge.from === address || edge.to === address)
+          .map((edge) => ({
+            tx_hash: edge.tx_hash,
+            from: edge.from,
+            to: edge.to,
+            amount: edge.amount,
+            denom: edge.denom,
+          })),
+      });
+      break;
+    }
+  }
+
+  return patterns;
+}
+
+function buildSuspiciousPatterns(traceResult, context = {}, flowGraph = null) {
   if (!traceResult?.ok) return [];
   const patterns = [];
   if (traceResult.kind === "address") {
@@ -1163,7 +1280,7 @@ function buildSuspiciousPatterns(traceResult) {
       });
     }
   }
-  return patterns;
+  return [...patterns, ...buildGraphSuspiciousPatterns(context, flowGraph)];
 }
 
 function collectTraceSubjects(subject, traceResult) {
@@ -1400,7 +1517,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
   const taint_models = buildComparativeTaintModels(traceResult);
-  const suspicious_patterns = buildSuspiciousPatterns(traceResult);
+  const suspicious_patterns = buildSuspiciousPatterns(traceResult, context, flowGraph?.data || flowGraph || null);
   const entity = inferEntityLabel(context || {}, body.target || body.address || body.lot_id || body.tx_hash || "", traceResult);
   const clusters = buildAddressClusters(traceResult);
   return {

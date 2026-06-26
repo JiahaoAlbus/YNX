@@ -3051,6 +3051,32 @@ async function requireActionAuthorization(req, action, body, options = {}) {
   return { ok: true, policy_id: policyId, authorization: auth.authorization };
 }
 
+async function requirePolicyReadAuthorization(req, action, policyId, options = {}) {
+  const scopedPolicyId = String(policyId || "").trim();
+  if (!scopedPolicyId) {
+    if (AI_ENFORCE_POLICY) return { ok: false, status: 400, error: "policy_id_required" };
+    return { ok: true, policy_id: "" };
+  }
+  const auth = await authorizeViaWeb4(req, action, {
+    policy_id: scopedPolicyId,
+    amount: 0,
+    consume: false,
+    request_id: options.request_id || "",
+    resource: options.resource || `ai/read/${action}`,
+    reason: options.reason || action,
+  });
+  if (!auth.ok) return { ok: false, status: auth.status, error: auth.error };
+  return { ok: true, policy_id: scopedPolicyId, authorization: auth.authorization };
+}
+
+function caseAccessibleByPolicy(forensicCase, policyId) {
+  if (!forensicCase) return false;
+  const scoped = String(forensicCase.policy_id || "").trim();
+  const requested = String(policyId || "").trim();
+  if (!scoped) return !requested && !AI_ENFORCE_POLICY;
+  return scoped === requested;
+}
+
 async function runAiAction(req, body, context) {
   const action = String(body.action || body.intent || "").trim();
   const catalogItem = actionByName(action);
@@ -3223,6 +3249,9 @@ async function runAiAction(req, body, context) {
     if (!caseId) return { status: 400, payload: { ok: false, error: "case_id_required", action } };
     const forensicCase = findForensicsCase(caseId);
     if (!forensicCase) return { status: 404, payload: { ok: false, error: "case_not_found", action } };
+    if (!caseAccessibleByPolicy(forensicCase, auth.policy_id)) {
+      return { status: 403, payload: { ok: false, error: "case_policy_denied", action } };
+    }
     const nextStatus = String(body.next_status || body.nextStatus || forensicCase.review_status || "open").trim();
     if (!allowedCaseReviewStatuses().includes(nextStatus)) {
       return { status: 400, payload: { ok: false, error: "invalid_review_status", action, allowed_statuses: allowedCaseReviewStatuses() } };
@@ -3467,22 +3496,52 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/ai/audit") {
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.audit.read", url.searchParams.get("policy_id") || "", {
+      resource: "ai/audit",
+      reason: "ai-audit-read",
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
     const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
-    return json(res, 200, { ok: true, items: state.audit_logs.slice(0, limit) });
+    const items = policyRead.policy_id
+      ? state.audit_logs.filter((item) => String(item.policy_id || "") === policyRead.policy_id).slice(0, limit)
+      : state.audit_logs.slice(0, limit);
+    return json(res, 200, { ok: true, items });
   }
 
   if (req.method === "GET" && url.pathname === "/ai/jobs") {
-    return json(res, 200, { ok: true, items: state.jobs });
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.job.read", url.searchParams.get("policy_id") || "", {
+      resource: "ai/jobs",
+      reason: "ai-job-read",
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+    const items = policyRead.policy_id
+      ? state.jobs.filter((item) => String(item.policy_id || "") === policyRead.policy_id)
+      : state.jobs;
+    return json(res, 200, { ok: true, items });
   }
 
   if (req.method === "GET" && url.pathname === "/ai/forensics/cases") {
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.forensics.case.read", url.searchParams.get("policy_id") || "", {
+      resource: "ai/forensics/cases",
+      reason: "ai-forensics-case-read",
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
     const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
-    return json(res, 200, { ok: true, items: state.forensic_cases.slice(0, limit) });
+    const items = policyRead.policy_id
+      ? state.forensic_cases.filter((item) => caseAccessibleByPolicy(item, policyRead.policy_id)).slice(0, limit)
+      : state.forensic_cases.slice(0, limit);
+    return json(res, 200, { ok: true, items });
   }
 
   if (req.method === "GET" && segments[0] === "ai" && segments[1] === "forensics" && segments[2] === "cases" && segments[3]) {
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.forensics.case.read", url.searchParams.get("policy_id") || "", {
+      resource: `ai/forensics/cases/${decodeURIComponent(segments[3])}`,
+      reason: "ai-forensics-case-read",
+      request_id: decodeURIComponent(segments[3]),
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
     const forensicCase = findForensicsCase(decodeURIComponent(segments[3]));
-    if (!forensicCase) return json(res, 404, { ok: false, error: "case_not_found" });
+    if (!forensicCase || !caseAccessibleByPolicy(forensicCase, policyRead.policy_id)) return json(res, 404, { ok: false, error: "case_not_found" });
     return json(res, 200, { ok: true, case: forensicCase });
   }
 
@@ -3534,6 +3593,15 @@ const server = http.createServer(async (req, res) => {
     if (!job) return json(res, 404, { ok: false, error: "job_not_found" });
 
     if (req.method === "GET" && !action) {
+      const policyRead = await requirePolicyReadAuthorization(req, "ai.job.read", url.searchParams.get("policy_id") || job.policy_id || "", {
+        resource: `ai/jobs/${jobId}`,
+        reason: "ai-job-read",
+        request_id: jobId,
+      });
+      if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+      if (policyRead.policy_id && String(job.policy_id || "") !== policyRead.policy_id) {
+        return json(res, 404, { ok: false, error: "job_not_found" });
+      }
       return json(res, 200, { ok: true, job });
     }
 
@@ -3681,7 +3749,15 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/ai/vaults") {
-    return json(res, 200, { ok: true, items: state.vaults });
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.vault.read", url.searchParams.get("policy_id") || "", {
+      resource: "ai/vaults",
+      reason: "ai-vault-read",
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+    const items = policyRead.policy_id
+      ? state.vaults.filter((item) => String(item.policy_id || "") === policyRead.policy_id)
+      : state.vaults;
+    return json(res, 200, { ok: true, items });
   }
 
   if (req.method === "POST" && url.pathname === "/ai/vaults") {
@@ -3718,7 +3794,18 @@ const server = http.createServer(async (req, res) => {
     const vault = findVault(vaultId);
     if (!vault) return json(res, 404, { ok: false, error: "vault_not_found" });
 
-    if (req.method === "GET" && !action) return json(res, 200, { ok: true, vault });
+    if (req.method === "GET" && !action) {
+      const policyRead = await requirePolicyReadAuthorization(req, "ai.vault.read", url.searchParams.get("policy_id") || vault.policy_id || "", {
+        resource: `ai/vaults/${vaultId}`,
+        reason: "ai-vault-read",
+        request_id: vaultId,
+      });
+      if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+      if (policyRead.policy_id && String(vault.policy_id || "") !== policyRead.policy_id) {
+        return json(res, 404, { ok: false, error: "vault_not_found" });
+      }
+      return json(res, 200, { ok: true, vault });
+    }
 
     if (req.method === "POST" && action === "deposit") {
       const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
@@ -3771,7 +3858,15 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/ai/payments") {
-    return json(res, 200, { ok: true, items: state.payments });
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.payment.read", url.searchParams.get("policy_id") || "", {
+      resource: "ai/payments",
+      reason: "ai-payment-read",
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+    const items = policyRead.policy_id
+      ? state.payments.filter((item) => String(item.policy_id || "") === policyRead.policy_id)
+      : state.payments;
+    return json(res, 200, { ok: true, items });
   }
 
   if (req.method === "POST" && url.pathname === "/ai/payments/quote") {

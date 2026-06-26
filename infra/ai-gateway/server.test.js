@@ -470,6 +470,135 @@ test("enforces web4-backed policy authorization for vault creation", async (t) =
   assert.equal(created.vault.policy_id, policy.policy.policy_id);
 });
 
+test("protects job and vault read surfaces behind scoped Web4 sessions", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-read-scope-");
+  const web4Dir = await makeTempDir("ynx-web4-read-scope-");
+  const internalToken = "test-internal-token-read-scope";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-read-scope",
+        allowed_actions: ["ai.vault.create", "ai.vault.read", "ai.job.create", "ai.job.read"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.vault.create", "ai.vault.read", "ai.job.create", "ai.job.read"],
+        ttl_sec: 600,
+        max_ops: 6,
+      },
+    }),
+    201
+  );
+
+  const createdVault = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        owner: "ynx1owner",
+        policy_id: policy.policy.policy_id,
+      },
+    }),
+    201
+  );
+
+  const createdJob = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/jobs`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        creator: "ops",
+        reward: "0",
+        stake: "0",
+        input_uri: "ynx://job/read-scope",
+        policy_id: policy.policy.policy_id,
+      },
+    }),
+    201
+  );
+
+  const publicJobsDenied = await requestJson(`http://127.0.0.1:${aiPort}/ai/jobs`);
+  assert.equal(publicJobsDenied.status, 400);
+  assert.equal(publicJobsDenied.body.error, "policy_id_required");
+
+  const publicVaultsDenied = await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults`);
+  assert.equal(publicVaultsDenied.status, 400);
+  assert.equal(publicVaultsDenied.body.error, "policy_id_required");
+
+  const scopedJobs = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/jobs?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(scopedJobs.items.length, 1);
+  assert.equal(scopedJobs.items[0].job_id, createdJob.job.job_id);
+
+  const scopedVaults = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(scopedVaults.items.length, 1);
+  assert.equal(scopedVaults.items[0].vault_id, createdVault.vault.vault_id);
+
+  const scopedJob = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/jobs/${createdJob.job.job_id}?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(scopedJob.job.job_id, createdJob.job.job_id);
+
+  const scopedVault = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults/${createdVault.vault.vault_id}?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(scopedVault.vault.vault_id, createdVault.vault.vault_id);
+});
+
 test("denies AI action when policy service host allowlist does not include gateway host", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();
@@ -1240,7 +1369,7 @@ test("creates protected structured forensics cases with risk and evidence", asyn
       method: "POST",
       body: {
         owner: "owner-ai-case",
-        allowed_actions: ["ai.forensics.case.create"],
+        allowed_actions: ["ai.forensics.case.create", "ai.forensics.case.read"],
         allowed_service_hosts: ["127.0.0.1"],
       },
     }),
@@ -1251,7 +1380,7 @@ test("creates protected structured forensics cases with risk and evidence", asyn
       method: "POST",
       headers: { "x-ynx-owner": policy.owner_secret },
       body: {
-        capabilities: ["ai.forensics.case.create"],
+        capabilities: ["ai.forensics.case.create", "ai.forensics.case.read"],
         ttl_sec: 600,
         max_ops: 3,
       },
@@ -1313,7 +1442,9 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
 
-  const listed = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases`), 200);
+  const listed = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+    headers: { "x-ynx-session": session.token },
+  }), 200);
   assert.equal(listed.items.length, 1);
   assert.equal(listed.items[0].case_id, forensicCase.case.case_id);
 });
@@ -1464,7 +1595,7 @@ test("reviews and escalates forensics cases through protected operator flow", as
       method: "POST",
       body: {
         owner: "owner-ai-case-review",
-        allowed_actions: ["ai.forensics.case.create", "ai.forensics.case.review"],
+        allowed_actions: ["ai.forensics.case.create", "ai.forensics.case.review", "ai.forensics.case.read"],
         allowed_service_hosts: ["127.0.0.1"],
       },
     }),
@@ -1475,7 +1606,7 @@ test("reviews and escalates forensics cases through protected operator flow", as
       method: "POST",
       headers: { "x-ynx-owner": policy.owner_secret },
       body: {
-        capabilities: ["ai.forensics.case.create", "ai.forensics.case.review"],
+        capabilities: ["ai.forensics.case.create", "ai.forensics.case.review", "ai.forensics.case.read"],
         ttl_sec: 600,
         max_ops: 5,
       },
@@ -1520,11 +1651,142 @@ test("reviews and escalates forensics cases through protected operator flow", as
   assert.equal(reviewed.case.review_logs[0].reviewer, "ops-1");
   assert.equal(reviewed.case.review_logs[0].next_status, "escalated");
 
-  const fetched = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}`), 200);
+  const fetched = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+    headers: { "x-ynx-session": session.token },
+  }), 200);
   assert.equal(fetched.case.case_id, created.case.case_id);
   assert.equal(fetched.case.review_status, "escalated");
   assert.equal(fetched.case.case_dossier.operational_state.review_status, "escalated");
   assert.equal(fetched.case.guardrails.freeze_authority_granted, false);
+});
+
+test("protects forensic case reads and denies cross-policy case review access", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const mockPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-forensics-policy-scope-");
+  const web4Dir = await makeTempDir("ynx-web4-forensics-policy-scope-");
+  const internalToken = "test-internal-token-forensics-scope";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+      AI_TRACE_INDEXER_TOKEN: "trace-token-test",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policyA = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-case-a",
+        allowed_actions: ["ai.forensics.case.create", "ai.forensics.case.read", "ai.forensics.case.review"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const sessionA = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policyA.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policyA.owner_secret },
+      body: {
+        capabilities: ["ai.forensics.case.create", "ai.forensics.case.read", "ai.forensics.case.review"],
+        ttl_sec: 600,
+        max_ops: 6,
+      },
+    }),
+    201
+  );
+
+  const policyB = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-ai-case-b",
+        allowed_actions: ["ai.forensics.case.read", "ai.forensics.case.review"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const sessionB = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policyB.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policyB.owner_secret },
+      body: {
+        capabilities: ["ai.forensics.case.read", "ai.forensics.case.review"],
+        ttl_sec: 600,
+        max_ops: 6,
+      },
+    }),
+    201
+  );
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/actions/run`, {
+      method: "POST",
+      headers: { "x-ynx-session": sessionA.token },
+      body: {
+        action: "ai.forensics.case.create",
+        policy_id: policyA.policy.policy_id,
+        target: "ynx1victim",
+        kind: "address",
+      },
+    }),
+    201
+  );
+
+  const publicDenied = await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases`);
+  assert.equal(publicDenied.status, 400);
+  assert.equal(publicDenied.body.error, "policy_id_required");
+
+  const wrongPolicyFetch = await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}?policy_id=${encodeURIComponent(policyB.policy.policy_id)}`, {
+    headers: { "x-ynx-session": sessionB.token },
+  });
+  assert.equal(wrongPolicyFetch.status, 404);
+  assert.equal(wrongPolicyFetch.body.error, "case_not_found");
+
+  const wrongPolicyReview = await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}/review`, {
+    method: "POST",
+    headers: { "x-ynx-session": sessionB.token },
+    body: {
+      policy_id: policyB.policy.policy_id,
+      reviewer: "ops-b",
+      next_status: "escalated",
+      escalation_status: "compliance_queue",
+      note: "Should not be able to mutate another policy's case.",
+    },
+  });
+  assert.equal(wrongPolicyReview.status, 403);
+  assert.equal(wrongPolicyReview.body.error, "case_policy_denied");
 });
 
 test("answers intelligence chat through configured Ollama provider", async (t) => {

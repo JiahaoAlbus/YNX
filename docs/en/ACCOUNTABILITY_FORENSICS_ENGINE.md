@@ -81,6 +81,7 @@ The AI gateway now supports:
 - `ai.trace.report`
 - `ai.forensics.case.create`
 - `ai.forensics.case.review`
+- `ai.forensics.case.read`
 
 This action is designed to be called with:
 
@@ -141,6 +142,13 @@ The case review flow now allows operators to:
 - move a case through `open`, `under_review`, `escalated`,
   `freeze_requested`, `closed_no_action`, or `closed_confirmed`
 - record escalation state without granting direct transfer/freeze authority
+
+Protected read boundary:
+
+- case list/detail reads should stay policy-scoped behind Web4 sessions
+- cross-policy case fetch or mutation should be denied
+- public explorer/search may show redacted evidence previews, but operator case
+  records are not a public feed
 
 The trace indexer now also exposes a graph endpoint:
 

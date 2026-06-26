@@ -88,6 +88,7 @@ paths:
   /ai/jobs:
     get:
       summary: List jobs
+      description: When Web4 policy enforcement is enabled, this read surface is policy-scoped and expects `policy_id` plus `x-ynx-session`.
       responses:
         "200":
           description: OK
@@ -105,6 +106,7 @@ paths:
   /ai/jobs/{job_id}:
     get:
       summary: Get job detail
+      description: When Web4 policy enforcement is enabled, this read surface is policy-scoped and expects `policy_id` plus `x-ynx-session`.
       parameters:
         - in: path
           name: job_id

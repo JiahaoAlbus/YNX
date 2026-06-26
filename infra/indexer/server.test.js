@@ -554,15 +554,17 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
 
   const searchAddress = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=ynx1dave`), 200);
   assert.equal(searchAddress.kind, "trace_address");
-  assert.equal(searchAddress.graph.stats.edge_count >= 1, true);
-  assert.equal(searchAddress.graph.nodes.addresses.some((item) => item.address === "ynx1risky"), true);
-  assert.equal(Array.isArray(searchAddress.graph.paths), true);
+  assert.equal(searchAddress.graph_preview.stats.edge_count >= 1, true);
+  assert.equal(searchAddress.graph_preview.edge_preview.some((item) => item.from === "ynx1risky"), true);
+  assert.equal(Array.isArray(searchAddress.graph_preview.path_preview), true);
+  assert.equal(searchAddress.graph_preview.guardrails.preview_only, true);
+  assert.equal(searchAddress.graph_preview.edge_preview[0].tainted_amount, undefined);
 
   const searchLot = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=${lotId}`), 200);
   assert.equal(searchLot.kind, "trace_lot");
-  assert.equal(searchLot.graph.stats.lot_count >= 1, true);
+  assert.equal(searchLot.graph_preview.stats.lot_count >= 1, true);
 
   const searchTx = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=0xTRACE05`), 200);
   assert.equal(searchTx.kind, "trace_tx");
-  assert.equal(searchTx.graph.stats.tx_count >= 1, true);
+  assert.equal(searchTx.graph_preview.stats.tx_count >= 1, true);
 });

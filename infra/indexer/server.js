@@ -1346,6 +1346,54 @@ function searchGraphPayload(kind, target) {
   return graph;
 }
 
+function redactGraphPreview(graph) {
+  if (!graph?.ok) return null;
+  return {
+    ok: true,
+    kind: graph.kind,
+    target: graph.target,
+    options: {
+      direction: graph.options?.direction || "both",
+      max_depth: graph.options?.max_depth || 0,
+      max_paths: graph.options?.max_paths || 0,
+      denom: graph.options?.denom || "",
+    },
+    stats: graph.stats || {
+      address_count: 0,
+      lot_count: 0,
+      tx_count: 0,
+      edge_count: 0,
+      max_depth_reached: 0,
+    },
+    path_preview: (graph.paths || []).slice(0, 6).map((path, index) => ({
+      preview_id: `path_preview_${String(index + 1).padStart(2, "0")}`,
+      direction: path.direction,
+      depth: path.depth,
+      tx_hashes: Array.isArray(path.tx_hashes) ? path.tx_hashes.slice(0, 4) : [],
+      addresses: Array.isArray(path.addresses) ? path.addresses.slice(0, 6) : [],
+      denoms: Array.isArray(path.denoms) ? path.denoms.slice(0, 4) : [],
+    })),
+    edge_preview: (graph.edges || []).slice(0, 10).map((edge) => ({
+      tx_hash: edge.tx_hash,
+      from: edge.from,
+      to: edge.to,
+      denom: edge.denom,
+      amount: edge.amount,
+      height: edge.height,
+      traversal_direction: edge.traversal_direction,
+      depth: edge.depth,
+    })),
+    root_origin_preview: [...new Set((graph.nodes?.lots || []).map((lot) => lot.root_origin_lot_id).filter(Boolean))].slice(0, 8),
+    guardrails: {
+      preview_only: true,
+      full_trace_token_required: true,
+      omits_lot_level_transfer_ids: true,
+      omits_tainted_amounts: true,
+    },
+    updated_at: graph.updated_at || null,
+  };
+}
+
 async function initChainId() {
   try {
     const status = await rpcRequest("/status");
@@ -1659,14 +1707,21 @@ async function searchIndex(query) {
   if (validator) return { ok: true, kind: "validator", ...validator };
 
   const addressTrace = summarizeAddressTrace(raw);
-  if (addressTrace.ok) return { ok: true, kind: "trace_address", trace: addressTrace, graph: searchGraphPayload("address", raw) };
+  if (addressTrace.ok) {
+    const graph = searchGraphPayload("address", raw);
+    return { ok: true, kind: "trace_address", trace: addressTrace, graph_preview: redactGraphPreview(graph) };
+  }
 
   const lotTrace = summarizeLotTrace(raw);
-  if (lotTrace) return { ok: true, kind: "trace_lot", trace: lotTrace, graph: searchGraphPayload("lot", raw) };
+  if (lotTrace) {
+    const graph = searchGraphPayload("lot", raw);
+    return { ok: true, kind: "trace_lot", trace: lotTrace, graph_preview: redactGraphPreview(graph) };
+  }
 
   const txEffect = findTxEffectByHash(raw);
   if (txEffect) {
-    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect }, graph: searchGraphPayload("tx", raw) };
+    const graph = searchGraphPayload("tx", raw);
+    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect }, graph_preview: redactGraphPreview(graph) };
   }
 
   const tx = await findTxByHash(raw);

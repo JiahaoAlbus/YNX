@@ -105,6 +105,9 @@ changing the base coin model into a UTXO or NFT-style system.
 - purpose: fraud tracing, source reconstruction, taint inheritance, and
   operator-side risk review
 - scope: selected denoms only, configured by the indexer
+- architecture decision: this is the correct V2 base for accountability and
+  forensics; do not model every fungible unit as a permanently unique
+  serial-numbered coin fragment after merges and splits
 
 Runtime controls:
 
@@ -122,7 +125,13 @@ Public trace APIs:
 curl -s https://indexer.ynxweb4.com/trace/addresses/ynx1... | jq
 curl -s https://indexer.ynxweb4.com/trace/lots/lot_00000001 | jq
 curl -s https://indexer.ynxweb4.com/trace/txs/0x... | jq
-curl -s "https://indexer.ynxweb4.com/trace/graph?kind=address&target=ynx1...&direction=both&max_depth=4" | jq
+```
+
+Protected full graph API:
+
+```bash
+curl -s "https://indexer.ynxweb4.com/trace/graph?kind=address&target=ynx1...&direction=both&max_depth=4" \
+  -H "x-ynx-trace-token: <protected-token>" | jq
 ```
 
 What the trace layer gives you:
@@ -131,6 +140,14 @@ What the trace layer gives you:
 - tainted vs clean balance ratios
 - parent/child lot ancestry after splits
 - transaction-level pro-rata lineage fragments
+- a solid source-of-truth for higher-level case reports, pattern detection, and
+  accountability workflows
+
+What public search/explorer now shows:
+
+- redacted graph previews for traceable addresses, lots, and tx hashes
+- path summaries and counterparty directionality
+- no lot-level transfer ids or tainted-amount fields in the public preview
 
 What it does not claim yet:
 

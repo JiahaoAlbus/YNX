@@ -25,6 +25,16 @@ splits, merges, and mixed balances without pretending that exact one-note
 identity always survives. Lot lineage plus comparative taint models preserves
 truth better than a fake exact-coin story.
 
+In practical terms:
+
+- keep exact lineage where the system really has exact lineage
+- keep proportional lineage where balances have merged or split
+- expose multiple taint interpretations side by side instead of pretending a
+  single irreversible interpretation is always correct
+
+So the answer is: yes, this strategy is better, but specifically because it is
+more honest about fungible-asset reality than a universal serial-number model.
+
 ## Why this strategy is better
 
 The broader forensics engine strategy adds capabilities the current trace layer
@@ -136,6 +146,9 @@ The trace indexer now also exposes a graph endpoint:
 
 - `GET /trace/graph?kind=address&target=ynx1...&direction=both&max_depth=4`
 
+That endpoint is intended to stay protected. Public search and public explorer
+surfaces should only expose a redacted graph preview.
+
 This graph view returns:
 
 - address nodes
@@ -144,6 +157,15 @@ This graph view returns:
 - lineage edges with `source_lot_id`, `child_lot_id`, amount, taint, and depth
 - path-level traversals that summarize upstream/downstream routes across those
   edges
+
+The public preview version intentionally omits:
+
+- lot-level transfer ids
+- tainted-amount fields
+- the full lot-node graph payload needed for exact reconstruction
+
+This keeps public accountability evidence useful while preserving the protected
+detail surface for operator, victim-support, and compliance review flows.
 
 So the case layer can now include actual traced paths instead of only a flat
 balance or transaction snapshot.
@@ -196,7 +218,8 @@ instead of a loose bundle of raw analysis fields.
 ## Suggested next build steps
 
 1. add broader transaction-graph traversal beyond current trace targets
-2. keep the enforcement boundary separate from evidence generation
+2. add more attribution providers and detector families
+3. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

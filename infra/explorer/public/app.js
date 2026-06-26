@@ -44,24 +44,20 @@ function renderLines(container, lines) {
 function renderTraceGraph(graph) {
   if (!graph || !graph.stats) return "";
   const stats = graph.stats || {};
-  const edges = (graph.edges || [])
+  const edges = (graph.edge_preview || graph.edges || [])
     .slice(0, 12)
     .map((edge) => {
       const direction = edge.traversal_direction === "upstream" ? "upstream" : edge.traversal_direction === "downstream" ? "downstream" : "linked";
       return `<div class="trace-edge">
         <div><strong>${escapeHtml(edge.from || "unknown")} → ${escapeHtml(edge.to || "unknown")}</strong></div>
-        <div class="muted">${escapeHtml(edge.tx_hash)} · ${escapeHtml(edge.amount)} ${escapeHtml(edge.denom)} · tainted ${escapeHtml(edge.tainted_amount)} · ${direction} · depth ${escapeHtml(edge.depth)}</div>
-        <div class="muted">lot ${escapeHtml(edge.source_lot_id)} → ${escapeHtml(edge.child_lot_id)}</div>
+        <div class="muted">${escapeHtml(edge.tx_hash)} · ${escapeHtml(edge.amount)} ${escapeHtml(edge.denom)} · ${direction} · depth ${escapeHtml(edge.depth)}</div>
       </div>`;
     })
     .join("");
-  const roots = (graph.nodes?.lots || [])
-    .map((lot) => lot.root_origin_lot_id)
-    .filter(Boolean)
-    .filter((value, index, arr) => arr.indexOf(value) === index)
+  const roots = (graph.root_origin_preview || [])
     .slice(0, 6)
     .join(", ");
-  const paths = (graph.paths || [])
+  const paths = (graph.path_preview || graph.paths || [])
     .slice(0, 6)
     .map((path) => {
       const addresses = (path.addresses || []).slice(0, 6).join(" → ");
@@ -85,6 +81,7 @@ function renderTraceGraph(graph) {
     ${roots ? `<div class="muted">Root origins: ${escapeHtml(roots)}</div>` : ""}
     ${paths ? `<div class="trace-paths">${paths}</div>` : ""}
     <div class="trace-graph-edges">${edges || '<div class="muted">No linked edges found.</div>'}</div>
+    ${graph.guardrails?.preview_only ? '<div class="muted">Preview only. Full lot-level trace details stay behind protected trace endpoints.</div>' : ""}
   </div>`;
 }
 
@@ -257,7 +254,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(item.denom)}</strong> total ${escapeHtml(item.total_amount)} · tainted ${escapeHtml(item.tainted_amount)} · risk ${(item.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}${renderTraceGraph(result.graph)}`;
+      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}${renderTraceGraph(result.graph_preview)}`;
       return;
     }
     if (result.kind === "trace_lot") {
@@ -274,7 +271,7 @@ async function runSearch() {
         <div>Tainted amount: ${escapeHtml(lot.tainted_amount)}</div>
         <div>Risk: ${(lot.risk_basis_points / 100).toFixed(2)}%</div>
         <div class="muted">${holders}</div>
-        ${renderTraceGraph(result.graph)}`;
+        ${renderTraceGraph(result.graph_preview)}`;
       return;
     }
     if (result.kind === "trace_tx") {
@@ -287,7 +284,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(flow.from)} → ${escapeHtml(flow.to)}</strong> ${escapeHtml(flow.amount)} ${escapeHtml(flow.denom)} · tainted ${escapeHtml(flow.tainted_amount)} · risk ${(flow.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}${renderTraceGraph(result.graph)}`;
+      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}${renderTraceGraph(result.graph_preview)}`;
     }
   } catch (err) {
     searchResult.textContent = `Not found: ${err.message}`;

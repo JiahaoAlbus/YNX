@@ -108,6 +108,7 @@ The first structured case flow returns:
 - `suspicious_patterns`
 - `entity_attribution`
 - `address_clusters`
+- `cluster_summary`
 - `recommended_next_actions`
 - `review_status`
 - `review_logs`
@@ -162,12 +163,23 @@ Suspicious pattern detection is now split across:
 That makes the case layer materially better at explaining suspicious routing
 instead of only flagging end-state balances.
 
+Cluster output is now also more than a single shared-root heuristic. It can
+combine:
+
+- shared root origins
+- linked counterparties from the traced graph
+- bridge-route exposure
+- multi-asset path hints
+- fragmented lot-owner distribution
+
+So the case object can summarize not just that addresses are related, but why
+they are grouped and which heuristic families contributed.
+
 ## Suggested next build steps
 
 1. add broader transaction-graph traversal beyond current trace targets
-2. expand clustering heuristics beyond shared lot/root-lineage signals
-3. add more suspicious detectors such as bridge hopping and time correlation
-4. keep the enforcement boundary separate from evidence generation
+2. add more suspicious detectors such as time correlation and dormant activation
+3. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

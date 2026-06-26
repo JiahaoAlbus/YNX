@@ -1275,6 +1275,11 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.entity_attribution.entity_type, "bridge_exposed_account");
   assert.ok(Array.isArray(forensicCase.case.address_clusters));
   assert.ok(forensicCase.case.address_clusters.length > 0);
+  assert.equal(forensicCase.case.address_clusters[0].reasons.some((item) => item.type === "linked_counterparties"), true);
+  assert.equal(forensicCase.case.address_clusters[0].reasons.some((item) => item.type === "bridge_route_exposure"), true);
+  assert.equal(forensicCase.case.cluster_summary.total_clusters, 1);
+  assert.equal(forensicCase.case.cluster_summary.total_addresses >= 2, true);
+  assert.equal(forensicCase.case.cluster_summary.by_reason_type.bridge_route_exposure >= 1, true);
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
 

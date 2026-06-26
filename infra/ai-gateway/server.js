@@ -1442,25 +1442,70 @@ function itemDenomLike(item, fallback = "") {
   return normalizeSymbol(item?.denom || item?.symbol || fallback);
 }
 
-function buildAddressClusters(traceResult) {
+function summarizeCaseClusters(clusters) {
+  const items = Array.isArray(clusters) ? clusters : [];
+  return {
+    total_clusters: items.length,
+    total_addresses: [...new Set(items.flatMap((item) => item.addresses || []))].length,
+    by_reason_type: items.flatMap((item) => item.reasons || []).reduce((acc, reason) => {
+      const key = reason?.type || "unknown";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {}),
+    top_clusters: items
+      .slice()
+      .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
+      .slice(0, 3)
+      .map((item) => ({
+        cluster_id: item.cluster_id,
+        address_count: Array.isArray(item.addresses) ? item.addresses.length : 0,
+        confidence: item.confidence,
+        reason_types: (item.reasons || []).map((reason) => reason.type),
+      })),
+  };
+}
+
+function buildAddressClusters(traceResult, flowGraph = null) {
   if (!traceResult?.ok) return [];
+  const graph = flowGraph?.data || flowGraph || null;
+  const graphEdgeList = graphEdges(graph);
   if (traceResult.kind === "address") {
     const address = traceResult.data.address;
     const balances = traceResult.data.balances || [];
     const roots = [...new Set(balances.flatMap((item) => (item.lots || []).map((lot) => lot.root_origin_lot_id).filter(Boolean)))];
-    if (roots.length === 0) return [];
+    const connectedEdges = graphEdgeList.filter((edge) => edge.from === address || edge.to === address);
+    const counterparties = [...new Set(connectedEdges.flatMap((edge) => [edge.from, edge.to]).filter((item) => item && item !== address))];
+    const graphAddresses = [...new Set(graphEdgeList.flatMap((edge) => [edge.from, edge.to]).filter((item) => item && item !== address))];
+    if (roots.length === 0 && graphAddresses.length === 0) return [];
+    const reasons = [];
+    if (roots.length > 0) {
+      reasons.push({
+        type: "shared_root_origins",
+        detail: `Address balance is composed from ${roots.length} shared root origins`,
+      });
+    }
+    if (graphAddresses.length >= 2) {
+      reasons.push({
+        type: "linked_counterparties",
+        detail: `Address links to ${graphAddresses.length} distinct traced counterparties across the flow graph`,
+      });
+    }
+    const wrappedDenoms = [...new Set(connectedEdges.map((edge) => edge.denom).filter((denom) => /\.y$/i.test(String(denom || ""))))];
+    if (wrappedDenoms.length >= 1) {
+      reasons.push({
+        type: "bridge_route_exposure",
+        detail: `Address touches wrapped route assets ${wrappedDenoms.join(", ")}`,
+      });
+    }
     return [
       {
         cluster_id: `cluster_${Buffer.from(`${address}:${roots.join(",")}`).toString("hex").slice(0, 16)}`,
-        addresses: [address],
-        reasons: [
-          {
-            type: "shared_root_origins",
-            detail: `Address balance is composed from ${roots.length} shared root origins`,
-          },
-        ],
-        confidence: roots.length >= 2 ? 0.78 : 0.62,
+        addresses: [address, ...graphAddresses].filter((item, index, arr) => arr.indexOf(item) === index),
+        reasons,
+        confidence: roots.length >= 2 || graphAddresses.length >= 2 ? 0.82 : 0.68,
         root_origin_lot_ids: roots,
+        wrapped_denoms: wrappedDenoms,
+        direct_counterparties: counterparties,
       },
     ];
   }
@@ -1468,18 +1513,27 @@ function buildAddressClusters(traceResult) {
     const tx = traceResult.data.tx_effect;
     const addresses = [...new Set((tx.flows || []).flatMap((flow) => [flow.from, flow.to]).filter(Boolean))];
     if (addresses.length < 2) return [];
+    const denoms = [...new Set((tx.flows || []).map((flow) => flow.denom).filter(Boolean))];
+    const reasons = [
+      {
+        type: "same_transaction_lineage",
+        detail: `Addresses co-appear in traced lineage transfer ${tx.hash}`,
+      },
+    ];
+    if (denoms.length >= 2) {
+      reasons.push({
+        type: "multi_asset_path",
+        detail: `Transaction-level trace spans multiple assets: ${denoms.join(", ")}`,
+      });
+    }
     return [
       {
         cluster_id: `cluster_${Buffer.from(`${tx.hash}:${addresses.join(",")}`).toString("hex").slice(0, 16)}`,
         addresses,
-        reasons: [
-          {
-            type: "same_transaction_lineage",
-            detail: `Addresses co-appear in traced lineage transfer ${tx.hash}`,
-          },
-        ],
-        confidence: 0.71,
+        reasons,
+        confidence: denoms.length >= 2 ? 0.79 : 0.71,
         transaction_hashes: [tx.hash],
+        denoms,
       },
     ];
   }
@@ -1487,18 +1541,28 @@ function buildAddressClusters(traceResult) {
     const lot = traceResult.data.lot || {};
     const addresses = [...new Set((lot.holders || []).map((holder) => holder.address).filter(Boolean))];
     if (addresses.length === 0) return [];
+    const children = Array.isArray(lot.children) ? lot.children : [];
+    const childOwners = [...new Set(children.map((child) => child.owner).filter(Boolean))];
+    const reasons = [
+      {
+        type: "shared_lot_lineage",
+        detail: `Addresses are current holders of child fragments tied to lot ${lot.lot_id}`,
+      },
+    ];
+    if (childOwners.length >= 2) {
+      reasons.push({
+        type: "fragmented_distribution",
+        detail: `Lot ${lot.lot_id} has split across ${childOwners.length} child-owner paths`,
+      });
+    }
     return [
       {
         cluster_id: `cluster_${Buffer.from(`${lot.lot_id}:${addresses.join(",")}`).toString("hex").slice(0, 16)}`,
-        addresses,
-        reasons: [
-          {
-            type: "shared_lot_lineage",
-            detail: `Addresses are current holders of child fragments tied to lot ${lot.lot_id}`,
-          },
-        ],
-        confidence: 0.69,
+        addresses: [...new Set([...addresses, ...childOwners])],
+        reasons,
+        confidence: childOwners.length >= 2 ? 0.77 : 0.69,
         root_origin_lot_ids: [lot.root_origin_lot_id || lot.lot_id],
+        child_owner_paths: childOwners,
       },
     ];
   }
@@ -1519,7 +1583,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
   const taint_models = buildComparativeTaintModels(traceResult);
   const suspicious_patterns = buildSuspiciousPatterns(traceResult, context, flowGraph?.data || flowGraph || null);
   const entity = inferEntityLabel(context || {}, body.target || body.address || body.lot_id || body.tx_hash || "", traceResult);
-  const clusters = buildAddressClusters(traceResult);
+  const clusters = buildAddressClusters(traceResult, flowGraph?.data || flowGraph || null);
   return {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
@@ -1537,6 +1601,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
     suspicious_patterns,
     entity_attribution: entity,
     address_clusters: clusters,
+    cluster_summary: summarizeCaseClusters(clusters),
     final_summary: summary,
     recommended_next_actions: buildTraceRecommendedActions(risk),
     review_status: "open",

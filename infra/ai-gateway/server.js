@@ -1577,6 +1577,119 @@ function buildTraceRecommendedActions(risk) {
   return ["monitor account activity"];
 }
 
+function structuredActionQueue(actions, risk, patterns = []) {
+  const items = Array.isArray(actions) ? actions : [];
+  return items.map((action, index) => ({
+    step_id: `step_${String(index + 1).padStart(2, "0")}`,
+    action,
+    status: "pending",
+    priority:
+      /freeze|escalate/i.test(action) ? "high" :
+      /manual review/i.test(action) ? "medium" :
+      "low",
+    rationale:
+      /freeze/i.test(action)
+        ? `High-severity case (${risk?.severity || "unknown"}) with ${patterns.length} suspicious pattern hits still requires separate authority.`
+        : /escalate/i.test(action)
+          ? `Risk score ${risk?.score ?? 0} and current evidence suggest operator/compliance escalation.`
+          : /manual review/i.test(action)
+            ? `Case contains trace evidence that should be reviewed by a human operator before any downstream action.`
+            : `Recommended by current risk/profile rules.`,
+  }));
+}
+
+function buildKeyFindings(traceResult, risk, suspiciousPatterns, entity, clusters) {
+  const findings = [];
+  if (risk) {
+    findings.push({
+      type: "risk_summary",
+      severity: risk.severity,
+      confidence: risk.confidence,
+      detail: `Risk score ${risk.score}/100 with reasons: ${(risk.reasons || []).join("; ") || "none"}`,
+    });
+  }
+  if (entity?.entity_type) {
+    findings.push({
+      type: "entity_attribution",
+      severity: risk?.severity || "low",
+      confidence: entity.confidence,
+      detail: `Subject attributed as ${entity.label || entity.entity_type} via ${entity.provider || "unknown"} provider.`,
+    });
+  }
+  for (const pattern of (suspiciousPatterns || []).slice(0, 4)) {
+    findings.push({
+      type: "suspicious_pattern",
+      severity: pattern.severity || "medium",
+      confidence: pattern.confidence,
+      detail: `${pattern.pattern_type}: ${pattern.reason}`,
+    });
+  }
+  const topCluster = (clusters || []).slice().sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))[0];
+  if (topCluster) {
+    findings.push({
+      type: "cluster_summary",
+      severity: "medium",
+      confidence: topCluster.confidence,
+      detail: `Top cluster ${topCluster.cluster_id} groups ${(topCluster.addresses || []).length} addresses with reasons ${(topCluster.reasons || []).map((item) => item.type).join(", ")}.`,
+    });
+  }
+  if (traceResult?.kind === "address") {
+    findings.push({
+      type: "trace_scope",
+      severity: "low",
+      confidence: 0.9,
+      detail: `Case is centered on address ${traceResult.data?.address || ""} and current traced balances.`,
+    });
+  }
+  return findings;
+}
+
+function buildEvidenceIndex(evidenceChain) {
+  return (evidenceChain || []).map((item, index) => ({
+    evidence_id: `evidence_${String(index + 1).padStart(2, "0")}`,
+    claim: item.claim,
+    confidence: item.confidence,
+    item_count: Array.isArray(item.evidence) ? item.evidence.length : 0,
+  }));
+}
+
+function buildCaseDossier(forensicCase) {
+  const findings = buildKeyFindings(
+    { kind: forensicCase.kind, data: forensicCase.trace },
+    forensicCase.risk,
+    forensicCase.suspicious_patterns,
+    forensicCase.entity_attribution,
+    forensicCase.address_clusters,
+  );
+  const action_queue = structuredActionQueue(
+    forensicCase.recommended_next_actions,
+    forensicCase.risk,
+    forensicCase.suspicious_patterns,
+  );
+  const primaryDisposition =
+    action_queue.find((item) => item.priority === "high")?.action ||
+    action_queue[0]?.action ||
+    "no action required";
+  return {
+    dossier_version: 1,
+    primary_disposition: primaryDisposition,
+    operational_state: {
+      review_status: forensicCase.review_status,
+      escalation_status: forensicCase.escalation_status,
+      observation_only: forensicCase.guardrails?.observation_only !== false,
+    },
+    subject_profile: {
+      subject: forensicCase.subject,
+      kind: forensicCase.kind,
+      entity_type: forensicCase.entity_attribution?.entity_type || "unknown",
+      label: forensicCase.entity_attribution?.label || forensicCase.entity_attribution?.entity_type || "unknown",
+    },
+    key_findings: findings,
+    evidence_index: buildEvidenceIndex(forensicCase.evidence_chain),
+    action_queue,
+  };
+}
+
 function createForensicsCase(body, traceResult, summary, context, flowGraph = null) {
   const risk = buildTraceRisk(traceResult);
   const evidence_chain = buildTraceEvidence(traceResult);
@@ -1584,7 +1697,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
   const suspicious_patterns = buildSuspiciousPatterns(traceResult, context, flowGraph?.data || flowGraph || null);
   const entity = inferEntityLabel(context || {}, body.target || body.address || body.lot_id || body.tx_hash || "", traceResult);
   const clusters = buildAddressClusters(traceResult, flowGraph?.data || flowGraph || null);
-  return {
+  const forensicCase = {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
     kind: traceResult.kind,
@@ -1615,6 +1728,8 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
     created_at: nowIso(),
     updated_at: nowIso(),
   };
+  forensicCase.case_dossier = buildCaseDossier(forensicCase);
+  return forensicCase;
 }
 
 function findForensicsCase(caseId) {
@@ -1639,6 +1754,7 @@ function appendCaseReview(forensicCase, entry) {
   forensicCase.review_status = entry.next_status || forensicCase.review_status || "open";
   forensicCase.escalation_status = entry.escalation_status || forensicCase.escalation_status || "none";
   forensicCase.updated_at = nowIso();
+  forensicCase.case_dossier = buildCaseDossier(forensicCase);
 }
 
 function routeReadinessCounts(context) {

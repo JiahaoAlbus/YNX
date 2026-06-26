@@ -109,6 +109,7 @@ The first structured case flow returns:
 - `entity_attribution`
 - `address_clusters`
 - `cluster_summary`
+- `case_dossier`
 - `recommended_next_actions`
 - `review_status`
 - `review_logs`
@@ -174,6 +175,20 @@ combine:
 
 So the case object can summarize not just that addresses are related, but why
 they are grouped and which heuristic families contributed.
+
+The case object now also includes a dossier layer so operators do not have to
+manually stitch together risk, evidence, clusters, and next steps. The dossier
+contains:
+
+- `primary_disposition`
+- `operational_state`
+- `subject_profile`
+- `key_findings`
+- `evidence_index`
+- `action_queue`
+
+This makes the protected case surface closer to a real operator work item
+instead of a loose bundle of raw analysis fields.
 
 ## Suggested next build steps
 

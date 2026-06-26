@@ -1280,6 +1280,15 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.cluster_summary.total_clusters, 1);
   assert.equal(forensicCase.case.cluster_summary.total_addresses >= 2, true);
   assert.equal(forensicCase.case.cluster_summary.by_reason_type.bridge_route_exposure >= 1, true);
+  assert.equal(forensicCase.case.case_dossier.primary_disposition, "manual review required");
+  assert.equal(forensicCase.case.case_dossier.operational_state.review_status, "open");
+  assert.equal(forensicCase.case.case_dossier.subject_profile.label, "bridge_exposed_account");
+  assert.equal(Array.isArray(forensicCase.case.case_dossier.key_findings), true);
+  assert.equal(forensicCase.case.case_dossier.key_findings.some((item) => item.type === "risk_summary"), true);
+  assert.equal(Array.isArray(forensicCase.case.case_dossier.evidence_index), true);
+  assert.equal(forensicCase.case.case_dossier.evidence_index.length > 0, true);
+  assert.equal(Array.isArray(forensicCase.case.case_dossier.action_queue), true);
+  assert.equal(forensicCase.case.case_dossier.action_queue[0].status, "pending");
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
 
@@ -1493,6 +1502,7 @@ test("reviews and escalates forensics cases through protected operator flow", as
   const fetched = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases/${created.case.case_id}`), 200);
   assert.equal(fetched.case.case_id, created.case.case_id);
   assert.equal(fetched.case.review_status, "escalated");
+  assert.equal(fetched.case.case_dossier.operational_state.review_status, "escalated");
   assert.equal(fetched.case.guardrails.freeze_authority_granted, false);
 });
 

@@ -186,6 +186,15 @@ Current protected case output includes:
 - dossier/action-queue output
 - provenance anchors
 
+Current persistence/runtime behavior:
+
+- protected forensics cases persist in the AI gateway data store alongside jobs,
+  vaults, payments, and audit logs
+- case review state and review logs survive gateway restart
+- `GET /health` and `GET /ready` expose persistence metadata plus aggregated
+  forensic-case counts by review and escalation state for easier operator
+  verification
+
 ## 6. Optional On-chain Mirroring
 
 The AI Gateway can mirror high-value settlement actions into `YNXAISettlement`.

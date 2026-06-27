@@ -210,6 +210,14 @@ The first structured case flow returns:
 - `escalation_status`
 - `guardrails`
 
+Current operator durability:
+
+- protected cases are not restart-ephemeral; they persist in the AI gateway
+  data store
+- review status, escalation state, and review logs survive gateway restart
+- health/readiness surfaces expose case-count summaries so operators can verify
+  persistence and workflow state without opening raw storage files
+
 Current comparative taint output includes:
 
 - `poison`

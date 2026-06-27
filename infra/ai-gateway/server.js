@@ -726,17 +726,26 @@ function quoteFromRequest(body) {
   return { units, unit_price: unitPrice, amount };
 }
 
-function summarizeStats() {
-  const byStatus = state.jobs.reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + 1;
+function countByField(items, field, fallback = "unknown") {
+  return (Array.isArray(items) ? items : []).reduce((acc, item) => {
+    const key = String(item?.[field] || fallback).trim() || fallback;
+    acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+}
+
+function summarizeStats() {
+  const byStatus = countByField(state.jobs, "status", "unknown");
+  const casesByReviewStatus = countByField(state.forensic_cases, "review_status", "open");
+  const casesByEscalationStatus = countByField(state.forensic_cases, "escalation_status", "none");
   return {
     total_jobs: state.jobs.length,
     total_vaults: state.vaults.length,
     total_payments: state.payments.length,
     total_forensic_cases: state.forensic_cases.length,
     by_status: byStatus,
+    forensic_cases_by_review_status: casesByReviewStatus,
+    forensic_cases_by_escalation_status: casesByEscalationStatus,
   };
 }
 
@@ -3439,6 +3448,7 @@ const server = http.createServer(async (req, res) => {
         last_error: onchainRuntime.last_error,
       },
       persistence: {
+        data_file: AI_DATA_FILE,
         debounce_ms: AI_PERSIST_DEBOUNCE_MS,
         pending: persistRuntime.pending,
         writing: persistRuntime.writing,
@@ -3482,11 +3492,13 @@ const server = http.createServer(async (req, res) => {
         last_error: onchainRuntime.last_error,
       },
       persistence: {
+        data_file: AI_DATA_FILE,
         debounce_ms: AI_PERSIST_DEBOUNCE_MS,
         pending: persistRuntime.pending,
         writing: persistRuntime.writing,
         last_error: persistRuntime.last_error,
       },
+      stats: summarizeStats(),
     });
   }
 

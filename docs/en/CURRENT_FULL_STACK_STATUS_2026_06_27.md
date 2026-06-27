@@ -44,6 +44,8 @@ The following live checks were verified directly:
   - LLM mode: `ollama`, model `qwen2.5:1.5b`
   - on-chain AI settlement mode: enabled and ready
   - current stats observed: `8 jobs`, `7 vaults`, `9 payments`
+  - current live health still does **not** expose forensic-case review /
+    escalation breakdown counters
 - Web4 Hub readiness:
   - endpoint: `https://web4.ynxweb4.com/ready`
   - `ok=true`
@@ -139,12 +141,41 @@ Current live public truth should therefore be stated carefully:
 - only `2/5` routes currently justify the strongest `full_loop_tested` wording
 - provenance-anchor and protected forensics capabilities exist in the codebase,
   but public explorer/search intentionally exposes only redacted previews
+- current local AI gateway code can also expose forensic-case workflow
+  breakdowns on `/health` and `/ready`, but the current live public deployment
+  does not yet expose those newer counters
 
 This is the correct "online vs local granularity alignment" posture:
 
 - do not downgrade real local capability
 - do not overstate live route completion
 - do keep public-versus-protected evidence boundaries explicit
+
+### 4.3 AI runtime visibility gap that still exists today
+
+There is also a smaller but real runtime-visibility gap:
+
+- local code now supports AI-health visibility for:
+  - total forensic cases
+  - forensic cases by review status
+  - forensic cases by escalation status
+  - persistence metadata such as writes and last persist time
+- the current live AI health response still exposes:
+  - jobs
+  - vaults
+  - payments
+  - job status counts
+- the current live AI health response does **not** yet expose the newer
+  forensic workflow counters
+
+So the current truth is:
+
+- the capability exists in the repository
+- the current live deployment has not yet caught up to that newer runtime
+  visibility shape
+
+That gap is smaller than the bridge blocker gap, but it is still worth
+recording because it affects operator observability and online/local alignment.
 
 ## 5. Public versus protected trace boundary
 

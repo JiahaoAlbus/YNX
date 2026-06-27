@@ -113,9 +113,15 @@ indexer_last_indexed="$(jq -r '.last_indexed // ""' "${OUTPUT_DIR}/responses/ind
 indexer_latest_seen="$(jq -r '.latest_seen // ""' "${OUTPUT_DIR}/responses/indexer_health.json" 2>/dev/null || true)"
 ai_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_policy_enforced="$(jq -r '.enforce_policy // false' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_has_web4_authorizer="$(jq -r '.has_web4_authorizer // false' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_llm_provider="$(jq -r '.intelligence.llm_provider // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_llm_model="$(jq -r '.intelligence.model // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_llm_mode="$(jq -r '.intelligence.mode // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_onchain_ready="$(jq -r '.onchain.ready // false' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_persistence_writes="$(jq -r '.persistence.writes // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_persistence_last_persist_at="$(jq -r '.persistence.last_persist_at // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_stats_has_forensics_review="$(jq -r '(.stats.forensic_cases_by_review_status | type) == "object"' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_stats_has_forensics_escalation="$(jq -r '(.stats.forensic_cases_by_escalation_status | type) == "object"' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 web4_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 web4_policy_enforcement="$(jq -r '.checks.policy_enforcement // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 web4_internal_authorizer="$(jq -r '.checks.internal_authorizer // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
@@ -134,9 +140,15 @@ jq -n \
   --arg ai_url "${AI_HEALTH_URL}" \
   --argjson ai_ok "${ai_ok}" \
   --argjson ai_policy_enforced "${ai_policy_enforced}" \
+  --argjson ai_has_web4_authorizer "${ai_has_web4_authorizer}" \
   --arg ai_llm_provider "${ai_llm_provider}" \
   --arg ai_llm_model "${ai_llm_model}" \
+  --arg ai_llm_mode "${ai_llm_mode}" \
   --argjson ai_onchain_ready "${ai_onchain_ready}" \
+  --arg ai_persistence_writes "${ai_persistence_writes}" \
+  --arg ai_persistence_last_persist_at "${ai_persistence_last_persist_at}" \
+  --argjson ai_stats_has_forensics_review "${ai_stats_has_forensics_review}" \
+  --argjson ai_stats_has_forensics_escalation "${ai_stats_has_forensics_escalation}" \
   --arg web4_url "${WEB4_READY_URL}" \
   --argjson web4_ok "${web4_ok}" \
   --argjson web4_policy_enforcement "${web4_policy_enforcement}" \
@@ -169,9 +181,15 @@ jq -n \
         url: $ai_url,
         ok: $ai_ok,
         policy_enforced: $ai_policy_enforced,
+        has_web4_authorizer: $ai_has_web4_authorizer,
         llm_provider: $ai_llm_provider,
         llm_model: $ai_llm_model,
+        llm_mode: $ai_llm_mode,
         onchain_ready: $ai_onchain_ready,
+        persistence: {
+          writes: $ai_persistence_writes,
+          last_persist_at: $ai_persistence_last_persist_at
+        },
         stats: ($ai_health_raw[0].stats // {})
       },
       web4: {
@@ -200,6 +218,19 @@ jq -n \
         explorer_http: $explorer_http,
         website_ai_url: $website_ai_url,
         website_ai_http: $website_ai_http
+      }
+    },
+    alignment: {
+      ai_runtime_visibility: {
+        forensics_review_breakdown_exposed_live: $ai_stats_has_forensics_review,
+        forensics_escalation_breakdown_exposed_live: $ai_stats_has_forensics_escalation,
+        note: (
+          if ($ai_stats_has_forensics_review and $ai_stats_has_forensics_escalation) then
+            "live ai health already exposes forensic-case workflow breakdown"
+          else
+            "live ai health does not yet expose the newer forensic-case workflow breakdown that current local code can emit"
+          end
+        )
       }
     },
     doc_entrypoints: {
@@ -232,6 +263,9 @@ full_loop_tested="$(jq -r '.live.bridge.summary.full_loop_tested // ""' "${OUTPU
 deposit_tested="$(jq -r '.live.bridge.summary.deposit_tested // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 automatic_loop_ready="$(jq -r '.live.bridge.summary.automatic_loop_ready // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 mapped_route_only="$(jq -r '.live.bridge.summary.mapped_route_only // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_forensics_review_visible="$(jq -r '.alignment.ai_runtime_visibility.forensics_review_breakdown_exposed_live // false' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_forensics_escalation_visible="$(jq -r '.alignment.ai_runtime_visibility.forensics_escalation_breakdown_exposed_live // false' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_alignment_note="$(jq -r '.alignment.ai_runtime_visibility.note // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 
 cat > "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.md" <<EOF
 # YNX Current Full-Stack Status Snapshot
@@ -243,10 +277,16 @@ cat > "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.md" <<EOF
 
 - RPC: \`${rpc_chain_id}\` @ height \`${rpc_height}\`; catching_up=\`${rpc_catching_up}\`
 - Indexer: ok=\`${indexer_ok}\`; last_indexed=\`${indexer_last_indexed}\`; latest_seen=\`${indexer_latest_seen}\`
-- AI Gateway: ok=\`${ai_ok}\`; policy_enforced=\`${ai_policy_enforced}\`; llm=\`${ai_llm_provider}\` / \`${ai_llm_model}\`; onchain_ready=\`${ai_onchain_ready}\`
+- AI Gateway: ok=\`${ai_ok}\`; policy_enforced=\`${ai_policy_enforced}\`; web4_authorizer=\`${ai_has_web4_authorizer}\`; llm=\`${ai_llm_provider}\` / \`${ai_llm_model}\` / \`${ai_llm_mode}\`; onchain_ready=\`${ai_onchain_ready}\`
 - Web4 Hub: ok=\`${web4_ok}\`; policy_enforcement=\`${web4_policy_enforcement}\`; internal_authorizer=\`${web4_internal_authorizer}\`
 - Explorer: \`${explorer_status:-unavailable}\`
 - Website /ai: \`${website_ai_status:-unavailable}\`
+
+## AI runtime visibility alignment
+
+- live health exposes forensic review breakdown: \`${ai_forensics_review_visible}\`
+- live health exposes forensic escalation breakdown: \`${ai_forensics_escalation_visible}\`
+- note: ${ai_alignment_note}
 
 ## Bridge summary
 

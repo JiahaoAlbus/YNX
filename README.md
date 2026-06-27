@@ -201,6 +201,7 @@ Current funding boundary:
 Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo entry points:
 
 - EN: [`docs/en/BUILDER_QUICKSTART.md`](docs/en/BUILDER_QUICKSTART.md)
+- Live status snapshot generator: `./scripts/current_full_stack_status_snapshot.sh`
 
 ### 6) Node Operators / Validators
 

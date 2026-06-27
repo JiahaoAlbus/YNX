@@ -16,6 +16,12 @@ This document is the practical alignment note for:
 It is intentionally narrower and more current than older launch-grade or
 readiness reports.
 
+Repeatable snapshot command:
+
+```bash
+./scripts/current_full_stack_status_snapshot.sh
+```
+
 ## 2. Live public facts verified on 2026-06-27
 
 The following live checks were verified directly:

@@ -171,6 +171,10 @@ Security note:
 - funding should happen through `POST /ai/vaults/:id/deposit`
 - direct positive `balance` bootstrap on create is disabled by default so local
   machine-payment balance cannot be injected by request body alone
+- local deposit-based balance increases are also disabled by default unless you
+  explicitly enable a dev/demo path such as `AI_ALLOW_LOCAL_VAULT_DEPOSITS=1`
+- production funding should come from a verified deposit path, not from a bare
+  request body that increments local accounting
 
 When enabled, the response includes:
 

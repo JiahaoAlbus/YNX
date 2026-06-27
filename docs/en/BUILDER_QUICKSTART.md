@@ -111,6 +111,9 @@ Core endpoint groups:
 - `GET /ai/payments/:id` (policy-scoped when Web4 enforcement is enabled)
 - `GET /x402/resource`
 
+For secure-by-default setups, treat vault creation as empty-state only and keep
+local deposit emulation disabled unless you explicitly need a dev/demo flow.
+
 Start with:
 
 ```bash

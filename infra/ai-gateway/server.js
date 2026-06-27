@@ -305,6 +305,7 @@ const AI_TRADE_AGENT_MOCK = process.env.AI_TRADE_AGENT_MOCK === "1";
 const AI_TRADE_MAX_AMOUNT = Number(process.env.AI_TRADE_MAX_AMOUNT || "1");
 const AI_TRADE_MAX_SLIPPAGE_BPS = Math.max(0, Math.min(5000, parseInt(process.env.AI_TRADE_MAX_SLIPPAGE_BPS || "300", 10) || 300));
 const AI_ALLOW_VAULT_BALANCE_BOOTSTRAP = process.env.AI_ALLOW_VAULT_BALANCE_BOOTSTRAP === "1";
+const AI_ALLOW_LOCAL_VAULT_DEPOSITS = process.env.AI_ALLOW_LOCAL_VAULT_DEPOSITS === "1";
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -3871,7 +3872,15 @@ const server = http.createServer(async (req, res) => {
         reason: "ai-vault-deposit",
       });
       if (!auth.ok) return json(res, auth.status, { ok: false, error: auth.error });
-      if (vault.onchain?.vault_id && (body.onchain === true || body.onchain === "1" || body.onchain_value_wei || body.amount_wei)) {
+      const requestsOnchainMirror = vault.onchain?.vault_id && (body.onchain === true || body.onchain === "1" || body.onchain_value_wei || body.amount_wei);
+      if (!AI_ALLOW_LOCAL_VAULT_DEPOSITS && !requestsOnchainMirror) {
+        return json(res, 400, {
+          ok: false,
+          error: "local_vault_deposit_disabled",
+          detail: "Local vault balance increases are disabled by default. Use a verified funding path or explicitly enable local deposits for dev/demo environments.",
+        });
+      }
+      if (requestsOnchainMirror) {
         const onchain = await depositVaultOnchain(vault, body);
         if (!onchain.ok) return json(res, 502, { ok: false, error: "onchain_vault_deposit_failed", detail: onchain.error, vault });
         vault.onchain = { ...vault.onchain, last_deposit_tx_hash: onchain.onchain.tx_hash };

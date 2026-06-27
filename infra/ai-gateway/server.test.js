@@ -494,6 +494,41 @@ test("rejects direct balance bootstrap on vault creation by default", async (t) 
   assert.equal(created.body.error, "vault_balance_bootstrap_disabled");
 });
 
+test("rejects local vault deposits by default", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-local-deposit-disabled-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(port),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const vault = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/ai/vaults`, {
+      method: "POST",
+      body: {
+        owner: "owner-local-deposit",
+      },
+    }),
+    201
+  );
+
+  const deposit = await requestJson(`http://127.0.0.1:${port}/ai/vaults/${vault.vault.vault_id}/deposit`, {
+    method: "POST",
+    body: {
+      amount: 10,
+    },
+  });
+  assert.equal(deposit.status, 400);
+  assert.equal(deposit.body.error, "local_vault_deposit_disabled");
+});
+
 test("protects job and vault read surfaces behind scoped Web4 sessions", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();
@@ -521,6 +556,7 @@ test("protects job and vault read surfaces behind scoped Web4 sessions", async (
       AI_GATEWAY_PORT: String(aiPort),
       AI_DATA_DIR: dataDir,
       AI_ENFORCE_POLICY: "1",
+      AI_ALLOW_LOCAL_VAULT_DEPOSITS: "1",
       AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
       AI_WEB4_INTERNAL_TOKEN: internalToken,
       AI_CHAIN_ID: "ynx_9102-1",
@@ -650,6 +686,7 @@ test("protects payment detail reads behind scoped Web4 sessions", async (t) => {
       AI_GATEWAY_PORT: String(aiPort),
       AI_DATA_DIR: dataDir,
       AI_ENFORCE_POLICY: "1",
+      AI_ALLOW_LOCAL_VAULT_DEPOSITS: "1",
       AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
       AI_WEB4_INTERNAL_TOKEN: internalToken,
       AI_CHAIN_ID: "ynx_9102-1",
@@ -921,6 +958,7 @@ test("rejects x402 delivery when settled payment resource does not match request
     {
       AI_GATEWAY_PORT: String(port),
       AI_DATA_DIR: dataDir,
+      AI_ALLOW_LOCAL_VAULT_DEPOSITS: "1",
       AI_ENFORCE_POLICY: "0",
       AI_CHAIN_ID: "ynx_9102-1",
     },

@@ -35,6 +35,30 @@ In practical terms:
 So the answer is: yes, this strategy is better, but specifically because it is
 more honest about fungible-asset reality than a universal serial-number model.
 
+## Official repository decision
+
+The full "Accountability / Forensics Engine" spec should be treated as the
+official expansion direction for YNX.
+
+But that does **not** mean:
+
+- stop using the current V2 trace model
+- restart from zero
+- rename the current system into a marketing-only V3
+
+It **does** mean:
+
+- keep V2 lot-lineage evidence as the truth base
+- keep extending V2 with graph, case, risk, attribution, and review layers
+- use the spec as the checklist for what YNX should keep strengthening next
+
+So the explicit repository-level answer is:
+
+- yes, this strategy is better
+- yes, YNX should adopt it
+- no, YNX should not switch to a fake per-unit permanent serial-number model
+- no, YNX does not need a disconnected V3 just to implement it
+
 ## How this strategy maps into YNX today
 
 The requested strategy is directionally correct, but in YNX it should be
@@ -74,6 +98,26 @@ The main remaining expansion areas are:
 - more detector families and operator workflows
 - longer-lived persistence/migrations if YNX later moves the forensics layer
   into a stronger dedicated store
+
+## Spec-to-YNX implementation map
+
+If we map the requested engine spec directly into current YNX architecture, the
+correct interpretation is:
+
+- GraphBuilder -> current protected trace graph plus future broader graph
+  normalization
+- LotLineageEngine -> current deterministic lot-lineage layer
+- TaintEngine -> current comparative taint-model execution
+- ClusterEngine -> current heuristic cluster output with room for more
+  provider-backed heuristics
+- EntityAttributionService -> current label-provider split
+- PatternDetectionEngine -> current suspicious-pattern detector family
+- RiskScoringEngine -> current explainable risk object generation
+- EvidenceEngine -> current evidence-chain and traced-path extraction
+- CaseReportService -> current protected case dossier and review workflow
+
+In other words, the spec matches YNX well; it just needs to be understood as a
+modular continuation of the existing stack rather than a greenfield rewrite.
 
 ## Explicit product recommendation
 
@@ -349,6 +393,9 @@ So the explicit YNX decision should be documented this way:
 1. add broader transaction-graph traversal beyond current trace targets
 2. add more attribution providers and detector families
 3. keep the enforcement boundary separate from evidence generation
+4. keep strengthening immutable provenance anchors on source lots and deposit
+   batches instead of inventing fake lifelong identities for every final
+   fungible fragment
 
 ## Limitation today
 

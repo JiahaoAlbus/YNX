@@ -150,6 +150,11 @@ The latest generated live runtime alignment audit is available at:
 - [LIVE_RUNTIME_ALIGNMENT.md](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [LIVE_RUNTIME_ALIGNMENT.json](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json)
 
+The latest generated bridge blocker remediation packet is available at:
+
+- [BRIDGE_BLOCKER_PACKET.md](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
+- [BRIDGE_BLOCKER_PACKET.json](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.json)
+
 Current live truth at the time of the latest captured snapshot:
 
 - RPC online on `ynx_9102-1`

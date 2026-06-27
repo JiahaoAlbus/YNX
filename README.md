@@ -177,6 +177,9 @@ Current architecture decision:
 - adopt the broader accountability / forensics-engine strategy inside V2
 - do not replace fungible lot lineage with a fake permanent per-unit serial
   model
+- treat the attached "Accountability / Forensics Engine" style spec as the
+  north-star expansion plan for YNX, but implement it as a layered V2 upgrade
+  instead of a disconnected V3 rewrite
 - keep expanding provenance anchors, protected case workflows, provider layers,
   and detector families without pretending YNX is already a universal
   multi-chain forensic platform
@@ -223,6 +226,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - EN: [`docs/en/BUILDER_QUICKSTART.md`](docs/en/BUILDER_QUICKSTART.md)
 - Live status snapshot generator: `./scripts/current_full_stack_status_snapshot.sh`
 - Live runtime alignment audit: `./scripts/verify_live_runtime_alignment.sh`
+- Bridge blocker remediation packet: `./scripts/prepare_bridge_blocker_packet.sh`
 - Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 - Grant / visibility pack: `./scripts/prepare_grant_visibility_pack.sh`
 - Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`

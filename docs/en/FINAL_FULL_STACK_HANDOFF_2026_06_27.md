@@ -124,6 +124,16 @@ This orchestrates the snapshot, runtime alignment audit, founder/operator
 evidence pack, and grant/visibility pack into one highest-level closeout
 folder and archive.
 
+The repository now also includes a closeout-pack verifier:
+
+```bash
+./scripts/verify_latest_closeout_packs.sh
+```
+
+This checks that the latest packs exist, their `SHA256SUMS.txt` files match,
+their artifact index resolves to real files, and their key manifest links are
+still present.
+
 ## 3. Current live full-stack status
 
 The canonical current-status source is:
@@ -267,6 +277,12 @@ Executive closeout pack:
 
 ```bash
 ./scripts/prepare_executive_closeout_pack.sh
+```
+
+Verify latest closeout packs:
+
+```bash
+./scripts/verify_latest_closeout_packs.sh
 ```
 
 Submission readiness:

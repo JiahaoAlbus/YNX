@@ -226,6 +226,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 - Grant / visibility pack: `./scripts/prepare_grant_visibility_pack.sh`
 - Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`
+- Verify latest closeout packs: `./scripts/verify_latest_closeout_packs.sh`
 
 ### 6) Node Operators / Validators
 

@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
+if command -v shasum >/dev/null 2>&1; then
+  HASH_CHECK_CMD="shasum -a 256 -c"
+elif command -v sha256sum >/dev/null 2>&1; then
+  HASH_CHECK_CMD="sha256sum -c"
+else
+  echo "shasum or sha256sum is required" >&2
+  exit 1
+fi
+
+PACKS=(
+  "output/full_stack_evidence_pack_latest"
+  "output/grant_visibility_pack_latest"
+  "output/executive_closeout_pack_latest"
+)
+
+fail() {
+  echo "FAIL: $*" >&2
+  exit 1
+}
+
+need_file() {
+  local path="$1"
+  [[ -f "$path" ]] || fail "missing file: $path"
+}
+
+need_dir() {
+  local path="$1"
+  [[ -d "$path" ]] || fail "missing directory: $path"
+}
+
+for pack in "${PACKS[@]}"; do
+  need_dir "$pack"
+  need_file "$pack/MANIFEST.md"
+  need_file "$pack/README.md"
+  need_file "$pack/SHA256SUMS.txt"
+  (
+    cd "$pack"
+    ${HASH_CHECK_CMD} SHA256SUMS.txt >/dev/null
+  ) || fail "hash verification failed for $pack"
+done
+
+need_file "output/executive_closeout_pack_latest/ARTIFACT_INDEX.json"
+need_file "output/executive_closeout_pack_latest/EXECUTIVE_CHECKLIST.md"
+need_file "output/full_stack_evidence_pack_latest/HANDOFF_CHECKLIST.md"
+need_file "output/grant_visibility_pack_latest/OUTREACH_CHECKLIST.md"
+
+while IFS= read -r rel; do
+  [[ -z "$rel" ]] && continue
+  need_file "output/executive_closeout_pack_latest/$rel"
+done < <(
+  jq -r '.artifacts | to_entries[] | .value' output/executive_closeout_pack_latest/ARTIFACT_INDEX.json
+)
+
+grep -q 'reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md' \
+  output/full_stack_evidence_pack_latest/MANIFEST.md \
+  || fail "full-stack evidence pack manifest missing snapshot link"
+
+grep -q 'reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md' \
+  output/grant_visibility_pack_latest/MANIFEST.md \
+  || fail "grant visibility pack manifest missing alignment link"
+
+echo "PASS: latest closeout packs are present, hashed, and internally linked."

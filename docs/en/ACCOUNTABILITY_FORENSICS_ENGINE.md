@@ -35,6 +35,46 @@ In practical terms:
 So the answer is: yes, this strategy is better, but specifically because it is
 more honest about fungible-asset reality than a universal serial-number model.
 
+## How this strategy maps into YNX today
+
+The requested strategy is directionally correct, but in YNX it should be
+interpreted as a layered expansion of the current V2 trace/accountability stack
+rather than as a greenfield rewrite.
+
+Current implementation status by concept:
+
+- transaction flow graph: already present through the protected
+  `GET /trace/graph` surface with upstream/downstream traversal, direction
+  control, hop limits, and taint/amount-aware path summaries
+- lot lineage tracking: already present and still the canonical deterministic
+  evidence layer
+- comparative taint models: already present for `poison`, `proRata`, `fifo`,
+  `lifo`, and `specificTrace`
+- address clustering: already present through heuristic cluster output on case
+  generation
+- entity attribution: already present through static label providers plus live
+  inferred fallback labels
+- suspicious pattern detection: already present for mixed exposure, root
+  concentration, rapid multi-hop transfers, amount-preserving hops,
+  bridge-route exposure, pass-through behavior, time-correlated routing, and
+  dormant-wallet reactivation
+- risk scoring: already present with explainable severity, confidence, and
+  reasons
+- evidence chain: already present and required for case conclusions
+- case report generation: already present through structured protected case
+  objects and dossier output
+- API integration: already present on the AI gateway under
+  `ai.trace.report`, `ai.forensics.case.create`, `ai.forensics.case.review`,
+  and policy-scoped case reads
+
+The main remaining expansion areas are:
+
+- broader multi-ledger ingestion beyond the current YNX-focused trace targets
+- more attribution providers and label datasets
+- more detector families and operator workflows
+- longer-lived persistence/migrations if YNX later moves the forensics layer
+  into a stronger dedicated store
+
 ## Explicit product recommendation
 
 If the question is "should YNX switch to a per-coin permanent serial-number
@@ -282,6 +322,19 @@ identity.
 
 This makes the protected case surface closer to a real operator work item
 instead of a loose bundle of raw analysis fields.
+
+## Practical adoption decision
+
+So the explicit YNX decision should be documented this way:
+
+- yes, adopt the broader accountability / forensics-engine strategy
+- no, do not replace V2 lot-lineage truth with a fake per-unit serial model
+- no, do not market this as a disconnected V3 reset
+- yes, keep expanding the current V2 evidence layer into a stronger protected
+  accountability surface
+- yes, treat immutable provenance anchors such as `issuance_id` and
+  `deposit_batch_id` as the right compromise between stable references and
+  fungible-asset honesty
 
 ## Suggested next build steps
 

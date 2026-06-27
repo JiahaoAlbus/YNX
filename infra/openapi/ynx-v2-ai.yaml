@@ -334,6 +334,9 @@ components:
             - trade.prepare
             - trade.execute
             - ai.monitor.create
+            - ai.trace.report
+            - ai.forensics.case.create
+            - ai.forensics.case.review
             - bridge.watchers.scan
             - bridge.withdrawals.scan
         from_symbol:
@@ -356,3 +359,65 @@ components:
         policy_id:
           type: string
           description: Required for Web4-protected write/operator actions.
+        kind:
+          type: string
+          description: Trace target kind for protected accountability actions.
+          enum: [address, lot, tx]
+        target:
+          type: string
+          description: Trace target value used by ai.trace.report and ai.forensics.case.create.
+        case_id:
+          type: string
+          description: Required by ai.forensics.case.review and protected case detail operations.
+        direction:
+          type: string
+          description: Optional trace-graph traversal direction for protected case creation.
+          enum: [upstream, downstream, both]
+          default: both
+        max_depth:
+          type: integer
+          description: Optional hop limit for protected graph traversal.
+          minimum: 1
+          maximum: 32
+          default: 4
+        maxDepth:
+          type: integer
+          description: CamelCase alias of max_depth.
+          minimum: 1
+          maximum: 32
+        denom:
+          type: string
+          description: Optional asset denom filter for protected trace/case creation.
+        min_amount:
+          type: string
+          description: Optional minimum amount filter for protected graph traversal.
+        minAmount:
+          type: string
+          description: CamelCase alias of min_amount.
+        min_tainted_amount:
+          type: string
+          description: Optional minimum tainted amount filter for protected graph traversal.
+        minTaintedAmount:
+          type: string
+          description: CamelCase alias of min_tainted_amount.
+        since_height:
+          type: integer
+          description: Optional starting block height for protected graph traversal.
+        sinceHeight:
+          type: integer
+          description: CamelCase alias of since_height.
+        until_height:
+          type: integer
+          description: Optional ending block height for protected graph traversal.
+        untilHeight:
+          type: integer
+          description: CamelCase alias of until_height.
+        note:
+          type: string
+          description: Optional manual review note for ai.forensics.case.review.
+        next_status:
+          type: string
+          description: Next review status for ai.forensics.case.review.
+        escalation_status:
+          type: string
+          description: Optional escalation state for ai.forensics.case.review.

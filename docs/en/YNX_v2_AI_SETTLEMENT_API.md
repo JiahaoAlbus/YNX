@@ -151,6 +151,41 @@ The forensics layer is defensive and evidence-oriented:
 - it does not grant transfer, seizure, or freeze authority by itself
 - any stronger enforcement decision must go through a separate reviewed path
 
+Architecture decision:
+
+- this is the adopted V2 accountability / forensics strategy for YNX
+- it extends the existing lot-lineage evidence layer instead of replacing it
+- it should not be described as a permanent per-unit serial-number model for
+  fungible assets
+- stable provenance comes from lot anchors such as `issuance_id` and optional
+  `deposit_batch_id`, plus exact/proportional lineage depending on whether
+  merges or splits occurred
+
+Current protected case-create request shape accepts:
+
+- `policy_id`
+- `kind`
+- `target`
+- optional `direction`
+- optional `max_depth` or `maxDepth`
+- optional `denom`
+- optional `min_amount` or `minAmount`
+- optional `min_tainted_amount` or `minTaintedAmount`
+- optional `since_height` or `sinceHeight`
+- optional `until_height` or `untilHeight`
+
+Current protected case output includes:
+
+- flow graph traversal
+- comparative taint models
+- entity attribution
+- address clustering
+- suspicious pattern detection
+- evidence chain
+- risk scoring
+- dossier/action-queue output
+- provenance anchors
+
 ## 6. Optional On-chain Mirroring
 
 The AI Gateway can mirror high-value settlement actions into `YNXAISettlement`.

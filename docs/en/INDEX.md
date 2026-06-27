@@ -19,6 +19,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md` — adopted V2 accountability / forensics architecture decision
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo for policy, session, job, and vault reward flow
 - `docs/en/V2_HIGH_ASSURANCE_CRYPTO_MODEL.md` — high-assurance and post-quantum security baseline
 - `docs/en/YNX_ARES_HYBRID_CRYPTO_PROTOCOL.md` — YNX ARES hybrid crypto protocol profile
@@ -94,6 +95,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 target architecture and protocol requirements
 - `docs/en/YNX_v2_EXECUTION_PLAN.md` — v2 delivery plan and milestones
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
+- `docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md` — current accountability / forensics strategy and boundary
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API endpoint reference
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo
 - `docs/en/V2_PUBLIC_TESTNET_PLAYBOOK.md` — v2 public testnet deployment and operations

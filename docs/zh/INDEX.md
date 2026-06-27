@@ -16,6 +16,7 @@
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图
 - `docs/zh/AI_WEB4_官方演示.md`：可运行的 AI/Web4 结算闭环演示
+- `docs/zh/问责与取证引擎.md`：YNX 当前问责 / 取证架构决议与边界
 - `docs/zh/V2_高保证加密与抗量子安全模型.md`：高保证加密与抗量子迁移基线
 - `docs/zh/YNX_ARES_混合抗量子加密协议.md`：YNX ARES 混合抗量子协议说明
 - `docs/zh/YNX_非托管商业与合规边界.md`：非托管、非交易所、非稳定币、非 KYC 商业边界
@@ -72,3 +73,4 @@
 - `docs/zh/Grant与曝光目标清单_2026_06_27.md`：当前对外申请和曝光目标优先级清单
 - `docs/zh/Grant申请模板包_2026_06_27.md`：grant-ready 文案模板包
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布文案包
+- `docs/zh/问责与取证引擎.md`：当前问责 / 取证策略、边界与下一步扩展方向

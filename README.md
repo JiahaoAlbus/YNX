@@ -146,6 +146,9 @@ What the trace layer gives you:
 - transaction-level pro-rata lineage fragments
 - stable provenance anchors (`issuance_id`, `deposit_batch_id`) that survive
   child-lot propagation
+- protected graph traversal, comparative taint models, clustering, entity
+  labeling, suspicious-pattern detection, risk scoring, and evidence-backed
+  structured case generation on top of the base trace layer
 - a solid source-of-truth for higher-level case reports, pattern detection, and
   accountability workflows
 
@@ -168,6 +171,15 @@ Next architecture note:
 
 - EN: [`docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md`](docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md)
 - ZH: [`docs/zh/问责与取证引擎.md`](docs/zh/问责与取证引擎.md)
+
+Current architecture decision:
+
+- adopt the broader accountability / forensics-engine strategy inside V2
+- do not replace fungible lot lineage with a fake permanent per-unit serial
+  model
+- keep expanding provenance anchors, protected case workflows, provider layers,
+  and detector families without pretending YNX is already a universal
+  multi-chain forensic platform
 
 ### 4.5) Funding / grant / compliance packet
 

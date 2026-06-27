@@ -302,6 +302,7 @@ const WEB4_TOOL_TIMEOUT_MS = Math.max(1000, parseInt(process.env.WEB4_TOOL_TIMEO
 const WEB4_TOOL_RESPONSE_LIMIT_BYTES = Math.max(1024, parseInt(process.env.WEB4_TOOL_RESPONSE_LIMIT_BYTES || "65536", 10) || 65536);
 const WEB4_ALLOW_PRIVATE_TOOL_URLS = process.env.WEB4_ALLOW_PRIVATE_TOOL_URLS === "1";
 const WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE = process.env.WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE !== "0";
+const WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES = Math.max(0, parseInt(process.env.WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES || "1", 10) || 0);
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -403,6 +404,12 @@ function findBootstrapByApiKey(apiKey) {
   if (!apiKey) return null;
   const apiKeyHash = hashSecret(apiKey);
   return state.wallet_bootstraps.find((item) => item.status === "verified" && timingSafeEqualHex(apiKeyHash, String(item.api_key_hash || ""))) || null;
+}
+
+function bootstrapApiKeyExhausted(bootstrap) {
+  if (!bootstrap) return true;
+  if (WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES <= 0) return false;
+  return Number(bootstrap.api_key_uses || 0) >= WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES;
 }
 
 function addAudit(event, payload) {
@@ -790,6 +797,8 @@ function createWalletBootstrap(body) {
     created_at: nowIso(),
     verified_at: "",
     api_key_hash: "",
+    api_key_uses: 0,
+    api_key_last_used_at: "",
   };
 }
 
@@ -1141,6 +1150,7 @@ const server = http.createServer(async (req, res) => {
     if (WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE) {
       bootstrap = findBootstrapByApiKey(readHeader(req, "x-ynx-api-key"));
       if (!bootstrap) return json(res, 401, { ok: false, error: "bootstrap_api_key_required" });
+      if (bootstrapApiKeyExhausted(bootstrap)) return json(res, 403, { ok: false, error: "bootstrap_api_key_exhausted" });
       body.owner_wallet_address = bootstrap.wallet_address;
       body.bootstrap_id = bootstrap.bootstrap_id;
       if (!body.owner) body.owner = bootstrap.wallet_address;
@@ -1157,6 +1167,10 @@ const server = http.createServer(async (req, res) => {
       owner_wallet_address: created.policy.owner_wallet_address,
       bootstrap_id: created.policy.bootstrap_id,
     });
+    if (bootstrap) {
+      bootstrap.api_key_uses = Number(bootstrap.api_key_uses || 0) + 1;
+      bootstrap.api_key_last_used_at = nowIso();
+    }
     persist();
     return json(res, 201, {
       ok: true,

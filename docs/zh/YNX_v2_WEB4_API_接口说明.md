@@ -23,6 +23,7 @@ YNX v2 Web4 API 的执行顺序是：
 
 - `POST /web4/wallet/bootstrap`
 - `POST /web4/wallet/verify`（必须提交对 challenge message 的真实钱包签名）
+- bootstrap api key 默认只能用于一次 policy 创建
 
 ## 4. 策略与会话
 

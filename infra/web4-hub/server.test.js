@@ -336,6 +336,16 @@ test("policy creation requires bootstrap api key when bootstrap gating is enable
   assert.equal(created.policy.owner, wallet.address);
   assert.equal(created.policy.owner_wallet_address, wallet.address);
   assert.equal(created.policy.bootstrap_id, bootstrap.bootstrap.bootstrap_id);
+
+  const reused = await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+    method: "POST",
+    headers: { "x-ynx-api-key": verified.api_key },
+    body: {
+      name: "bootstrap-backed-policy-reuse",
+    },
+  });
+  assert.equal(reused.status, 403);
+  assert.equal(reused.body.error, "bootstrap_api_key_exhausted");
 });
 
 test("protects web4 audit reads and redacts sensitive audit payload values", async (t) => {

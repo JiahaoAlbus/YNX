@@ -192,11 +192,13 @@ Current funding boundary:
 - EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
 - EN: [`docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md`](docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md)
 - EN: [`docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md`](docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md)
+- EN: [`docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md`](docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md)
 - ZH: [`docs/zh/投资人与尽调资料室_2026_06_13.md`](docs/zh/投资人与尽调资料室_2026_06_13.md)
 - ZH: [`docs/zh/融资备忘录_2026_06_13.md`](docs/zh/融资备忘录_2026_06_13.md)
 - ZH: [`docs/zh/合规就绪包_2026_06_13.md`](docs/zh/合规就绪包_2026_06_13.md)
 - ZH: [`docs/zh/当前全链状态与对齐快照_2026_06_27.md`](docs/zh/当前全链状态与对齐快照_2026_06_27.md)
 - ZH: [`docs/zh/最终全链交付总览_2026_06_27.md`](docs/zh/最终全链交付总览_2026_06_27.md)
+- ZH: [`docs/zh/Grant与曝光目标清单_2026_06_27.md`](docs/zh/Grant与曝光目标清单_2026_06_27.md)
 
 ### 5) Builders
 

@@ -37,6 +37,7 @@ Last updated: 2026-04-30
 - `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md` — company, privacy, and regulatory readiness packet
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current live-vs-local full-stack alignment snapshot
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — current final handoff summary across status, blockers, and compliance entry points
+- `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — current official-source shortlist for grants and visibility targets
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy
@@ -81,6 +82,7 @@ Last updated: 2026-04-30
 - `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md` — current website legal publication gap and publish packet
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current full-stack truth snapshot across live endpoints and local repo scope
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — final current-state handoff for operator / founder / diligence use
+- `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — founder-facing grant and visibility shortlist
 
 ## Core Specs
 

@@ -47,8 +47,8 @@ broader detector/provider layers?", the answer is yes.
 Recommended product line:
 
 - keep `lot lineage + pro-rata taint tracking` as the canonical V2 truth layer
-- optionally add immutable `issuance_id` or `deposit_batch_id` at lot creation
-  for stronger mint/deposit provenance
+- keep immutable `issuance_id` and optional `deposit_batch_id` anchors at lot
+  creation for stronger mint/deposit provenance
 - preserve exact lineage only where exact lineage really exists
 - preserve proportional ancestry after merges and splits
 - make any stronger enforcement or freeze action a separate reviewed path
@@ -162,6 +162,7 @@ The first structured case flow returns:
 - `entity_attribution`
 - `address_clusters`
 - `cluster_summary`
+- `provenance_anchors`
 - `case_dossier`
 - `recommended_next_actions`
 - `review_status`
@@ -262,16 +263,24 @@ contains:
 - `evidence_index`
 - `action_queue`
 
+The trace layer now also preserves stable provenance anchors on traced lots and
+graph edges:
+
+- `issuance_id`
+- `deposit_batch_id`
+
+Those anchors are meant for source-lot or deposit-batch continuity, not as a
+claim that every final fungible fragment has a lifelong unique per-unit
+identity.
+
 This makes the protected case surface closer to a real operator work item
 instead of a loose bundle of raw analysis fields.
 
 ## Suggested next build steps
 
-1. add immutable `issuance_id` / `deposit_batch_id` support for stronger origin
-   anchoring without faking per-unit identity after merges
-2. add broader transaction-graph traversal beyond current trace targets
-3. add more attribution providers and detector families
-4. keep the enforcement boundary separate from evidence generation
+1. add broader transaction-graph traversal beyond current trace targets
+2. add more attribution providers and detector families
+3. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

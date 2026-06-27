@@ -414,7 +414,19 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
           amount: [{ denom: "anyxt", amount: "100" }],
         },
       ],
-      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1risky", to: "ynx1alice", denom: "anyxt", amount: "100" }],
+      send_flows: [{
+        message_index: 0,
+        type: "bank_send",
+        from: "ynx1risky",
+        to: "ynx1alice",
+        denom: "anyxt",
+        amount: "100",
+        issuance_id: "iss_risky_seed_001",
+        deposit_batch_id: "dep_bridge_risky_001",
+        source_type: "bridge_deposit",
+        source_ref: "bridge:risky:seed",
+        origin_ref: "bridge:risky:seed",
+      }],
     },
     {
       hash: "0xTRACE02",
@@ -465,7 +477,19 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
           amount: [{ denom: "anyxt", amount: "60" }],
         },
       ],
-      send_flows: [{ message_index: 0, type: "bank_send", from: "ynx1clean", to: "ynx1bob", denom: "anyxt", amount: "60" }],
+      send_flows: [{
+        message_index: 0,
+        type: "bank_send",
+        from: "ynx1clean",
+        to: "ynx1bob",
+        denom: "anyxt",
+        amount: "60",
+        issuance_id: "iss_clean_seed_001",
+        deposit_batch_id: "dep_bridge_clean_001",
+        source_type: "bridge_deposit",
+        source_ref: "bridge:clean:seed",
+        origin_ref: "bridge:clean:seed",
+      }],
     },
     {
       hash: "0xTRACE05",
@@ -516,12 +540,16 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(dave.balances[0].tainted_amount, "20");
   assert.equal(dave.balances[0].risk_basis_points, 4000);
   assert.equal(dave.balances[0].lots.length, 2);
+  assert.equal(dave.balances[0].lots.some((lot) => lot.issuance_id === "iss_risky_seed_001"), true);
+  assert.equal(dave.balances[0].lots.some((lot) => lot.deposit_batch_id === "dep_bridge_clean_001"), true);
 
   const txTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/txs/0xTRACE05`), 200);
   assert.equal(txTrace.tx_effect.flows[0].amount, "50");
   assert.equal(txTrace.tx_effect.flows[0].tainted_amount, "20");
   assert.equal(txTrace.tx_effect.flows[0].risk_basis_points, 4000);
   assert.equal(txTrace.tx_effect.flows[0].transferred_lots.length, 2);
+  assert.equal(txTrace.tx_effect.flows[0].transferred_lots.some((lot) => lot.issuance_id === "iss_risky_seed_001"), true);
+  assert.equal(txTrace.tx_effect.flows[0].transferred_lots.some((lot) => lot.deposit_batch_id === "dep_bridge_clean_001"), true);
 
   const graphUpstream = assertJson(
     await requestJson(`http://127.0.0.1:${indexerPort}/trace/graph?kind=address&target=ynx1dave&direction=upstream&max_depth=4&denom=anyxt`),
@@ -551,6 +579,7 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   const lotTrace = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/trace/lots/${lotId}`), 200);
   assert.equal(lotTrace.lot.owner, "ynx1dave");
   assert.equal(Array.isArray(lotTrace.lot.parent_lot_ids), true);
+  assert.ok(/^iss_(risky|clean)_seed_001$/.test(lotTrace.lot.issuance_id));
 
   const searchAddress = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=ynx1dave`), 200);
   assert.equal(searchAddress.kind, "trace_address");

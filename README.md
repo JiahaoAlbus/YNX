@@ -108,9 +108,10 @@ changing the base coin model into a UTXO or NFT-style system.
 - architecture decision: this is the correct V2 base for accountability and
   forensics; do not model every fungible unit as a permanently unique
   serial-numbered coin fragment after merges and splits
-- issuance note: if YNX later wants stronger mint/deposit provenance, add
-  immutable issuance or deposit-batch ids at lot creation time; do not pretend
-  that post-merge balances still preserve a single exact per-unit serial number
+- provenance anchors: traceable lots now support immutable `issuance_id` and
+  optional `deposit_batch_id` propagation for stronger mint/deposit provenance;
+  do not pretend that post-merge balances still preserve a single exact
+  per-unit serial number
 
 Runtime controls:
 
@@ -143,6 +144,8 @@ What the trace layer gives you:
 - tainted vs clean balance ratios
 - parent/child lot ancestry after splits
 - transaction-level pro-rata lineage fragments
+- stable provenance anchors (`issuance_id`, `deposit_batch_id`) that survive
+  child-lot propagation
 - a solid source-of-truth for higher-level case reports, pattern detection, and
   accountability workflows
 

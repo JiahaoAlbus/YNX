@@ -921,6 +921,24 @@ function classifySeverity(score) {
   return "low";
 }
 
+function collectProvenanceAnchors(traceResult, flowGraph = null) {
+  const issuance = new Set();
+  const depositBatches = new Set();
+  const rootOrigins = new Set();
+  const register = (item = {}) => {
+    if (item.issuance_id) issuance.add(item.issuance_id);
+    if (item.deposit_batch_id) depositBatches.add(item.deposit_batch_id);
+    if (item.root_origin_lot_id) rootOrigins.add(item.root_origin_lot_id);
+  };
+  for (const lot of lotsFromTraceResult(traceResult)) register(lot);
+  for (const edge of graphEdges(flowGraph)) register(edge);
+  return {
+    issuance_ids: [...issuance],
+    deposit_batch_ids: [...depositBatches],
+    root_origin_lot_ids: [...rootOrigins],
+  };
+}
+
 function buildTraceEvidence(traceResult) {
   if (!traceResult?.ok) return [];
   if (traceResult.kind === "address") {
@@ -933,6 +951,8 @@ function buildTraceEvidence(traceResult) {
         amount: lot.amount,
         tainted_amount: lot.tainted_amount,
         root_origin_lot_id: lot.root_origin_lot_id,
+        issuance_id: lot.issuance_id || "",
+        deposit_batch_id: lot.deposit_batch_id || "",
         reason: "Current balance composition includes this traced lot fragment",
       })),
       confidence: 0.9,
@@ -950,6 +970,8 @@ function buildTraceEvidence(traceResult) {
             amount: lot.current_amount,
             tainted_amount: lot.tainted_amount,
             parent_lot_ids: lot.parent_lot_ids || [],
+            issuance_id: lot.issuance_id || "",
+            deposit_batch_id: lot.deposit_batch_id || "",
             holders: lot.holders || [],
             reason: "Lot lineage record and current-holdings snapshot",
           },
@@ -970,6 +992,8 @@ function buildTraceEvidence(traceResult) {
       tainted_amount: lot.tainted_amount,
       source_lot_id: lot.source_lot_id,
       child_lot_id: lot.child_lot_id,
+      issuance_id: lot.issuance_id || "",
+      deposit_batch_id: lot.deposit_batch_id || "",
       reason: "Recorded pro-rata lineage fragment in traced transaction",
     })),
     confidence: 0.92,
@@ -1011,7 +1035,7 @@ function buildTraceRisk(traceResult) {
 }
 
 function lotsFromTraceResult(traceResult) {
-  if (!traceResult?.ok) return [];
+  if (!traceResult || traceResult.ok === false) return [];
   if (traceResult.kind === "address") {
     return (traceResult.data.balances || []).flatMap((balance) =>
       (balance.lots || []).map((lot) => ({
@@ -1030,6 +1054,8 @@ function lotsFromTraceResult(traceResult) {
         tainted_amount: lot.tainted_amount || "0",
         risk_basis_points: lot.risk_basis_points || 0,
         root_origin_lot_id: lot.root_origin_lot_id || lot.lot_id,
+        issuance_id: lot.issuance_id || "",
+        deposit_batch_id: lot.deposit_batch_id || "",
       },
     ];
   }
@@ -1039,6 +1065,8 @@ function lotsFromTraceResult(traceResult) {
       denom: flow.denom,
       lot_id: lot.child_lot_id,
       amount: lot.amount,
+      issuance_id: lot.issuance_id || "",
+      deposit_batch_id: lot.deposit_batch_id || "",
     })),
   );
 }
@@ -1752,6 +1780,15 @@ function buildKeyFindings(traceResult, risk, suspiciousPatterns, entity, cluster
       detail: `Case is centered on address ${traceResult.data?.address || ""} and current traced balances.`,
     });
   }
+  const provenance = collectProvenanceAnchors(traceResult);
+  if ((provenance.issuance_ids || []).length > 0 || (provenance.deposit_batch_ids || []).length > 0) {
+    findings.push({
+      type: "provenance_anchors",
+      severity: "low",
+      confidence: 0.88,
+      detail: `Trace exposes ${(provenance.issuance_ids || []).length} issuance anchors and ${(provenance.deposit_batch_ids || []).length} deposit-batch anchors for stable origin referencing.`,
+    });
+  }
   return findings;
 }
 
@@ -1794,6 +1831,11 @@ function buildCaseDossier(forensicCase) {
       kind: forensicCase.kind,
       entity_type: forensicCase.entity_attribution?.entity_type || "unknown",
       label: forensicCase.entity_attribution?.label || forensicCase.entity_attribution?.entity_type || "unknown",
+      provenance_anchors: forensicCase.provenance_anchors || {
+        issuance_ids: [],
+        deposit_batch_ids: [],
+        root_origin_lot_ids: [],
+      },
     },
     key_findings: findings,
     evidence_index: buildEvidenceIndex(forensicCase.evidence_chain),
@@ -1808,6 +1850,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
   const suspicious_patterns = buildSuspiciousPatterns(traceResult, context, flowGraph?.data || flowGraph || null);
   const entity = inferEntityLabel(context || {}, body.target || body.address || body.lot_id || body.tx_hash || "", traceResult);
   const clusters = buildAddressClusters(traceResult, flowGraph?.data || flowGraph || null);
+  const provenance_anchors = collectProvenanceAnchors(traceResult, flowGraph?.data || flowGraph || null);
   const forensicCase = {
     case_id: body.case_id || randomId("case"),
     subject: body.target || body.address || body.lot_id || body.tx_hash || "",
@@ -1826,6 +1869,7 @@ function createForensicsCase(body, traceResult, summary, context, flowGraph = nu
     entity_attribution: entity,
     address_clusters: clusters,
     cluster_summary: summarizeCaseClusters(clusters),
+    provenance_anchors,
     final_summary: summary,
     recommended_next_actions: buildTraceRecommendedActions(risk),
     review_status: "open",

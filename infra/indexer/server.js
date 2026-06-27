@@ -718,6 +718,16 @@ function totalHoldingAmount(entries) {
   return entries.reduce((sum, entry) => sum + amountToBigInt(entry.amount), 0n);
 }
 
+function stableProvenanceId(prefix, parts = []) {
+  const raw = parts.map((item) => String(item || "").trim()).filter(Boolean).join("|");
+  if (!raw) return "";
+  return `${prefix}_${Buffer.from(raw).toString("hex").slice(0, 24)}`;
+}
+
+function normalizeAnchorValue(value) {
+  return String(value || "").trim();
+}
+
 function createLot({
   denom,
   amount,
@@ -731,12 +741,16 @@ function createLot({
   parent_lot_ids,
   risk_basis_points,
   tainted_amount,
+  issuance_id,
+  deposit_batch_id,
 }) {
   const lotId = `lot_${String(lineageState.next_lot_seq++).padStart(8, "0")}`;
   const normalizedOwner = normalizeAddress(owner);
   const normalizedDenom = normalizeDenom(denom);
   const amountString = bigIntToString(amount);
   const taintedString = bigIntToString(tainted_amount ?? amountToBigInt(amount) * BigInt(Number(risk_basis_points || 0)) / 10000n);
+  const normalizedIssuanceId = normalizeAnchorValue(issuance_id);
+  const normalizedDepositBatchId = normalizeAnchorValue(deposit_batch_id);
   lineageState.lots[lotId] = {
     lot_id: lotId,
     denom: normalizedDenom,
@@ -750,6 +764,8 @@ function createLot({
     origin_ref: origin_ref || source_ref || "",
     root_origin_lot_id: root_origin_lot_id || lotId,
     parent_lot_ids: Array.isArray(parent_lot_ids) ? parent_lot_ids.filter(Boolean) : [],
+    issuance_id: normalizedIssuanceId,
+    deposit_batch_id: normalizedDepositBatchId,
     risk_basis_points: Number(risk_basis_points || 0),
     tainted_amount: taintedString,
     created_at: new Date().toISOString(),
@@ -761,6 +777,8 @@ function createLot({
     tainted_amount: taintedString,
     risk_basis_points: Number(risk_basis_points || 0),
     root_origin_lot_id: root_origin_lot_id || lotId,
+    issuance_id: normalizedIssuanceId,
+    deposit_batch_id: normalizedDepositBatchId,
   });
   return lineageState.lots[lotId];
 }
@@ -778,6 +796,15 @@ function bootstrapSourceLiquidity(address, denom, amount, context = {}) {
     source_type: context.source_type || "opening_balance_inferred",
     source_ref: context.source_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
     origin_ref: context.origin_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
+    issuance_id:
+      context.issuance_id ||
+      stableProvenanceId("iss", [
+        context.source_type || "opening_balance_inferred",
+        context.source_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
+        context.origin_ref || `${normalizeAddress(address)}:${normalizeDenom(denom)}`,
+        context.height || 0,
+      ]),
+    deposit_batch_id: context.deposit_batch_id || "",
     risk_basis_points: Number(context.risk_basis_points ?? (risky ? 10000 : 0)),
     tainted_amount: context.tainted_amount || (risky ? bigIntToString(required) : "0"),
   });
@@ -824,7 +851,7 @@ function allocateConsumption(entries, amount) {
   return plan.filter((item) => item.amount > 0n);
 }
 
-function transferWithLineage({ from, to, denom, amount, txHash, height, message_index }) {
+function transferWithLineage({ from, to, denom, amount, txHash, height, message_index, source_type, source_ref, origin_ref, issuance_id, deposit_batch_id }) {
   const normalizedFrom = normalizeAddress(from);
   const normalizedTo = normalizeAddress(to);
   const normalizedDenom = normalizeDenom(denom);
@@ -836,7 +863,11 @@ function transferWithLineage({ from, to, denom, amount, txHash, height, message_
     bootstrapSourceLiquidity(normalizedFrom, normalizedDenom, target - senderTotal, {
       created_by_tx: txHash,
       height,
-      source_ref: `${normalizedFrom}:${normalizedDenom}`,
+      source_type: source_type || "opening_balance_inferred",
+      source_ref: source_ref || `${normalizedFrom}:${normalizedDenom}`,
+      origin_ref: origin_ref || source_ref || `${normalizedFrom}:${normalizedDenom}`,
+      issuance_id: issuance_id || "",
+      deposit_batch_id: deposit_batch_id || "",
     });
   }
   const refreshedEntries = getHoldingEntries(normalizedFrom, normalizedDenom);
@@ -868,6 +899,8 @@ function transferWithLineage({ from, to, denom, amount, txHash, height, message_
       origin_ref: sourceLot.origin_ref || sourceLot.source_ref || sourceLot.lot_id,
       root_origin_lot_id: sourceLot.root_origin_lot_id || sourceLot.lot_id,
       parent_lot_ids: [sourceLot.lot_id],
+      issuance_id: sourceLot.issuance_id || issuance_id || "",
+      deposit_batch_id: sourceLot.deposit_batch_id || deposit_batch_id || "",
       risk_basis_points: riskScoreFromParts(moved, movedTainted),
       tainted_amount: movedTainted,
     });
@@ -878,6 +911,8 @@ function transferWithLineage({ from, to, denom, amount, txHash, height, message_
       tainted_amount: bigIntToString(movedTainted),
       risk_basis_points: childLot.risk_basis_points,
       root_origin_lot_id: childLot.root_origin_lot_id,
+      issuance_id: childLot.issuance_id || "",
+      deposit_batch_id: childLot.deposit_batch_id || "",
     });
   }
   lineageState.holdings[normalizedFrom][normalizedDenom] = refreshedEntries.filter((entry) => amountToBigInt(entry.amount) > 0n);
@@ -951,6 +986,11 @@ function rebuildLineageFromTxCache() {
         txHash: record.hash,
         height: record.height,
         message_index: flow.message_index,
+        source_type: flow.source_type,
+        source_ref: flow.source_ref,
+        origin_ref: flow.origin_ref,
+        issuance_id: flow.issuance_id,
+        deposit_batch_id: flow.deposit_batch_id,
       });
       if (effect) effects.push(effect);
     }
@@ -985,13 +1025,15 @@ function summarizeAddressTrace(address, denomFilter = "") {
         const lot = lineageState.lots[entry.lot_id] || {};
         return {
           lot_id: entry.lot_id,
-          amount: entry.amount,
-          tainted_amount: entry.tainted_amount,
-          risk_basis_points: entry.risk_basis_points,
-          root_origin_lot_id: entry.root_origin_lot_id,
-          origin_ref: lot.origin_ref || "",
-          source_type: lot.source_type || "",
-          parent_lot_ids: lot.parent_lot_ids || [],
+        amount: entry.amount,
+        tainted_amount: entry.tainted_amount,
+        risk_basis_points: entry.risk_basis_points,
+        root_origin_lot_id: entry.root_origin_lot_id,
+        issuance_id: entry.issuance_id || lot.issuance_id || "",
+        deposit_batch_id: entry.deposit_batch_id || lot.deposit_batch_id || "",
+        origin_ref: lot.origin_ref || "",
+        source_type: lot.source_type || "",
+        parent_lot_ids: lot.parent_lot_ids || [],
         };
       }),
     });
@@ -1017,6 +1059,8 @@ function summarizeLotTrace(lotId) {
         amount: match.amount,
         tainted_amount: match.tainted_amount,
         risk_basis_points: match.risk_basis_points,
+        issuance_id: match.issuance_id || lot.issuance_id || "",
+        deposit_batch_id: match.deposit_batch_id || lot.deposit_batch_id || "",
       });
     }
   }
@@ -1029,6 +1073,8 @@ function summarizeLotTrace(lotId) {
       current_amount: item.current_amount,
       created_by_tx: item.created_by_tx,
       risk_basis_points: item.risk_basis_points,
+      issuance_id: item.issuance_id || "",
+      deposit_batch_id: item.deposit_batch_id || "",
     }));
   return {
     ok: true,
@@ -1068,6 +1114,8 @@ function buildLotTransferEdges() {
           source_lot_id: lot.source_lot_id,
           child_lot_id: lot.child_lot_id,
           root_origin_lot_id: lot.root_origin_lot_id || "",
+          issuance_id: lot.issuance_id || "",
+          deposit_batch_id: lot.deposit_batch_id || "",
         });
       }
     }
@@ -1145,6 +1193,8 @@ function buildGraphPathPayload(edgePath, direction) {
       tainted_amount: edge.tainted_amount,
       source_lot_id: edge.source_lot_id,
       child_lot_id: edge.child_lot_id,
+      issuance_id: edge.issuance_id || "",
+      deposit_batch_id: edge.deposit_batch_id || "",
       height: edge.height,
     })),
   };
@@ -1288,6 +1338,8 @@ function traceGraph(kind, target, rawOptions = {}) {
         current_amount: lot.current_amount || lot.amount || "0",
         tainted_amount: lot.tainted_amount || "0",
         root_origin_lot_id: lot.root_origin_lot_id || lotId,
+        issuance_id: lot.issuance_id || "",
+        deposit_batch_id: lot.deposit_batch_id || "",
       };
     });
   const txNodes = [...nodeTxs].map((hash) => {

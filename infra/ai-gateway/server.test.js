@@ -97,8 +97,24 @@ function startMockIntelligenceUpstreams(port) {
             tainted_amount: "20",
             risk_basis_points: 4000,
             lots: [
-              { lot_id: "lot_00000009", amount: "20", tainted_amount: "20", risk_basis_points: 10000, root_origin_lot_id: "lot_00000001" },
-              { lot_id: "lot_00000010", amount: "30", tainted_amount: "0", risk_basis_points: 0, root_origin_lot_id: "lot_00000008" },
+              {
+                lot_id: "lot_00000009",
+                amount: "20",
+                tainted_amount: "20",
+                risk_basis_points: 10000,
+                root_origin_lot_id: "lot_00000001",
+                issuance_id: "iss_bridge_seed_001",
+                deposit_batch_id: "dep_bridge_batch_001",
+              },
+              {
+                lot_id: "lot_00000010",
+                amount: "30",
+                tainted_amount: "0",
+                risk_basis_points: 0,
+                root_origin_lot_id: "lot_00000008",
+                issuance_id: "iss_clean_seed_001",
+                deposit_batch_id: "dep_bridge_batch_002",
+              },
             ],
           },
         ],
@@ -131,11 +147,11 @@ function startMockIntelligenceUpstreams(port) {
             { id: "ynx1victim", type: "address", address: "ynx1victim" },
           ],
           lots: [
-            { id: "lot_00000000", type: "lot", lot_id: "lot_00000000", owner: "ynx1origin", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000000" },
-            { id: "lot_00000001", type: "lot", lot_id: "lot_00000001", owner: "ynx1source", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
-            { id: "lot_00000005", type: "lot", lot_id: "lot_00000005", owner: "ynx1bridgea", denom: "wETH.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
-            { id: "lot_00000007", type: "lot", lot_id: "lot_00000007", owner: "ynx1bridgeb", denom: "wUSDC.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
-            { id: "lot_00000009", type: "lot", lot_id: "lot_00000009", owner: "ynx1victim", denom: "anyxt", current_amount: "20", tainted_amount: "20", root_origin_lot_id: "lot_00000001" },
+            { id: "lot_00000000", type: "lot", lot_id: "lot_00000000", owner: "ynx1origin", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000000", issuance_id: "iss_bridge_seed_001", deposit_batch_id: "dep_bridge_batch_001" },
+            { id: "lot_00000001", type: "lot", lot_id: "lot_00000001", owner: "ynx1source", denom: "anyxt", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001", issuance_id: "iss_bridge_seed_001", deposit_batch_id: "dep_bridge_batch_001" },
+            { id: "lot_00000005", type: "lot", lot_id: "lot_00000005", owner: "ynx1bridgea", denom: "wETH.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001", issuance_id: "iss_bridge_seed_001", deposit_batch_id: "dep_bridge_batch_001" },
+            { id: "lot_00000007", type: "lot", lot_id: "lot_00000007", owner: "ynx1bridgeb", denom: "wUSDC.y", current_amount: "0", tainted_amount: "20", root_origin_lot_id: "lot_00000001", issuance_id: "iss_bridge_seed_001", deposit_batch_id: "dep_bridge_batch_001" },
+            { id: "lot_00000009", type: "lot", lot_id: "lot_00000009", owner: "ynx1victim", denom: "anyxt", current_amount: "20", tainted_amount: "20", root_origin_lot_id: "lot_00000001", issuance_id: "iss_bridge_seed_001", deposit_batch_id: "dep_bridge_batch_001" },
           ],
           txs: [
             { id: "0xTRACECASEPRE", type: "tx", tx_hash: "0xTRACECASEPRE", height: 10, index: 0 },
@@ -158,6 +174,8 @@ function startMockIntelligenceUpstreams(port) {
             source_lot_id: "lot_00000000",
             child_lot_id: "lot_00000001",
             root_origin_lot_id: "lot_00000001",
+            issuance_id: "iss_bridge_seed_001",
+            deposit_batch_id: "dep_bridge_batch_001",
             traversal_direction: "upstream",
             depth: 4,
           },
@@ -174,6 +192,8 @@ function startMockIntelligenceUpstreams(port) {
             source_lot_id: "lot_00000001",
             child_lot_id: "lot_00000005",
             root_origin_lot_id: "lot_00000001",
+            issuance_id: "iss_bridge_seed_001",
+            deposit_batch_id: "dep_bridge_batch_001",
             traversal_direction: "upstream",
             depth: 3,
           },
@@ -190,6 +210,8 @@ function startMockIntelligenceUpstreams(port) {
             source_lot_id: "lot_00000005",
             child_lot_id: "lot_00000007",
             root_origin_lot_id: "lot_00000001",
+            issuance_id: "iss_bridge_seed_001",
+            deposit_batch_id: "dep_bridge_batch_001",
             traversal_direction: "upstream",
             depth: 2,
           },
@@ -206,6 +228,8 @@ function startMockIntelligenceUpstreams(port) {
             source_lot_id: "lot_00000007",
             child_lot_id: "lot_00000009",
             root_origin_lot_id: "lot_00000001",
+            issuance_id: "iss_bridge_seed_001",
+            deposit_batch_id: "dep_bridge_batch_001",
             traversal_direction: "upstream",
             depth: 1,
           },
@@ -1719,17 +1743,22 @@ test("creates protected structured forensics cases with risk and evidence", asyn
   assert.equal(forensicCase.case.cluster_summary.total_clusters, 1);
   assert.equal(forensicCase.case.cluster_summary.total_addresses >= 2, true);
   assert.equal(forensicCase.case.cluster_summary.by_reason_type.bridge_route_exposure >= 1, true);
+  assert.equal(forensicCase.case.provenance_anchors.issuance_ids.includes("iss_bridge_seed_001"), true);
+  assert.equal(forensicCase.case.provenance_anchors.deposit_batch_ids.includes("dep_bridge_batch_001"), true);
   assert.equal(forensicCase.case.case_dossier.primary_disposition, "manual review required");
   assert.equal(forensicCase.case.case_dossier.operational_state.review_status, "open");
   assert.equal(forensicCase.case.case_dossier.subject_profile.label, "bridge_exposed_account");
+  assert.equal(forensicCase.case.case_dossier.subject_profile.provenance_anchors.issuance_ids.includes("iss_bridge_seed_001"), true);
   assert.equal(Array.isArray(forensicCase.case.case_dossier.key_findings), true);
   assert.equal(forensicCase.case.case_dossier.key_findings.some((item) => item.type === "risk_summary"), true);
+  assert.equal(forensicCase.case.case_dossier.key_findings.some((item) => item.type === "provenance_anchors"), true);
   assert.equal(Array.isArray(forensicCase.case.case_dossier.evidence_index), true);
   assert.equal(forensicCase.case.case_dossier.evidence_index.length > 0, true);
   assert.equal(Array.isArray(forensicCase.case.case_dossier.action_queue), true);
   assert.equal(forensicCase.case.case_dossier.action_queue[0].status, "pending");
   assert.ok(forensicCase.case.recommended_next_actions.includes("manual review required"));
   assert.equal(forensicCase.case.guardrails.transfer_authority_granted, false);
+  assert.equal(forensicCase.case.evidence_chain[0].evidence[0].issuance_id, "iss_bridge_seed_001");
 
   const listed = assertJson(await requestJson(`http://127.0.0.1:${aiPort}/ai/forensics/cases?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
     headers: { "x-ynx-session": session.token },

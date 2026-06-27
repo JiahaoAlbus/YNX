@@ -580,10 +580,39 @@ function persist() {
 }
 
 function addAudit(event, payload) {
+  const sanitizeAuditValue = (value, key = "") => {
+    const normalizedKey = String(key || "").toLowerCase();
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return value.slice(0, 50).map((item) => sanitizeAuditValue(item));
+    if (typeof value === "object") {
+      const out = {};
+      for (const [childKey, childValue] of Object.entries(value)) {
+        out[childKey] = sanitizeAuditValue(childValue, childKey);
+      }
+      return out;
+    }
+    if (
+      normalizedKey.includes("token") ||
+      normalizedKey.includes("secret") ||
+      normalizedKey.includes("private_key") ||
+      normalizedKey.includes("mnemonic") ||
+      normalizedKey.includes("signature") ||
+      normalizedKey === "api_key"
+    ) {
+      return "[redacted]";
+    }
+    if (typeof value === "string") {
+      if (/ses_[a-z0-9]{12,}/i.test(value) || /api_[a-z0-9]{12,}/i.test(value) || /own_[a-z0-9]{12,}/i.test(value)) {
+        return "[redacted]";
+      }
+      return value.length > 400 ? `${value.slice(0, 397)}...` : value;
+    }
+    return value;
+  };
   state.audit_logs.unshift({
     audit_id: randomId("audit"),
     event,
-    payload,
+    payload: sanitizeAuditValue(payload),
     created_at: nowIso(),
   });
   if (state.audit_logs.length > AI_AUDIT_LIMIT) {

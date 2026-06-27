@@ -232,6 +232,7 @@ const DEFAULT_ALLOWED_ACTIONS = [
   "ai.trace.report",
   "ai.payment.read",
   "ai.payment.charge",
+  "audit.read",
   "tool.execute",
 ];
 const DEFAULT_ALLOWED_SERVICE_HOSTS = ["*"];
@@ -397,10 +398,39 @@ function findTool(toolId) {
 }
 
 function addAudit(event, payload) {
+  const sanitizeAuditValue = (value, key = "") => {
+    const normalizedKey = String(key || "").toLowerCase();
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return value.slice(0, 50).map((item) => sanitizeAuditValue(item));
+    if (typeof value === "object") {
+      const out = {};
+      for (const [childKey, childValue] of Object.entries(value)) {
+        out[childKey] = sanitizeAuditValue(childValue, childKey);
+      }
+      return out;
+    }
+    if (
+      normalizedKey.includes("token") ||
+      normalizedKey.includes("secret") ||
+      normalizedKey.includes("private_key") ||
+      normalizedKey.includes("mnemonic") ||
+      normalizedKey.includes("signature") ||
+      normalizedKey === "api_key"
+    ) {
+      return "[redacted]";
+    }
+    if (typeof value === "string") {
+      if (/ses_[a-z0-9]{12,}/i.test(value) || /api_[a-z0-9]{12,}/i.test(value) || /own_[a-z0-9]{12,}/i.test(value)) {
+        return "[redacted]";
+      }
+      return value.length > 400 ? `${value.slice(0, 397)}...` : value;
+    }
+    return value;
+  };
   state.audit_logs.unshift({
     audit_id: randomId("audit"),
     event,
-    payload,
+    payload: sanitizeAuditValue(payload),
     created_at: nowIso(),
   });
   if (state.audit_logs.length > WEB4_AUDIT_LIMIT) {
@@ -844,8 +874,15 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/web4/audit") {
+    const policyId = String(url.searchParams.get("policy_id") || "").trim();
+    if (!policyId) return json(res, 400, { ok: false, error: "policy_id_required" });
+    const guard = policyGuard(req, "audit.read", policyId, 0);
+    if (!guard.ok) return json(res, guard.status, { ok: false, error: guard.error });
     const limit = Math.max(1, Math.min(500, parseInt(url.searchParams.get("limit") || "100", 10) || 100));
-    return json(res, 200, { ok: true, items: state.audit_logs.slice(0, limit) });
+    return json(res, 200, {
+      ok: true,
+      items: state.audit_logs.filter((item) => String(item.payload?.policy_id || "") === policyId).slice(0, limit),
+    });
   }
 
   if (req.method === "GET" && url.pathname === "/web4/tools") {

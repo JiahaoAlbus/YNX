@@ -109,7 +109,7 @@ The v2 public track includes machine-operable primitives:
 - Session issuance and bounded capability delegation (`/web4/policies/:id/sessions`)
 - Agent controlled self-update (`/web4/agents/:id/self-update`)
 - Agent controlled replication (`/web4/agents/:id/replicate`)
-- Audit log surface (`/web4/audit`)
+- Audit log surface (`/web4/audit`) with policy-scoped session-gated reads
 
 ## 5. Governance and Upgrade Safety
 

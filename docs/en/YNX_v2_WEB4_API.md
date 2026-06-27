@@ -98,7 +98,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `GET /health`
 - `GET /web4/overview`
 - `GET /web4/stats`
-- `GET /web4/audit`
+- `GET /web4/audit` — policy-scoped; expect `policy_id` + `x-ynx-session`
 
 ## 9. Error Patterns
 

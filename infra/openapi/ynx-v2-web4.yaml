@@ -21,6 +21,7 @@ paths:
   /web4/audit:
     get:
       summary: Web4 audit stream
+      description: Policy-scoped audit stream. Requires `policy_id` plus `x-ynx-session` with `audit.read` capability when policy enforcement is enabled.
       responses:
         "200":
           description: OK

@@ -81,7 +81,7 @@ Core endpoint groups:
 - `POST /web4/policies`
 - `POST /web4/policies/:id/sessions`
 - `POST /web4/intents`
-- `GET /web4/audit`
+- `GET /web4/audit` (policy-scoped; use `policy_id` + `x-ynx-session`)
 
 Start with:
 

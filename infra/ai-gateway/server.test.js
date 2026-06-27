@@ -599,6 +599,85 @@ test("protects job and vault read surfaces behind scoped Web4 sessions", async (
   assert.equal(scopedVault.vault.vault_id, createdVault.vault.vault_id);
 });
 
+test("redacts sensitive values from AI audit read surfaces", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-audit-redact-");
+  const web4Dir = await makeTempDir("ynx-web4-ai-audit-redact-");
+  const internalToken = "test-internal-token-ai-audit-redact";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policy = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-audit-redact",
+        allowed_actions: ["ai.vault.create", "ai.audit.read"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policy.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policy.owner_secret },
+      body: {
+        capabilities: ["ai.vault.create", "ai.audit.read"],
+        ttl_sec: 600,
+      },
+    }),
+    201
+  );
+
+  await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults`, {
+    method: "POST",
+    headers: { "x-ynx-session": session.token },
+    body: {
+      owner: "owner-audit-redact",
+      policy_id: policy.policy.policy_id,
+    },
+  });
+
+  const audit = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/audit?policy_id=${encodeURIComponent(policy.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(Array.isArray(audit.items), true);
+  const serialized = JSON.stringify(audit);
+  assert.doesNotMatch(serialized, /ses_[a-z0-9]{12,}/i);
+  assert.doesNotMatch(serialized, /owner_secret|private[_-]?key|mnemonic/i);
+});
+
 test("denies AI action when policy service host allowlist does not include gateway host", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();

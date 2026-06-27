@@ -100,7 +100,7 @@ YNX v2 Web4 API 的执行顺序是：
 - `GET /health`
 - `GET /web4/overview`
 - `GET /web4/stats`
-- `GET /web4/audit`
+- `GET /web4/audit` —— 按 policy 受控读取，需要 `policy_id` + `x-ynx-session`
 
 ## 9. 常见错误码语义
 

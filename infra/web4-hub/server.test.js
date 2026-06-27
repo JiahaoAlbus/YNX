@@ -221,6 +221,66 @@ test("policy owner actions require owner secret, not public owner name", async (
   assert.ok(secretAttempt.token);
 });
 
+test("protects web4 audit reads and redacts sensitive audit payload values", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-audit-protected-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "audit-owner",
+        owner_secret: "own_super_secret_value",
+        allowed_actions: ["audit.read"],
+      },
+    }),
+    201
+  );
+
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["audit.read"],
+        ttl_sec: 600,
+      },
+    }),
+    201
+  );
+
+  const missingPolicy = await requestJson(`http://127.0.0.1:${port}/web4/audit`, {
+    headers: { "x-ynx-session": session.token },
+  });
+  assert.equal(missingPolicy.status, 400);
+  assert.equal(missingPolicy.body.error, "policy_id_required");
+
+  const audit = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/audit?policy_id=${encodeURIComponent(created.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(Array.isArray(audit.items), true);
+  assert.equal(audit.items.some((item) => item.event === "policy.created"), true);
+  const serialized = JSON.stringify(audit);
+  assert.doesNotMatch(serialized, /own_super_secret_value/);
+  assert.doesNotMatch(serialized, /ses_[a-z0-9]{12,}/i);
+});
+
 test("executes any third-party API through bounded tool policy", async (t) => {
   const port = await getFreePort();
   const toolPort = await getFreePort();

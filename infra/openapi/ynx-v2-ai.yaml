@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: YNX v2 AI Intelligence and Settlement API
   version: 2.0.0
-  description: Live chain intelligence, AI assistant responses, AI jobs, machine-payment vaults, programmable charges, and x402-style protected resources.
+  description: Live chain intelligence, AI assistant responses, AI jobs, machine-payment vaults, programmable charges, protected accountability and forensics workflows, and x402-style protected resources.
 servers:
   - url: http://127.0.0.1:38090
 paths:
@@ -48,7 +48,7 @@ paths:
   /ai/actions/run:
     post:
       summary: Run an AI action
-      description: Runs public read/preparation actions or Web4-protected actions. trade.prepare returns wallet transaction parameters; trade.execute submits only after Web4 policy/session authorization, limits, and a configured testnet agent signer.
+      description: Runs public read/preparation actions or Web4-protected actions. trade.prepare returns wallet transaction parameters; trade.execute submits only after Web4 policy/session authorization, limits, and a configured testnet agent signer. Protected accountability actions such as ai.trace.report, ai.forensics.case.create, and ai.forensics.case.review also require Web4 policy/session authorization.
       requestBody:
         required: true
         content:
@@ -56,6 +56,26 @@ paths:
             schema:
               $ref: "#/components/schemas/RunActionRequest"
             examples:
+              traceReport:
+                value:
+                  action: ai.trace.report
+                  policy_id: pol_example
+                  kind: address
+                  target: ynx1example
+              createForensicsCase:
+                value:
+                  action: ai.forensics.case.create
+                  policy_id: pol_example
+                  kind: address
+                  target: ynx1example
+                  review_note: Initial victim-support trace request
+              reviewForensicsCase:
+                value:
+                  action: ai.forensics.case.review
+                  policy_id: pol_example
+                  case_id: case_example
+                  review_status: under_review
+                  note: Escalating for operator review
               tradePreflight:
                 value:
                   action: trade.preflight
@@ -212,6 +232,26 @@ paths:
       parameters:
         - in: path
           name: payment_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /ai/forensics/cases:
+    get:
+      summary: List protected forensics cases
+      description: Policy-scoped protected case list. Expects `policy_id` plus `x-ynx-session` when Web4 policy enforcement is enabled.
+      responses:
+        "200":
+          description: OK
+  /ai/forensics/cases/{case_id}:
+    get:
+      summary: Get protected forensics case detail
+      description: Policy-scoped protected case detail. Expects `policy_id` plus `x-ynx-session` when Web4 policy enforcement is enabled.
+      parameters:
+        - in: path
+          name: case_id
           required: true
           schema:
             type: string

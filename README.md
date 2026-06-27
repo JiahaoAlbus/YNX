@@ -108,6 +108,9 @@ changing the base coin model into a UTXO or NFT-style system.
 - architecture decision: this is the correct V2 base for accountability and
   forensics; do not model every fungible unit as a permanently unique
   serial-numbered coin fragment after merges and splits
+- issuance note: if YNX later wants stronger mint/deposit provenance, add
+  immutable issuance or deposit-batch ids at lot creation time; do not pretend
+  that post-merge balances still preserve a single exact per-unit serial number
 
 Runtime controls:
 
@@ -158,6 +161,7 @@ What it does not claim yet:
 Next architecture note:
 
 - EN: [`docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md`](docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md)
+- ZH: [`docs/zh/问责与取证引擎.md`](docs/zh/问责与取证引擎.md)
 
 ### 4.5) Funding / grant / compliance packet
 

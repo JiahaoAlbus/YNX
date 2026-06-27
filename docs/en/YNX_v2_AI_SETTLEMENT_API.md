@@ -133,6 +133,24 @@ AI_LLM_MODEL=qwen2.5:1.5b
 - `GET /ai/payments/:id` — payment detail (policy-scoped when Web4 enforcement is enabled)
 - `GET /x402/resource` — x402-style paywalled resource
 
+Protected accountability / forensics actions on the same gateway:
+
+- `POST /ai/actions/run` with `action: "ai.trace.report"` — protected trace
+  summary for an address, lot, or transaction target
+- `POST /ai/actions/run` with `action: "ai.forensics.case.create"` — create a
+  protected structured case from trace evidence
+- `POST /ai/actions/run` with `action: "ai.forensics.case.review"` — append
+  review notes or move case review/escalation state
+- `GET /ai/forensics/cases?policy_id=...` — list policy-scoped cases
+- `GET /ai/forensics/cases/:case_id?policy_id=...` — fetch one policy-scoped
+  case
+
+The forensics layer is defensive and evidence-oriented:
+
+- it supports accountability, victim support, and operator/compliance review
+- it does not grant transfer, seizure, or freeze authority by itself
+- any stronger enforcement decision must go through a separate reviewed path
+
 ## 6. Optional On-chain Mirroring
 
 The AI Gateway can mirror high-value settlement actions into `YNXAISettlement`.

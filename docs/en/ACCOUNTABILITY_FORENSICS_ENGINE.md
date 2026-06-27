@@ -35,6 +35,48 @@ In practical terms:
 So the answer is: yes, this strategy is better, but specifically because it is
 more honest about fungible-asset reality than a universal serial-number model.
 
+## Explicit product recommendation
+
+If the question is "should YNX switch to a per-coin permanent serial-number
+model like physical cash notes?", the answer is no.
+
+If the question is "should YNX strengthen accountability by adding stable
+origin identifiers, richer lineage, more taint models, better case reports, and
+broader detector/provider layers?", the answer is yes.
+
+Recommended product line:
+
+- keep `lot lineage + pro-rata taint tracking` as the canonical V2 truth layer
+- optionally add immutable `issuance_id` or `deposit_batch_id` at lot creation
+  for stronger mint/deposit provenance
+- preserve exact lineage only where exact lineage really exists
+- preserve proportional ancestry after merges and splits
+- make any stronger enforcement or freeze action a separate reviewed path
+
+This gives YNX the accountability benefits of stable provenance references
+without claiming that every smallest post-merge fungible fragment still has one
+exact lifelong identity.
+
+## V2 versus V3
+
+This belongs in V2 as a strengthening of the current architecture, not as a
+marketing-only V3 reset.
+
+Use the following distinction:
+
+- `V2 trace`: current deterministic lot-lineage evidence layer
+- `V2 accountability`: protected case, review, escalation, evidence, and risk
+  workflows on top of that evidence
+- potential future `V3`: a broader multi-network forensic fabric only if YNX
+  later normalizes multiple ledger models, cross-network provenance proofs, and
+  independent forensic storage/indexing
+
+So the right near-term decision is:
+
+- do not replace the current V2 lineage model
+- do not describe the system as permanent per-unit coin serial tracking
+- continue deepening the current V2 trace/accountability stack
+
 ## Why this strategy is better
 
 The broader forensics engine strategy adds capabilities the current trace layer
@@ -225,9 +267,11 @@ instead of a loose bundle of raw analysis fields.
 
 ## Suggested next build steps
 
-1. add broader transaction-graph traversal beyond current trace targets
-2. add more attribution providers and detector families
-3. keep the enforcement boundary separate from evidence generation
+1. add immutable `issuance_id` / `deposit_batch_id` support for stronger origin
+   anchoring without faking per-unit identity after merges
+2. add broader transaction-graph traversal beyond current trace targets
+3. add more attribution providers and detector families
+4. keep the enforcement boundary separate from evidence generation
 
 ## Limitation today
 

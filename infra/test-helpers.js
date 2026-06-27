@@ -73,10 +73,17 @@ async function requestJson(url, { method = "GET", body, headers = {} } = {}) {
 }
 
 async function startNodeServer(scriptPath, env, readyUrl) {
+  const effectiveEnv = { ...(env || {}) };
+  if (
+    /\/web4-hub\/server\.js$/.test(String(scriptPath)) &&
+    effectiveEnv.WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE === undefined
+  ) {
+    effectiveEnv.WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE = "0";
+  }
   const child = spawn(process.execPath, [scriptPath], {
     env: {
       ...process.env,
-      ...env,
+      ...effectiveEnv,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

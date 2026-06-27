@@ -18,7 +18,8 @@ In YNX v2, **Web4** means:
 1. **Wallet as identity**
    - `/web4/wallet/bootstrap`
    - `/web4/wallet/verify`
-   - wallet bootstrap is auditable and linked to policy/session controls
+   - wallet bootstrap is auditable and can gate policy creation so wallet
+     identity is actually linked to policy/session controls
 
 2. **Autonomous continuation with bounded resources**
    - policy-level spend ceilings (`max_total_spend`, `max_daily_spend`)

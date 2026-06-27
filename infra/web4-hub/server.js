@@ -301,6 +301,7 @@ const WEB4_PERSIST_DEBOUNCE_MS = Math.max(0, parseInt(process.env.WEB4_PERSIST_D
 const WEB4_TOOL_TIMEOUT_MS = Math.max(1000, parseInt(process.env.WEB4_TOOL_TIMEOUT_MS || "10000", 10) || 10000);
 const WEB4_TOOL_RESPONSE_LIMIT_BYTES = Math.max(1024, parseInt(process.env.WEB4_TOOL_RESPONSE_LIMIT_BYTES || "65536", 10) || 65536);
 const WEB4_ALLOW_PRIVATE_TOOL_URLS = process.env.WEB4_ALLOW_PRIVATE_TOOL_URLS === "1";
+const WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE = process.env.WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE !== "0";
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -396,6 +397,12 @@ function findPolicy(policyId) {
 
 function findTool(toolId) {
   return state.tools.find((item) => item.tool_id === toolId);
+}
+
+function findBootstrapByApiKey(apiKey) {
+  if (!apiKey) return null;
+  const apiKeyHash = hashSecret(apiKey);
+  return state.wallet_bootstraps.find((item) => item.status === "verified" && timingSafeEqualHex(apiKeyHash, String(item.api_key_hash || ""))) || null;
 }
 
 function addAudit(event, payload) {
@@ -576,6 +583,8 @@ function createPolicy(body) {
   const policy = {
     policy_id: body.policy_id || randomId("policy"),
     owner: body.owner || "",
+    owner_wallet_address: body.owner_wallet_address || "",
+    bootstrap_id: body.bootstrap_id || "",
     name: body.name || "default-policy",
     status: "active",
     allowed_actions: uniqueStrings(
@@ -800,7 +809,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       ...corsHeaders(req),
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,x-ynx-owner,x-ynx-session,x-ynx-internal-token",
+      "access-control-allow-headers": "content-type,x-ynx-owner,x-ynx-session,x-ynx-internal-token,x-ynx-api-key",
     });
     return res.end();
   }
@@ -1128,13 +1137,26 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/web4/policies") {
     const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
     if (!requireValidBody(res, body)) return;
+    let bootstrap = null;
+    if (WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE) {
+      bootstrap = findBootstrapByApiKey(readHeader(req, "x-ynx-api-key"));
+      if (!bootstrap) return json(res, 401, { ok: false, error: "bootstrap_api_key_required" });
+      body.owner_wallet_address = bootstrap.wallet_address;
+      body.bootstrap_id = bootstrap.bootstrap_id;
+      if (!body.owner) body.owner = bootstrap.wallet_address;
+    }
     if (!body.owner) return json(res, 400, { ok: false, error: "owner_required" });
     if (body.policy_id && !ensureUnique(state.policies, "policy_id", body.policy_id)) {
       return json(res, 409, { ok: false, error: "policy_id_exists" });
     }
     const created = createPolicy(body);
     state.policies.unshift(created.policy);
-    addAudit("policy.created", { policy_id: created.policy.policy_id, owner: created.policy.owner });
+    addAudit("policy.created", {
+      policy_id: created.policy.policy_id,
+      owner: created.policy.owner,
+      owner_wallet_address: created.policy.owner_wallet_address,
+      bootstrap_id: created.policy.bootstrap_id,
+    });
     persist();
     return json(res, 201, {
       ok: true,

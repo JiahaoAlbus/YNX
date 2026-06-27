@@ -274,6 +274,70 @@ test("wallet bootstrap verify requires a valid wallet signature", async (t) => {
   assert.match(verified.api_key, /^api_/);
 });
 
+test("policy creation requires bootstrap api key when bootstrap gating is enabled", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-policy-bootstrap-gate-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const denied = await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+    method: "POST",
+    body: {
+      owner: "ungated-owner",
+      name: "no-bootstrap-policy",
+    },
+  });
+  assert.equal(denied.status, 401);
+  assert.equal(denied.body.error, "bootstrap_api_key_required");
+
+  const wallet = ethers.Wallet.createRandom();
+  const bootstrap = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/wallet/bootstrap`, {
+      method: "POST",
+      body: {
+        wallet_address: wallet.address,
+      },
+    }),
+    201
+  );
+  const signature = await wallet.signMessage(bootstrap.siwe_message);
+  const verified = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/wallet/verify`, {
+      method: "POST",
+      body: {
+        bootstrap_id: bootstrap.bootstrap.bootstrap_id,
+        signature,
+      },
+    }),
+    200
+  );
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      headers: { "x-ynx-api-key": verified.api_key },
+      body: {
+        name: "bootstrap-backed-policy",
+      },
+    }),
+    201
+  );
+  assert.equal(created.policy.owner, wallet.address);
+  assert.equal(created.policy.owner_wallet_address, wallet.address);
+  assert.equal(created.policy.bootstrap_id, bootstrap.bootstrap.bootstrap_id);
+});
+
 test("protects web4 audit reads and redacts sensitive audit payload values", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-web4-audit-protected-");

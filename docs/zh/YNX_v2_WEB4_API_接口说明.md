@@ -17,6 +17,7 @@ YNX v2 Web4 API 的执行顺序是：
 - `content-type: application/json`
 - `x-ynx-owner: <owner secret 或 owner id>`（Owner 级操作）
 - `x-ynx-session: <session token>`（委托操作）
+- `x-ynx-api-key: <bootstrap api key>`（启用 bootstrap gating 时用于 wallet-backed policy 创建）
 
 ## 3. 钱包自举
 
@@ -26,7 +27,7 @@ YNX v2 Web4 API 的执行顺序是：
 ## 4. 策略与会话
 
 - `GET /web4/policies`
-- `POST /web4/policies`
+- `POST /web4/policies`（启用 bootstrap gating 时需要 `x-ynx-api-key`）
 - `GET /web4/policies/:policy_id`
 - `POST /web4/policies/:policy_id/sessions`
 - `POST /web4/policies/:policy_id/pause`

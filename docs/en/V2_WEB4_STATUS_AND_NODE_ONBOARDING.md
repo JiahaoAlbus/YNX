@@ -110,6 +110,8 @@ This service provides:
 
 - wallet bootstrap and verification (`/web4/wallet/*`)
 - owner-scoped policy creation and lifecycle (`/web4/policies*`)
+- wallet-backed bootstrap api keys can be used to gate policy creation so
+  wallet identity actually anchors the control plane
 - session issuance under policy constraints
 - identity, agent, and intent lifecycle APIs
 - controlled self-update and replication

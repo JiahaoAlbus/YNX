@@ -17,6 +17,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `content-type: application/json`
 - `x-ynx-owner: <owner secret or owner id>` (owner actions)
 - `x-ynx-session: <session token>` (delegated actions)
+- `x-ynx-api-key: <bootstrap api key>` (wallet-backed policy creation when bootstrap gating is enabled)
 
 ## 3. Wallet Bootstrap
 
@@ -29,6 +30,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 
 - `GET /web4/policies`
 - `POST /web4/policies`
+  - When bootstrap gating is enabled, requires `x-ynx-api-key` from a verified wallet bootstrap
   - Creates policy with limits:
     - `max_total_spend`
     - `max_daily_spend`

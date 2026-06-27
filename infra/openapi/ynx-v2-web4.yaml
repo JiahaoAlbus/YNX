@@ -46,9 +46,15 @@ paths:
           description: OK
     post:
       summary: Create sovereignty policy
+      description: When bootstrap gating is enabled, requires `x-ynx-api-key` from a previously verified wallet bootstrap so policy ownership stays linked to wallet identity.
       parameters:
         - in: header
           name: x-ynx-owner
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-api-key
           required: false
           schema:
             type: string

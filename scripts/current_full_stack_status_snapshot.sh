@@ -272,6 +272,8 @@ jq -n \
     doc_entrypoints: {
       en_current_status: "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md",
       zh_current_status: "docs/zh/当前全链状态与对齐快照_2026_06_27.md",
+      en_truth_matrix: "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md",
+      zh_truth_matrix: "docs/zh/YNX_全栈真相矩阵_2026_06_27.md",
       en_compliance: "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md",
       zh_compliance: "docs/zh/合规就绪包_2026_06_13.md",
       en_readiness_gates: "docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md",
@@ -344,6 +346,8 @@ ${bridge_actions_md}
 
 - \`docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md\`
 - \`docs/zh/当前全链状态与对齐快照_2026_06_27.md\`
+- \`docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md\`
+- \`docs/zh/YNX_全栈真相矩阵_2026_06_27.md\`
 - \`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md\`
 - \`docs/zh/合规就绪包_2026_06_13.md\`
 EOF

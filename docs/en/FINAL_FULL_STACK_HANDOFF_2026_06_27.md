@@ -104,6 +104,16 @@ This bundles the latest snapshot, latest alignment report, docs verification,
 and core current-state/compliance docs into one stable handoff folder plus
 archive.
 
+The repository now also includes a one-command grant / visibility pack:
+
+```bash
+./scripts/prepare_grant_visibility_pack.sh
+```
+
+This bundles the latest truthful status evidence, grant target shortlist,
+application templates, outreach copy, and diligence/compliance boundary docs
+into one stable outward-facing pack.
+
 ## 3. Current live full-stack status
 
 The canonical current-status source is:
@@ -235,6 +245,12 @@ Full-stack evidence pack:
 
 ```bash
 ./scripts/prepare_full_stack_evidence_pack.sh
+```
+
+Grant / visibility pack:
+
+```bash
+./scripts/prepare_grant_visibility_pack.sh
 ```
 
 Submission readiness:

@@ -22,6 +22,12 @@ Repeatable snapshot command:
 ./scripts/current_full_stack_status_snapshot.sh
 ```
 
+Repeatable live-vs-local runtime alignment audit:
+
+```bash
+./scripts/verify_live_runtime_alignment.sh
+```
+
 ## 2. Live public facts verified on 2026-06-27
 
 The following live checks were verified directly:

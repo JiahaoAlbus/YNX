@@ -85,6 +85,15 @@ The repository now includes a repeatable live snapshot command:
 This produces machine-readable and human-readable status artifacts for the
 current full stack.
 
+The repository now also includes a direct live runtime alignment audit:
+
+```bash
+./scripts/verify_live_runtime_alignment.sh
+```
+
+This produces a PASS/WARN/FAIL alignment report showing where live deployment
+matches or lags current local/runtime expectations.
+
 ## 3. Current live full-stack status
 
 The canonical current-status source is:
@@ -199,6 +208,12 @@ Current full-stack live snapshot:
 
 ```bash
 ./scripts/current_full_stack_status_snapshot.sh
+```
+
+Live runtime alignment audit:
+
+```bash
+./scripts/verify_live_runtime_alignment.sh
 ```
 
 Submission readiness:

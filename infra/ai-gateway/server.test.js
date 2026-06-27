@@ -599,6 +599,136 @@ test("protects job and vault read surfaces behind scoped Web4 sessions", async (
   assert.equal(scopedVault.vault.vault_id, createdVault.vault.vault_id);
 });
 
+test("protects payment detail reads behind scoped Web4 sessions", async (t) => {
+  const aiPort = await getFreePort();
+  const web4Port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-payment-read-scope-");
+  const web4Dir = await makeTempDir("ynx-web4-payment-read-scope-");
+  const internalToken = "test-internal-token-payment-read-scope";
+  const web4ServerPath = path.join(__dirname, "..", "web4-hub", "server.js");
+
+  const web4 = await startNodeServer(
+    web4ServerPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: web4Dir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: internalToken,
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => web4.stop());
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "1",
+      AI_WEB4_HUB_URL: `http://127.0.0.1:${web4Port}`,
+      AI_WEB4_INTERNAL_TOKEN: internalToken,
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const policyA = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-payment-a",
+        allowed_actions: ["ai.vault.create", "ai.payment.charge", "ai.payment.read"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const sessionA = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policyA.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policyA.owner_secret },
+      body: {
+        capabilities: ["ai.vault.create", "ai.payment.charge", "ai.payment.read"],
+        ttl_sec: 600,
+        max_ops: 6,
+        max_spend: 100,
+      },
+    }),
+    201
+  );
+
+  const policyB = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "owner-payment-b",
+        allowed_actions: ["ai.payment.read"],
+        allowed_service_hosts: ["127.0.0.1"],
+      },
+    }),
+    201
+  );
+  const sessionB = assertJson(
+    await requestJson(`http://127.0.0.1:${web4Port}/web4/policies/${policyB.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": policyB.owner_secret },
+      body: {
+        capabilities: ["ai.payment.read"],
+        ttl_sec: 600,
+        max_ops: 6,
+      },
+    }),
+    201
+  );
+
+  const vault = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults`, {
+      method: "POST",
+      headers: { "x-ynx-session": sessionA.token },
+      body: {
+        owner: "owner-payment-a",
+        balance: 50,
+        policy_id: policyA.policy.policy_id,
+      },
+    }),
+    201
+  );
+
+  const charged = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/payments/charge`, {
+      method: "POST",
+      headers: { "x-ynx-session": sessionA.token },
+      body: {
+        vault_id: vault.vault.vault_id,
+        policy_id: policyA.policy.policy_id,
+        amount: 5,
+        resource: "safe-resource",
+      },
+    }),
+    200
+  );
+
+  const publicDenied = await requestJson(`http://127.0.0.1:${aiPort}/ai/payments/${charged.payment.payment_id}`);
+  assert.equal(publicDenied.status, 401);
+  assert.equal(publicDenied.body.error, "session_required");
+
+  const ownRead = assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/payments/${charged.payment.payment_id}?policy_id=${encodeURIComponent(policyA.policy.policy_id)}`, {
+      headers: { "x-ynx-session": sessionA.token },
+    }),
+    200
+  );
+  assert.equal(ownRead.payment.payment_id, charged.payment.payment_id);
+
+  const crossRead = await requestJson(`http://127.0.0.1:${aiPort}/ai/payments/${charged.payment.payment_id}?policy_id=${encodeURIComponent(policyB.policy.policy_id)}`, {
+    headers: { "x-ynx-session": sessionB.token },
+  });
+  assert.equal(crossRead.status, 404);
+  assert.equal(crossRead.body.error, "payment_not_found");
+});
+
 test("redacts sensitive values from AI audit read surfaces", async (t) => {
   const aiPort = await getFreePort();
   const web4Port = await getFreePort();

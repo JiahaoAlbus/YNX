@@ -3949,6 +3949,15 @@ const server = http.createServer(async (req, res) => {
   if (segments[0] === "ai" && segments[1] === "payments" && segments[2] && req.method === "GET") {
     const payment = state.payments.find((item) => item.payment_id === segments[2]);
     if (!payment) return json(res, 404, { ok: false, error: "payment_not_found" });
+    const policyRead = await requirePolicyReadAuthorization(req, "ai.payment.read", url.searchParams.get("policy_id") || payment.policy_id || "", {
+      resource: `ai/payments/${segments[2]}`,
+      reason: "ai-payment-read",
+      request_id: segments[2],
+    });
+    if (!policyRead.ok) return json(res, policyRead.status, { ok: false, error: policyRead.error });
+    if (policyRead.policy_id && String(payment.policy_id || "") !== policyRead.policy_id) {
+      return json(res, 404, { ok: false, error: "payment_not_found" });
+    }
     return json(res, 200, { ok: true, payment });
   }
 

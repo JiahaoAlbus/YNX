@@ -205,6 +205,19 @@ paths:
       responses:
         "200":
           description: OK
+  /ai/payments/{payment_id}:
+    get:
+      summary: Get payment detail
+      description: When Web4 policy enforcement is enabled, this read surface is policy-scoped and expects `policy_id` plus `x-ynx-session`.
+      parameters:
+        - in: path
+          name: payment_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
   /x402/resource:
     get:
       summary: Access x402-style protected resource

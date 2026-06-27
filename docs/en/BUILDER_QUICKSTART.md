@@ -106,7 +106,8 @@ Core endpoint groups:
 - `POST /ai/jobs`
 - `POST /ai/jobs/:id/commit`
 - `POST /ai/jobs/:id/finalize`
-- `POST /ai/payments`
+- `POST /ai/payments/charge`
+- `GET /ai/payments/:id` (policy-scoped when Web4 enforcement is enabled)
 - `GET /x402/resource`
 
 Start with:

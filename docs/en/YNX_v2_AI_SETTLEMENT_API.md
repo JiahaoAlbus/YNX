@@ -130,6 +130,7 @@ AI_LLM_MODEL=qwen2.5:1.5b
 - `POST /ai/vaults/:id/deposit` — increase vault balance
 - `POST /ai/payments/quote` — quote payment amount
 - `POST /ai/payments/charge` — execute charge from vault
+- `GET /ai/payments/:id` — payment detail (policy-scoped when Web4 enforcement is enabled)
 - `GET /x402/resource` — x402-style paywalled resource
 
 ## 6. Optional On-chain Mirroring

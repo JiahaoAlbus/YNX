@@ -35,6 +35,7 @@ Last updated: 2026-04-30
 - `docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md` — email follow-up templates for grant and sponsor outreach
 - `docs/en/FUNDRAISING_MEMO_2026_06_13.md` — financing narrative, use of funds, and scope discipline
 - `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md` — company, privacy, and regulatory readiness packet
+- `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current live-vs-local full-stack alignment snapshot
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy
@@ -77,6 +78,7 @@ Last updated: 2026-04-30
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — practical security-response workflow and current maturity limits
 - `docs/en/TOKEN_POLICY_POSITION_2026_06_14.md` — how to talk about token policy without overcommitting to old drafts
 - `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md` — current website legal publication gap and publish packet
+- `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current full-stack truth snapshot across live endpoints and local repo scope
 
 ## Core Specs
 

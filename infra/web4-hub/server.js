@@ -303,6 +303,8 @@ const WEB4_TOOL_RESPONSE_LIMIT_BYTES = Math.max(1024, parseInt(process.env.WEB4_
 const WEB4_ALLOW_PRIVATE_TOOL_URLS = process.env.WEB4_ALLOW_PRIVATE_TOOL_URLS === "1";
 const WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE = process.env.WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE !== "0";
 const WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES = Math.max(0, parseInt(process.env.WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES || "1", 10) || 0);
+const WEB4_BOOTSTRAP_CHALLENGE_TTL_SEC = Math.max(30, parseInt(process.env.WEB4_BOOTSTRAP_CHALLENGE_TTL_SEC || "900", 10) || 900);
+const WEB4_BOOTSTRAP_API_KEY_TTL_SEC = Math.max(30, parseInt(process.env.WEB4_BOOTSTRAP_API_KEY_TTL_SEC || "900", 10) || 900);
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -410,6 +412,15 @@ function bootstrapApiKeyExhausted(bootstrap) {
   if (!bootstrap) return true;
   if (WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES <= 0) return false;
   return Number(bootstrap.api_key_uses || 0) >= WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES;
+}
+
+function isoAfterSeconds(seconds) {
+  return new Date(Date.now() + seconds * 1000).toISOString();
+}
+
+function isoExpired(value) {
+  const ts = new Date(String(value || "")).getTime();
+  return !Number.isFinite(ts) || ts <= Date.now();
 }
 
 function addAudit(event, payload) {
@@ -795,7 +806,9 @@ function createWalletBootstrap(body) {
     owner: body.owner || "",
     status: "pending",
     created_at: nowIso(),
+    expires_at: isoAfterSeconds(WEB4_BOOTSTRAP_CHALLENGE_TTL_SEC),
     verified_at: "",
+    api_key_expires_at: "",
     api_key_hash: "",
     api_key_uses: 0,
     api_key_last_used_at: "",
@@ -1117,6 +1130,7 @@ const server = http.createServer(async (req, res) => {
     const item = state.wallet_bootstraps.find((entry) => entry.bootstrap_id === body.bootstrap_id);
     if (!item) return json(res, 404, { ok: false, error: "bootstrap_not_found" });
     if (item.status !== "pending") return json(res, 400, { ok: false, error: "bootstrap_already_used" });
+    if (isoExpired(item.expires_at)) return json(res, 400, { ok: false, error: "bootstrap_expired" });
     if (!body.signature) return json(res, 400, { ok: false, error: "signature_required" });
     try {
       const recovered = ethers.verifyMessage(walletBootstrapMessage(item), String(body.signature || ""));
@@ -1129,6 +1143,7 @@ const server = http.createServer(async (req, res) => {
     const apiKey = `api_${crypto.randomBytes(18).toString("hex")}`;
     item.status = "verified";
     item.verified_at = nowIso();
+    item.api_key_expires_at = isoAfterSeconds(WEB4_BOOTSTRAP_API_KEY_TTL_SEC);
     item.api_key_hash = hashSecret(apiKey);
     addAudit("wallet.bootstrap.verified", { bootstrap_id: item.bootstrap_id, wallet_address: item.wallet_address });
     persist();
@@ -1150,6 +1165,7 @@ const server = http.createServer(async (req, res) => {
     if (WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE) {
       bootstrap = findBootstrapByApiKey(readHeader(req, "x-ynx-api-key"));
       if (!bootstrap) return json(res, 401, { ok: false, error: "bootstrap_api_key_required" });
+      if (isoExpired(bootstrap.api_key_expires_at)) return json(res, 403, { ok: false, error: "bootstrap_api_key_expired" });
       if (bootstrapApiKeyExhausted(bootstrap)) return json(res, 403, { ok: false, error: "bootstrap_api_key_exhausted" });
       body.owner_wallet_address = bootstrap.wallet_address;
       body.bootstrap_id = bootstrap.bootstrap_id;

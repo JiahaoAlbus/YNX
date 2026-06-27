@@ -21,6 +21,7 @@ In YNX v2, **Web4** means:
    - wallet bootstrap is auditable and can gate policy creation so wallet
      identity is actually linked to policy/session controls
    - bootstrap api keys are single-use for policy creation by default
+   - bootstrap challenges and bootstrap api keys expire by default
 
 2. **Autonomous continuation with bounded resources**
    - policy-level spend ceilings (`max_total_spend`, `max_daily_spend`)

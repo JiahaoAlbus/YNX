@@ -26,6 +26,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/wallet/verify`
   - Confirms bootstrap with a real wallet signature over the issued challenge and returns API key
   - bootstrap api keys are single-use for policy creation by default
+  - bootstrap challenges and bootstrap api keys expire by default
 
 ## 4. Policy and Session
 
@@ -33,6 +34,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/policies`
   - When bootstrap gating is enabled, requires `x-ynx-api-key` from a verified wallet bootstrap
   - bootstrap api keys are single-use for policy creation by default
+  - expired bootstrap api keys are rejected
   - Creates policy with limits:
     - `max_total_spend`
     - `max_daily_spend`

@@ -113,6 +113,7 @@ This service provides:
 - wallet-backed bootstrap api keys can be used to gate policy creation so
   wallet identity actually anchors the control plane
 - bootstrap api keys are single-use for policy creation by default
+- bootstrap challenges and bootstrap api keys expire by default
 - session issuance under policy constraints
 - identity, agent, and intent lifecycle APIs
 - controlled self-update and replication

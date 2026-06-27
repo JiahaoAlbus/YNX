@@ -34,7 +34,7 @@ paths:
   /web4/wallet/verify:
     post:
       summary: Complete wallet bootstrap
-      description: Verifies the issued wallet bootstrap challenge against a real signature recovered to the requested wallet address before returning an API key. Bootstrap api keys are single-use for policy creation by default.
+      description: Verifies the issued wallet bootstrap challenge against a real signature recovered to the requested wallet address before returning an API key. Bootstrap challenges and bootstrap api keys expire by default, and bootstrap api keys are single-use for policy creation by default.
       responses:
         "200":
           description: OK
@@ -46,7 +46,7 @@ paths:
           description: OK
     post:
       summary: Create sovereignty policy
-      description: When bootstrap gating is enabled, requires `x-ynx-api-key` from a previously verified wallet bootstrap so policy ownership stays linked to wallet identity. Bootstrap api keys are single-use for policy creation by default.
+      description: When bootstrap gating is enabled, requires `x-ynx-api-key` from a previously verified wallet bootstrap so policy ownership stays linked to wallet identity. Bootstrap api keys are single-use for policy creation by default, and expired bootstrap api keys are rejected.
       parameters:
         - in: header
           name: x-ynx-owner

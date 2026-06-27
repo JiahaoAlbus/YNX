@@ -114,6 +114,16 @@ This bundles the latest truthful status evidence, grant target shortlist,
 application templates, outreach copy, and diligence/compliance boundary docs
 into one stable outward-facing pack.
 
+The repository now also includes a top-level executive closeout pack:
+
+```bash
+./scripts/prepare_executive_closeout_pack.sh
+```
+
+This orchestrates the snapshot, runtime alignment audit, founder/operator
+evidence pack, and grant/visibility pack into one highest-level closeout
+folder and archive.
+
 ## 3. Current live full-stack status
 
 The canonical current-status source is:
@@ -251,6 +261,12 @@ Grant / visibility pack:
 
 ```bash
 ./scripts/prepare_grant_visibility_pack.sh
+```
+
+Executive closeout pack:
+
+```bash
+./scripts/prepare_executive_closeout_pack.sh
 ```
 
 Submission readiness:

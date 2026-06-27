@@ -225,6 +225,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Live runtime alignment audit: `./scripts/verify_live_runtime_alignment.sh`
 - Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 - Grant / visibility pack: `./scripts/prepare_grant_visibility_pack.sh`
+- Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`
 
 ### 6) Node Operators / Validators
 

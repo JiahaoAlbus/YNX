@@ -38,6 +38,8 @@ Last updated: 2026-04-30
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current live-vs-local full-stack alignment snapshot
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — current final handoff summary across status, blockers, and compliance entry points
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — current official-source shortlist for grants and visibility targets
+- `docs/en/GRANT_APPLICATION_KIT_2026_06_27.md` — practical grant-ready application template kit
+- `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md` — truthful X / Telegram outreach copy kit
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy
@@ -83,6 +85,8 @@ Last updated: 2026-04-30
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current full-stack truth snapshot across live endpoints and local repo scope
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — final current-state handoff for operator / founder / diligence use
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — founder-facing grant and visibility shortlist
+- `docs/en/GRANT_APPLICATION_KIT_2026_06_27.md` — grant-form copy kit and milestone skeleton
+- `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md` — current public-posting kit for X and Telegram
 
 ## Core Specs
 

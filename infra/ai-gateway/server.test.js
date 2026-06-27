@@ -448,7 +448,6 @@ test("enforces web4-backed policy authorization for vault creation", async (t) =
     method: "POST",
     body: {
       owner: "owner-test",
-      balance: 100,
       policy_id: policy.policy.policy_id,
     },
   });
@@ -461,13 +460,38 @@ test("enforces web4-backed policy authorization for vault creation", async (t) =
       headers: { "x-ynx-session": session.token },
       body: {
         owner: "owner-test",
-        balance: 100,
         policy_id: policy.policy.policy_id,
       },
     }),
     201
   );
   assert.equal(created.vault.policy_id, policy.policy.policy_id);
+});
+
+test("rejects direct balance bootstrap on vault creation by default", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-vault-bootstrap-disabled-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(port),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = await requestJson(`http://127.0.0.1:${port}/ai/vaults`, {
+    method: "POST",
+    body: {
+      owner: "owner-bootstrap",
+      balance: 100,
+    },
+  });
+  assert.equal(created.status, 400);
+  assert.equal(created.body.error, "vault_balance_bootstrap_disabled");
 });
 
 test("protects job and vault read surfaces behind scoped Web4 sessions", async (t) => {
@@ -639,7 +663,7 @@ test("protects payment detail reads behind scoped Web4 sessions", async (t) => {
       method: "POST",
       body: {
         owner: "owner-payment-a",
-        allowed_actions: ["ai.vault.create", "ai.payment.charge", "ai.payment.read"],
+        allowed_actions: ["ai.vault.create", "ai.vault.deposit", "ai.payment.charge", "ai.payment.read"],
         allowed_service_hosts: ["127.0.0.1"],
       },
     }),
@@ -650,7 +674,7 @@ test("protects payment detail reads behind scoped Web4 sessions", async (t) => {
       method: "POST",
       headers: { "x-ynx-owner": policyA.owner_secret },
       body: {
-        capabilities: ["ai.vault.create", "ai.payment.charge", "ai.payment.read"],
+        capabilities: ["ai.vault.create", "ai.vault.deposit", "ai.payment.charge", "ai.payment.read"],
         ttl_sec: 600,
         max_ops: 6,
         max_spend: 100,
@@ -689,11 +713,21 @@ test("protects payment detail reads behind scoped Web4 sessions", async (t) => {
       headers: { "x-ynx-session": sessionA.token },
       body: {
         owner: "owner-payment-a",
-        balance: 50,
         policy_id: policyA.policy.policy_id,
       },
     }),
     201
+  );
+
+  assertJson(
+    await requestJson(`http://127.0.0.1:${aiPort}/ai/vaults/${vault.vault.vault_id}/deposit`, {
+      method: "POST",
+      headers: { "x-ynx-session": sessionA.token },
+      body: {
+        amount: 50,
+      },
+    }),
+    200
   );
 
   const charged = assertJson(
@@ -872,7 +906,6 @@ test("denies AI action when policy service host allowlist does not include gatew
     headers: { "x-ynx-session": session.token },
     body: {
       owner: "owner-host-deny",
-      balance: 100,
       policy_id: policy.policy.policy_id,
     },
   });
@@ -900,12 +933,21 @@ test("rejects x402 delivery when settled payment resource does not match request
       method: "POST",
       body: {
         owner: "owner-x402",
-        balance: 100,
         max_daily_spend: 100,
         max_per_payment: 100,
       },
     }),
     201
+  );
+
+  assertJson(
+    await requestJson(`http://127.0.0.1:${port}/ai/vaults/${vault.vault.vault_id}/deposit`, {
+      method: "POST",
+      body: {
+        amount: 100,
+      },
+    }),
+    200
   );
 
   const payment = assertJson(

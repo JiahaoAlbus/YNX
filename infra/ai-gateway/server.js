@@ -304,6 +304,7 @@ const AI_TRADE_AGENT_PRIVATE_KEY = process.env.AI_TRADE_AGENT_PRIVATE_KEY || "";
 const AI_TRADE_AGENT_MOCK = process.env.AI_TRADE_AGENT_MOCK === "1";
 const AI_TRADE_MAX_AMOUNT = Number(process.env.AI_TRADE_MAX_AMOUNT || "1");
 const AI_TRADE_MAX_SLIPPAGE_BPS = Math.max(0, Math.min(5000, parseInt(process.env.AI_TRADE_MAX_SLIPPAGE_BPS || "300", 10) || 300));
+const AI_ALLOW_VAULT_BALANCE_BOOTSTRAP = process.env.AI_ALLOW_VAULT_BALANCE_BOOTSTRAP === "1";
 
 const AI_SETTLEMENT_ABI = [
   "function createVault(bytes32 vaultId, bytes32 policyHash, uint256 maxPerPayment) payable",
@@ -677,7 +678,7 @@ function createVault(payload) {
     owner: payload.owner || "",
     policy_id: payload.policy_id || "",
     status: "active",
-    balance: toNumber(payload.balance, 0),
+    balance: 0,
     max_daily_spend: toNumber(payload.max_daily_spend, 0),
     max_per_payment: toNumber(payload.max_per_payment, 0),
     metadata: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {},
@@ -3793,6 +3794,26 @@ const server = http.createServer(async (req, res) => {
     const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
     if (!requireValidBody(res, body)) return;
     if (!body.owner) return json(res, 400, { ok: false, error: "owner_required" });
+    if (!AI_ALLOW_VAULT_BALANCE_BOOTSTRAP && toNumber(body.balance, 0) > 0) {
+      return json(res, 400, {
+        ok: false,
+        error: "vault_balance_bootstrap_disabled",
+        detail: "Create empty vaults first, then fund them through the deposit path.",
+      });
+    }
+    if (!AI_ALLOW_VAULT_BALANCE_BOOTSTRAP) {
+      try {
+        if (weiFrom(body.onchain_value_wei, "0") > 0n) {
+          return json(res, 400, {
+            ok: false,
+            error: "vault_create_prefund_disabled",
+            detail: "Create empty vaults first, then fund them through the deposit path so local and onchain balances stay aligned.",
+          });
+        }
+      } catch {
+        return json(res, 400, { ok: false, error: "invalid_onchain_value" });
+      }
+    }
     if (body.vault_id && !ensureUnique(state.vaults, "vault_id", body.vault_id)) {
       return json(res, 409, { ok: false, error: "vault_id_exists" });
     }

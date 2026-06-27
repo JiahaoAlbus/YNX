@@ -103,6 +103,7 @@ Core endpoint groups:
 
 - `GET /health`
 - `POST /ai/vaults`
+- `POST /ai/vaults/:id/deposit`
 - `POST /ai/jobs`
 - `POST /ai/jobs/:id/commit`
 - `POST /ai/jobs/:id/finalize`

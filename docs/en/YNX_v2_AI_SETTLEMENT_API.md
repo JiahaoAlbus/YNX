@@ -158,13 +158,19 @@ curl -s https://ai.ynxweb4.com/ai/vaults \
   -d '{
     "owner": "demo-owner",
     "policy_id": "policy_demo",
-    "balance": 0,
     "max_per_payment": 50,
     "onchain": true,
-    "onchain_value_wei": "100000000000000000",
+    "onchain_value_wei": "0",
     "onchain_max_per_payment_wei": "50000000000000000"
   }' | jq
 ```
+
+Security note:
+
+- vault creation is expected to create an empty vault
+- funding should happen through `POST /ai/vaults/:id/deposit`
+- direct positive `balance` bootstrap on create is disabled by default so local
+  machine-payment balance cannot be injected by request body alone
 
 When enabled, the response includes:
 

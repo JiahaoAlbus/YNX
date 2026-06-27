@@ -102,8 +102,13 @@ The canonical current-status source is:
 
 The latest generated artifact from the new snapshot script is:
 
-- [CURRENT_FULL_STACK_STATUS.md](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_20260627_092958/CURRENT_FULL_STACK_STATUS.md)
-- [CURRENT_FULL_STACK_STATUS.json](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_20260627_092958/CURRENT_FULL_STACK_STATUS.json)
+- [CURRENT_FULL_STACK_STATUS.md](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [CURRENT_FULL_STACK_STATUS.json](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.json)
+
+The latest generated live runtime alignment audit is available at:
+
+- [LIVE_RUNTIME_ALIGNMENT.md](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
+- [LIVE_RUNTIME_ALIGNMENT.json](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json)
 
 Current live truth at the time of the latest captured snapshot:
 

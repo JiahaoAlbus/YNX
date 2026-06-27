@@ -43,16 +43,19 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
+OUTPUT_BASE_DIR="${REPO_ROOT}/output"
+LATEST_DIR="${OUTPUT_BASE_DIR}/live_runtime_alignment_latest"
 
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
+SNAPSHOT_OUTPUT_DIR="${OUTPUT_BASE_DIR}/current_full_stack_status_${STAMP_LOCAL}"
 if [[ -z "${OUTPUT_DIR:-}" ]]; then
-  OUTPUT_DIR="${REPO_ROOT}/output/live_runtime_alignment_${STAMP_LOCAL}"
+  OUTPUT_DIR="${OUTPUT_BASE_DIR}/live_runtime_alignment_${STAMP_LOCAL}"
 fi
 mkdir -p "${OUTPUT_DIR}"
 
-"${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" --output-dir "${OUTPUT_DIR}/snapshot" >/dev/null
+"${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" --output-dir "${SNAPSHOT_OUTPUT_DIR}" >/dev/null
 
-SNAPSHOT_JSON="${OUTPUT_DIR}/snapshot/CURRENT_FULL_STACK_STATUS.json"
+SNAPSHOT_JSON="${SNAPSHOT_OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json"
 ALIGNMENT_JSON="${OUTPUT_DIR}/LIVE_RUNTIME_ALIGNMENT.json"
 ALIGNMENT_MD="${OUTPUT_DIR}/LIVE_RUNTIME_ALIGNMENT.md"
 
@@ -145,13 +148,20 @@ fail_count="$(jq '[.findings[] | select(.status=="FAIL")] | length' "${ALIGNMENT
   echo
   echo "## Supporting snapshot"
   echo
-  echo "- [CURRENT_FULL_STACK_STATUS.md](${OUTPUT_DIR}/snapshot/CURRENT_FULL_STACK_STATUS.md)"
-  echo "- [CURRENT_FULL_STACK_STATUS.json](${OUTPUT_DIR}/snapshot/CURRENT_FULL_STACK_STATUS.json)"
+  echo "- [CURRENT_FULL_STACK_STATUS.md](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)"
+  echo "- [CURRENT_FULL_STACK_STATUS.json](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.json)"
 } > "${ALIGNMENT_MD}"
+
+rm -rf "${LATEST_DIR}"
+mkdir -p "${LATEST_DIR}"
+cp -R "${OUTPUT_DIR}/." "${LATEST_DIR}/"
 
 echo "Live runtime alignment report captured:"
 echo "- ${ALIGNMENT_JSON}"
 echo "- ${ALIGNMENT_MD}"
+echo "Stable latest alignment report:"
+echo "- ${LATEST_DIR}/LIVE_RUNTIME_ALIGNMENT.json"
+echo "- ${LATEST_DIR}/LIVE_RUNTIME_ALIGNMENT.md"
 
 if [[ "${overall_status}" == "FAIL" ]]; then
   exit 1

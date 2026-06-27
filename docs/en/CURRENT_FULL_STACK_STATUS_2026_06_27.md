@@ -28,6 +28,13 @@ Repeatable live-vs-local runtime alignment audit:
 ./scripts/verify_live_runtime_alignment.sh
 ```
 
+Stable latest generated artifacts:
+
+- [Latest full-stack snapshot markdown](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Latest full-stack snapshot json](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.json)
+- [Latest runtime alignment markdown](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
+- [Latest runtime alignment json](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json)
+
 ## 2. Live public facts verified on 2026-06-27
 
 The following live checks were verified directly:

@@ -44,13 +44,15 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
+OUTPUT_BASE_DIR="${REPO_ROOT}/output"
+LATEST_DIR="${OUTPUT_BASE_DIR}/current_full_stack_status_latest"
 
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
 NOW_UTC="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 FETCH_TIMEOUT_SEC="${YNX_FETCH_TIMEOUT_SEC:-15}"
 
 if [[ -z "${OUTPUT_DIR:-}" ]]; then
-  OUTPUT_DIR="${REPO_ROOT}/output/current_full_stack_status_${STAMP_LOCAL}"
+  OUTPUT_DIR="${OUTPUT_BASE_DIR}/current_full_stack_status_${STAMP_LOCAL}"
 fi
 mkdir -p "${OUTPUT_DIR}/responses"
 
@@ -312,6 +314,13 @@ ${bridge_actions_md}
 - \`docs/zh/合规就绪包_2026_06_13.md\`
 EOF
 
+rm -rf "${LATEST_DIR}"
+mkdir -p "${LATEST_DIR}"
+cp -R "${OUTPUT_DIR}/." "${LATEST_DIR}/"
+
 echo "Current full-stack status snapshot captured:"
 echo "- ${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json"
 echo "- ${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.md"
+echo "Stable latest snapshot:"
+echo "- ${LATEST_DIR}/CURRENT_FULL_STACK_STATUS.json"
+echo "- ${LATEST_DIR}/CURRENT_FULL_STACK_STATUS.md"

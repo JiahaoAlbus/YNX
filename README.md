@@ -153,7 +153,10 @@ What public search/explorer now shows:
 
 - redacted graph previews for traceable addresses, lots, and tx hashes
 - path summaries and counterparty directionality
+- provenance-anchor counts and presence summaries without exact anchor ids
 - no lot-level transfer ids or tainted-amount fields in the public preview
+- no exact `issuance_id` / `deposit_batch_id` values in the public preview path
+  or search trace payload
 
 What it does not claim yet:
 

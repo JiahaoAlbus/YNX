@@ -588,12 +588,21 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(Array.isArray(searchAddress.graph_preview.path_preview), true);
   assert.equal(searchAddress.graph_preview.guardrails.preview_only, true);
   assert.equal(searchAddress.graph_preview.edge_preview[0].tainted_amount, undefined);
+  assert.equal(searchAddress.graph_preview.edge_preview[0].issuance_id, undefined);
+  assert.equal(searchAddress.graph_preview.provenance_summary.issuance_anchor_count >= 1, true);
+  assert.equal(searchAddress.graph_preview.provenance_summary.deposit_batch_count >= 1, true);
+  assert.equal(searchAddress.trace.balances[0].lots[0].issuance_id, undefined);
+  assert.equal(searchAddress.trace.balances[0].lots[0].deposit_batch_id, undefined);
 
   const searchLot = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=${lotId}`), 200);
   assert.equal(searchLot.kind, "trace_lot");
   assert.equal(searchLot.graph_preview.stats.lot_count >= 1, true);
+  assert.equal(searchLot.trace.lot.issuance_id, undefined);
+  assert.equal(searchLot.trace.lot.deposit_batch_id, undefined);
 
   const searchTx = assertJson(await requestJson(`http://127.0.0.1:${indexerPort}/search?q=0xTRACE05`), 200);
   assert.equal(searchTx.kind, "trace_tx");
   assert.equal(searchTx.graph_preview.stats.tx_count >= 1, true);
+  assert.equal(searchTx.trace.tx_effect.flows[0].transferred_lots[0].issuance_id, undefined);
+  assert.equal(searchTx.trace.tx_effect.flows[0].transferred_lots[0].deposit_batch_id, undefined);
 });

@@ -1400,6 +1400,9 @@ function searchGraphPayload(kind, target) {
 
 function redactGraphPreview(graph) {
   if (!graph?.ok) return null;
+  const lotNodes = Array.isArray(graph.nodes?.lots) ? graph.nodes.lots : [];
+  const issuanceCount = new Set(lotNodes.map((lot) => lot.issuance_id).filter(Boolean)).size;
+  const depositBatchCount = new Set(lotNodes.map((lot) => lot.deposit_batch_id).filter(Boolean)).size;
   return {
     ok: true,
     kind: graph.kind,
@@ -1436,13 +1439,68 @@ function redactGraphPreview(graph) {
       depth: edge.depth,
     })),
     root_origin_preview: [...new Set((graph.nodes?.lots || []).map((lot) => lot.root_origin_lot_id).filter(Boolean))].slice(0, 8),
+    provenance_summary: {
+      issuance_anchor_count: issuanceCount,
+      deposit_batch_count: depositBatchCount,
+      protected_exact_ids: issuanceCount > 0 || depositBatchCount > 0,
+    },
     guardrails: {
       preview_only: true,
       full_trace_token_required: true,
       omits_lot_level_transfer_ids: true,
       omits_tainted_amounts: true,
+      omits_provenance_anchor_ids: true,
     },
     updated_at: graph.updated_at || null,
+  };
+}
+
+function redactTraceLotsForSearch(lots = []) {
+  return (Array.isArray(lots) ? lots : []).map((lot) => {
+    const next = { ...lot };
+    delete next.issuance_id;
+    delete next.deposit_batch_id;
+    return next;
+  });
+}
+
+function redactAddressTraceForSearch(trace) {
+  return {
+    ...trace,
+    balances: (trace.balances || []).map((balance) => ({
+      ...balance,
+      lots: redactTraceLotsForSearch(balance.lots),
+    })),
+  };
+}
+
+function redactLotTraceForSearch(trace) {
+  return {
+    ...trace,
+    lot: trace?.lot
+      ? {
+          ...trace.lot,
+          holders: (trace.lot.holders || []).map((holder) => {
+            const next = { ...holder };
+            delete next.issuance_id;
+            delete next.deposit_batch_id;
+            return next;
+          }),
+          children: redactTraceLotsForSearch(trace.lot.children),
+          issuance_id: undefined,
+          deposit_batch_id: undefined,
+        }
+      : trace?.lot,
+  };
+}
+
+function redactTxEffectForSearch(txEffect) {
+  return {
+    ...txEffect,
+    flows: (txEffect.flows || []).map((flow) => ({
+      ...flow,
+      transferred_lots: redactTraceLotsForSearch(flow.transferred_lots),
+    })),
   };
 }
 
@@ -1761,19 +1819,19 @@ async function searchIndex(query) {
   const addressTrace = summarizeAddressTrace(raw);
   if (addressTrace.ok) {
     const graph = searchGraphPayload("address", raw);
-    return { ok: true, kind: "trace_address", trace: addressTrace, graph_preview: redactGraphPreview(graph) };
+    return { ok: true, kind: "trace_address", trace: redactAddressTraceForSearch(addressTrace), graph_preview: redactGraphPreview(graph) };
   }
 
   const lotTrace = summarizeLotTrace(raw);
   if (lotTrace) {
     const graph = searchGraphPayload("lot", raw);
-    return { ok: true, kind: "trace_lot", trace: lotTrace, graph_preview: redactGraphPreview(graph) };
+    return { ok: true, kind: "trace_lot", trace: redactLotTraceForSearch(lotTrace), graph_preview: redactGraphPreview(graph) };
   }
 
   const txEffect = findTxEffectByHash(raw);
   if (txEffect) {
     const graph = searchGraphPayload("tx", raw);
-    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: txEffect }, graph_preview: redactGraphPreview(graph) };
+    return { ok: true, kind: "trace_tx", trace: { ok: true, tx_effect: redactTxEffectForSearch(txEffect) }, graph_preview: redactGraphPreview(graph) };
   }
 
   const tx = await findTxByHash(raw);

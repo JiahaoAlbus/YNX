@@ -57,6 +57,7 @@ function renderTraceGraph(graph) {
   const roots = (graph.root_origin_preview || [])
     .slice(0, 6)
     .join(", ");
+  const provenanceSummary = graph.provenance_summary || {};
   const paths = (graph.path_preview || graph.paths || [])
     .slice(0, 6)
     .map((path) => {
@@ -79,6 +80,9 @@ function renderTraceGraph(graph) {
       <span class="pill">depth ${escapeHtml(stats.max_depth_reached)}</span>
     </div>
     ${roots ? `<div class="muted">Root origins: ${escapeHtml(roots)}</div>` : ""}
+    ${(Number(provenanceSummary.issuance_anchor_count || 0) > 0 || Number(provenanceSummary.deposit_batch_count || 0) > 0)
+      ? `<div class="muted">Provenance anchors: ${escapeHtml(provenanceSummary.issuance_anchor_count || 0)} issuance · ${escapeHtml(provenanceSummary.deposit_batch_count || 0)} deposit batches${provenanceSummary.protected_exact_ids ? " · exact ids stay protected" : ""}</div>`
+      : ""}
     ${paths ? `<div class="trace-paths">${paths}</div>` : ""}
     <div class="trace-graph-edges">${edges || '<div class="muted">No linked edges found.</div>'}</div>
     ${graph.guardrails?.preview_only ? '<div class="muted">Preview only. Full lot-level trace details stay behind protected trace endpoints.</div>' : ""}
@@ -254,7 +258,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(item.denom)}</strong> total ${escapeHtml(item.total_amount)} · tainted ${escapeHtml(item.tainted_amount)} · risk ${(item.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}${renderTraceGraph(result.graph_preview)}`;
+      searchResult.innerHTML = `<div><strong>Trace address ${escapeHtml(trace.address)}</strong></div>${balances}<div class="muted">Public explorer view omits exact provenance anchor ids; use protected trace access for full issuance/deposit-batch references.</div>${renderTraceGraph(result.graph_preview)}`;
       return;
     }
     if (result.kind === "trace_lot") {
@@ -271,6 +275,7 @@ async function runSearch() {
         <div>Tainted amount: ${escapeHtml(lot.tainted_amount)}</div>
         <div>Risk: ${(lot.risk_basis_points / 100).toFixed(2)}%</div>
         <div class="muted">${holders}</div>
+        <div class="muted">Public explorer view omits exact provenance anchor ids; use protected trace access for full issuance/deposit-batch references.</div>
         ${renderTraceGraph(result.graph_preview)}`;
       return;
     }
@@ -284,7 +289,7 @@ async function runSearch() {
           return `<div><strong>${escapeHtml(flow.from)} → ${escapeHtml(flow.to)}</strong> ${escapeHtml(flow.amount)} ${escapeHtml(flow.denom)} · tainted ${escapeHtml(flow.tainted_amount)} · risk ${(flow.risk_basis_points / 100).toFixed(2)}%<div class="muted">${lots}</div></div>`;
         })
         .join("");
-      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}${renderTraceGraph(result.graph_preview)}`;
+      searchResult.innerHTML = `<div><strong>Trace tx ${escapeHtml(tx.hash)}</strong></div>${flows}<div class="muted">Public explorer view omits exact provenance anchor ids; use protected trace access for full issuance/deposit-batch references.</div>${renderTraceGraph(result.graph_preview)}`;
     }
   } catch (err) {
     searchResult.textContent = `Not found: ${err.message}`;

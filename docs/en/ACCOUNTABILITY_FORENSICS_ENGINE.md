@@ -213,7 +213,14 @@ The public preview version intentionally omits:
 
 - lot-level transfer ids
 - tainted-amount fields
+- exact provenance anchor ids such as `issuance_id` and `deposit_batch_id`
 - the full lot-node graph payload needed for exact reconstruction
+
+It may still show limited provenance-presence signals such as:
+
+- provenance-anchor counts
+- root-origin previews
+- path existence and counterparty directionality
 
 This keeps public accountability evidence useful while preserving the protected
 detail surface for operator, victim-support, and compliance review flows.

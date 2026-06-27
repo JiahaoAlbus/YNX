@@ -94,6 +94,16 @@ The repository now also includes a direct live runtime alignment audit:
 This produces a PASS/WARN/FAIL alignment report showing where live deployment
 matches or lags current local/runtime expectations.
 
+The repository now also includes a one-command founder/operator evidence pack:
+
+```bash
+./scripts/prepare_full_stack_evidence_pack.sh
+```
+
+This bundles the latest snapshot, latest alignment report, docs verification,
+and core current-state/compliance docs into one stable handoff folder plus
+archive.
+
 ## 3. Current live full-stack status
 
 The canonical current-status source is:
@@ -219,6 +229,12 @@ Live runtime alignment audit:
 
 ```bash
 ./scripts/verify_live_runtime_alignment.sh
+```
+
+Full-stack evidence pack:
+
+```bash
+./scripts/prepare_full_stack_evidence_pack.sh
 ```
 
 Submission readiness:

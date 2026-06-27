@@ -28,6 +28,12 @@ Repeatable live-vs-local runtime alignment audit:
 ./scripts/verify_live_runtime_alignment.sh
 ```
 
+Founder/operator evidence-pack command:
+
+```bash
+./scripts/prepare_full_stack_evidence_pack.sh
+```
+
 Stable latest generated artifacts:
 
 - [Latest full-stack snapshot markdown](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)

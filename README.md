@@ -223,6 +223,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - EN: [`docs/en/BUILDER_QUICKSTART.md`](docs/en/BUILDER_QUICKSTART.md)
 - Live status snapshot generator: `./scripts/current_full_stack_status_snapshot.sh`
 - Live runtime alignment audit: `./scripts/verify_live_runtime_alignment.sh`
+- Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 
 ### 6) Node Operators / Validators
 

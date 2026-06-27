@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const path = require("node:path");
+const { ethers } = require("ethers");
 
 const {
   assertJson,
@@ -219,6 +220,58 @@ test("policy owner actions require owner secret, not public owner name", async (
   );
   assert.equal(secretAttempt.ok, true);
   assert.ok(secretAttempt.token);
+});
+
+test("wallet bootstrap verify requires a valid wallet signature", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-wallet-verify-");
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const wallet = ethers.Wallet.createRandom();
+  const bootstrap = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/wallet/bootstrap`, {
+      method: "POST",
+      body: {
+        wallet_address: wallet.address,
+      },
+    }),
+    201
+  );
+
+  const badVerify = await requestJson(`http://127.0.0.1:${port}/web4/wallet/verify`, {
+    method: "POST",
+    body: {
+      bootstrap_id: bootstrap.bootstrap.bootstrap_id,
+      signature: "0xdeadbeef",
+    },
+  });
+  assert.equal(badVerify.status, 401);
+  assert.equal(badVerify.body.error, "invalid_signature");
+
+  const signature = await wallet.signMessage(bootstrap.siwe_message);
+  const verified = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/wallet/verify`, {
+      method: "POST",
+      body: {
+        bootstrap_id: bootstrap.bootstrap.bootstrap_id,
+        signature,
+      },
+    }),
+    200
+  );
+  assert.equal(verified.ok, true);
+  assert.match(verified.api_key, /^api_/);
 });
 
 test("protects web4 audit reads and redacts sensitive audit payload values", async (t) => {

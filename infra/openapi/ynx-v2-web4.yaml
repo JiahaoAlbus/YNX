@@ -34,6 +34,7 @@ paths:
   /web4/wallet/verify:
     post:
       summary: Complete wallet bootstrap
+      description: Verifies the issued wallet bootstrap challenge against a real signature recovered to the requested wallet address before returning an API key.
       responses:
         "200":
           description: OK

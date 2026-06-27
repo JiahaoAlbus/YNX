@@ -23,7 +23,7 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/wallet/bootstrap`
   - Creates bootstrap challenge and wallet bootstrap record
 - `POST /web4/wallet/verify`
-  - Confirms bootstrap with signature-like proof and returns API key
+  - Confirms bootstrap with a real wallet signature over the issued challenge and returns API key
 
 ## 4. Policy and Session
 

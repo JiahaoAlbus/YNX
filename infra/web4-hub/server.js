@@ -4,6 +4,7 @@ const https = require("https");
 const path = require("path");
 const crypto = require("crypto");
 const net = require("net");
+const { ethers } = require("ethers");
 
 function loadEnvFile(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return;
@@ -783,6 +784,10 @@ function createWalletBootstrap(body) {
   };
 }
 
+function walletBootstrapMessage(item) {
+  return `Sign-In With Ethereum\nAddress: ${item.wallet_address}\nNonce: ${item.nonce}\nChain: ${WEB4_CHAIN_ID}`;
+}
+
 function ensureUnique(collection, key, value) {
   return !value || !collection.some((item) => item[key] === value);
 }
@@ -1084,7 +1089,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 201, {
       ok: true,
       bootstrap: item,
-      siwe_message: `Sign-In With Ethereum\nAddress: ${item.wallet_address}\nNonce: ${item.nonce}\nChain: ${WEB4_CHAIN_ID}`,
+      siwe_message: walletBootstrapMessage(item),
     });
   }
 
@@ -1095,6 +1100,14 @@ const server = http.createServer(async (req, res) => {
     if (!item) return json(res, 404, { ok: false, error: "bootstrap_not_found" });
     if (item.status !== "pending") return json(res, 400, { ok: false, error: "bootstrap_already_used" });
     if (!body.signature) return json(res, 400, { ok: false, error: "signature_required" });
+    try {
+      const recovered = ethers.verifyMessage(walletBootstrapMessage(item), String(body.signature || ""));
+      if (ethers.getAddress(recovered) !== ethers.getAddress(item.wallet_address)) {
+        return json(res, 401, { ok: false, error: "invalid_signature" });
+      }
+    } catch {
+      return json(res, 401, { ok: false, error: "invalid_signature" });
+    }
     const apiKey = `api_${crypto.randomBytes(18).toString("hex")}`;
     item.status = "verified";
     item.verified_at = nowIso();

@@ -21,7 +21,7 @@ YNX v2 Web4 API 的执行顺序是：
 ## 3. 钱包自举
 
 - `POST /web4/wallet/bootstrap`
-- `POST /web4/wallet/verify`
+- `POST /web4/wallet/verify`（必须提交对 challenge message 的真实钱包签名）
 
 ## 4. 策略与会话
 

@@ -101,12 +101,14 @@ check_reference_coverage() {
   local en_readiness="docs/en/PUBLIC_TESTNET_READINESS_REPORT_2026_05_01.md"
   local en_gates="docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md"
   local en_launch="docs/en/PROJECT_NON_TECHNICAL_LAUNCH_PACKET.md"
+  local en_truth_matrix="docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   local zh_crypto="docs/zh/V2_高保证加密与抗量子安全模型.md"
   local zh_ares="docs/zh/YNX_ARES_混合抗量子加密协议.md"
   local zh_business="docs/zh/YNX_非托管商业与合规边界.md"
   local zh_readiness="docs/zh/公开测试网完整验收报告_2026_05_01.md"
   local zh_gates="docs/zh/主网与行业级上线门禁.md"
   local zh_launch="docs/zh/项目非技术上线手续包.md"
+  local zh_truth_matrix="docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
 
   for needle in "${en_pub}" "${en_node}" "${en_cons}" "${zh_pub}" "${zh_node}" "${zh_cons}"; do
     contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
@@ -116,6 +118,9 @@ check_reference_coverage() {
     contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
   done
   for needle in "${en_readiness}" "${en_gates}" "${en_launch}"; do
+    contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
+  done
+  for needle in "${en_truth_matrix}" "${zh_truth_matrix}"; do
     contains_fixed "${readme}" "${needle}" || failures+=("README missing ${needle}")
   done
 
@@ -129,6 +134,7 @@ check_reference_coverage() {
   for needle in "${en_readiness}" "${en_gates}" "${en_launch}"; do
     contains_fixed "${en_index}" "${needle}" || failures+=("docs/en/INDEX.md missing ${needle}")
   done
+  contains_fixed "${en_index}" "${en_truth_matrix}" || failures+=("docs/en/INDEX.md missing ${en_truth_matrix}")
 
   for needle in "${zh_pub}" "${zh_node}" "${zh_cons}"; do
     contains_fixed "${zh_index}" "${needle}" || failures+=("docs/zh/INDEX.md missing ${needle}")
@@ -140,6 +146,7 @@ check_reference_coverage() {
   for needle in "${zh_readiness}" "${zh_gates}" "${zh_launch}"; do
     contains_fixed "${zh_index}" "${needle}" || failures+=("docs/zh/INDEX.md missing ${needle}")
   done
+  contains_fixed "${zh_index}" "${zh_truth_matrix}" || failures+=("docs/zh/INDEX.md missing ${zh_truth_matrix}")
 
   for needle in "${en_pub}" "${en_node}" "${en_cons}" "${zh_pub}" "${zh_node}" "${zh_cons}"; do
     contains_fixed "${en_release}" "${needle}" || failures+=("docs/en/RELEASE_YNXWEB4.md missing ${needle}")

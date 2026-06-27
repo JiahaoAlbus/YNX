@@ -53,7 +53,7 @@ if [[ -z "${OUTPUT_DIR:-}" ]]; then
 fi
 mkdir -p "${OUTPUT_DIR}"
 
-"${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" --output-dir "${SNAPSHOT_OUTPUT_DIR}" >/dev/null
+bash "${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" --output-dir "${SNAPSHOT_OUTPUT_DIR}" >/dev/null
 
 SNAPSHOT_JSON="${SNAPSHOT_OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json"
 ALIGNMENT_JSON="${OUTPUT_DIR}/LIVE_RUNTIME_ALIGNMENT.json"

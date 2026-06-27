@@ -192,6 +192,11 @@ Current architecture decision:
 
 ### 4.5) Funding / grant / compliance packet
 
+Fastest current truth entry:
+
+- EN: [`docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
+- ZH: [`docs/zh/YNX_全栈真相矩阵_2026_06_27.md`](docs/zh/YNX_全栈真相矩阵_2026_06_27.md)
+
 Current funding boundary:
 
 - these materials are strongest for grants, sponsorships, strategic technical
@@ -213,6 +218,7 @@ Current funding boundary:
 - EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
 - EN: [`docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md`](docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md)
 - EN: [`docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md`](docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md)
+- EN: [`docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - EN: [`docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md`](docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md)
 - EN: [`docs/en/GRANT_APPLICATION_KIT_2026_06_27.md`](docs/en/GRANT_APPLICATION_KIT_2026_06_27.md)
 - EN: [`docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md`](docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md)
@@ -221,6 +227,7 @@ Current funding boundary:
 - ZH: [`docs/zh/合规就绪包_2026_06_13.md`](docs/zh/合规就绪包_2026_06_13.md)
 - ZH: [`docs/zh/当前全链状态与对齐快照_2026_06_27.md`](docs/zh/当前全链状态与对齐快照_2026_06_27.md)
 - ZH: [`docs/zh/最终全链交付总览_2026_06_27.md`](docs/zh/最终全链交付总览_2026_06_27.md)
+- ZH: [`docs/zh/YNX_全栈真相矩阵_2026_06_27.md`](docs/zh/YNX_全栈真相矩阵_2026_06_27.md)
 - ZH: [`docs/zh/Grant与曝光目标清单_2026_06_27.md`](docs/zh/Grant与曝光目标清单_2026_06_27.md)
 - ZH: [`docs/zh/Grant申请模板包_2026_06_27.md`](docs/zh/Grant申请模板包_2026_06_27.md)
 - ZH: [`docs/zh/X与Telegram对外发布素材_2026_06_27.md`](docs/zh/X与Telegram对外发布素材_2026_06_27.md)

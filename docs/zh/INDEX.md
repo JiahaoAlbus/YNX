@@ -30,6 +30,7 @@
 - `docs/zh/合规就绪包_2026_06_13.md`：公司、隐私与监管就绪包
 - `docs/zh/当前全链状态与对齐快照_2026_06_27.md`：当前线上 / 本地 / bridge / 合规口径对齐快照
 - `docs/zh/最终全链交付总览_2026_06_27.md`：当前最终交付总览，汇总状态、阻塞和合规入口
+- `docs/zh/YNX_全栈真相矩阵_2026_06_27.md`：一页讲清 live、mock、protected、testnet 与未来 provider 依赖边界
 - `docs/zh/Grant与曝光目标清单_2026_06_27.md`：基于官方来源整理的当前 grant / 曝光目标清单
 - `docs/zh/Grant申请模板包_2026_06_27.md`：可直接改写的 grant 申请模板与 milestone 骨架
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布 thread / channel 简介草案
@@ -70,6 +71,7 @@
 - `docs/zh/网站披露发布包_2026_06_14.md`：网站条款、隐私、风险页的发布阻塞
 - `docs/zh/当前全链状态与对齐快照_2026_06_27.md`：当前全链真实状态、颗粒度边界和对齐说明
 - `docs/zh/最终全链交付总览_2026_06_27.md`：最终 handoff 总文档，方便创始人 / 运维 / 尽调统一查看
+- `docs/zh/YNX_全栈真相矩阵_2026_06_27.md`：最快速的全栈真相表，覆盖 chain / AI / bridge / trace / card / compliance
 - `docs/zh/Grant与曝光目标清单_2026_06_27.md`：当前对外申请和曝光目标优先级清单
 - `docs/zh/Grant申请模板包_2026_06_27.md`：grant-ready 文案模板包
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布文案包

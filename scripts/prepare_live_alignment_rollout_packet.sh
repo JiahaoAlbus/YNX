@@ -48,9 +48,9 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 
 if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
-  "${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" >/dev/null
-  "${REPO_ROOT}/scripts/verify_live_runtime_alignment.sh" >/dev/null
-  "${REPO_ROOT}/scripts/prepare_bridge_blocker_packet.sh" >/dev/null
+  bash "${REPO_ROOT}/scripts/current_full_stack_status_snapshot.sh" >/dev/null
+  bash "${REPO_ROOT}/scripts/verify_live_runtime_alignment.sh" >/dev/null
+  bash "${REPO_ROOT}/scripts/prepare_bridge_blocker_packet.sh" >/dev/null
 fi
 
 SNAPSHOT_JSON="${OUTPUT_BASE}/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.json"

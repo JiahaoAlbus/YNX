@@ -16,6 +16,10 @@ This document is the practical alignment note for:
 It is intentionally narrower and more current than older launch-grade or
 readiness reports.
 
+Fastest one-page companion:
+
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
+
 Repeatable snapshot command:
 
 ```bash
@@ -44,6 +48,11 @@ Stable latest generated artifacts:
 - [Latest bridge blocker packet json](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.json)
 - [Latest live alignment rollout packet markdown](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Latest live alignment rollout packet json](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.json)
+
+If someone first needs the simple split between live, mock, protected,
+testnet, and future-provider dependencies, start with:
+
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 
 ## 2. Live public facts verified on 2026-06-27
 

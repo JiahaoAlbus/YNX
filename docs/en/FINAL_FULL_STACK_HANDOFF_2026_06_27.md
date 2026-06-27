@@ -4,6 +4,10 @@ Status: active working handoff
 Prepared on: 2026-06-27  
 Purpose: one-document handoff for current truth, completed work, remaining blockers, and compliance entry points
 
+Fastest companion for "what exactly is live vs mock vs provider-dependent":
+
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
+
 ## 1. Executive summary
 
 YNX now has a much stronger and clearer full-stack baseline than it did at the
@@ -139,6 +143,7 @@ still present.
 The canonical current-status source is:
 
 - [Current full-stack status and alignment snapshot](/Users/huangjiahao/Desktop/YNX/docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md)
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 
 The latest generated artifact from the new snapshot script is:
 

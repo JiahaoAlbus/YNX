@@ -41,6 +41,7 @@ Last updated: 2026-04-30
 - `docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md` — company, privacy, and regulatory readiness packet
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current live-vs-local full-stack alignment snapshot
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — current final handoff summary across status, blockers, and compliance entry points
+- `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md` — one-page truth matrix for live, mock, protected, testnet, and future-provider boundaries
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — current official-source shortlist for grants and visibility targets
 - `docs/en/GRANT_APPLICATION_KIT_2026_06_27.md` — practical grant-ready application template kit
 - `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md` — truthful X / Telegram outreach copy kit
@@ -88,6 +89,7 @@ Last updated: 2026-04-30
 - `docs/en/WEBSITE_DISCLOSURE_PUBLISH_PACKET_2026_06_14.md` — current website legal publication gap and publish packet
 - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md` — current full-stack truth snapshot across live endpoints and local repo scope
 - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` — final current-state handoff for operator / founder / diligence use
+- `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md` — fastest current-state truth table across chain, AI, bridge, trace, card, and compliance scope
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — founder-facing grant and visibility shortlist
 - `docs/en/GRANT_APPLICATION_KIT_2026_06_27.md` — grant-form copy kit and milestone skeleton
 - `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md` — current public-posting kit for X and Telegram

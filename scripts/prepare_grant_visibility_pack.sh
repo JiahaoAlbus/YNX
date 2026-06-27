@@ -59,22 +59,23 @@ LATEST_DIR="${OUTPUT_BASE}/grant_visibility_pack_latest"
 mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh" "${OUT_DIR}/reports"
 
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
-  ./scripts/verify_docs_readiness.sh
+  bash ./scripts/verify_docs_readiness.sh
 fi
 if [[ "${RUN_SNAPSHOT}" -eq 1 ]]; then
-  ./scripts/current_full_stack_status_snapshot.sh >/dev/null
-  ./scripts/verify_live_runtime_alignment.sh >/dev/null
-  ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
-  ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
+  bash ./scripts/current_full_stack_status_snapshot.sh >/dev/null
+  bash ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  bash ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
+  bash ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
 fi
 if [[ "${RUN_EVIDENCE_PACK}" -eq 1 ]]; then
-  ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
+  bash ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
 fi
 
 declare -a COPY_FILES=(
   "README.md"
   "docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md"
   "docs/en/GRANT_APPLICATION_KIT_2026_06_27.md"
+  "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   "docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md"
   "docs/en/INVESTOR_DATA_ROOM_2026_06_13.md"
   "docs/en/FUNDRAISING_MEMO_2026_06_13.md"
@@ -87,6 +88,7 @@ declare -a COPY_FILES=(
   "docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md"
   "docs/zh/Grant与曝光目标清单_2026_06_27.md"
   "docs/zh/Grant申请模板包_2026_06_27.md"
+  "docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
   "docs/zh/X与Telegram对外发布素材_2026_06_27.md"
   "docs/zh/投资人与尽调资料室_2026_06_13.md"
   "docs/zh/融资备忘录_2026_06_13.md"
@@ -145,6 +147,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 ## Included reports
 
 - [Latest full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Truth matrix](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Latest runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [Latest bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Latest live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
@@ -192,6 +195,7 @@ Open these first:
 - `MANIFEST.md`
 - `OUTREACH_CHECKLIST.md`
 - `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+- `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 - `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`

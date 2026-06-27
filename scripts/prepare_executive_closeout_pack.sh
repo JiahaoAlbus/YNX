@@ -58,25 +58,27 @@ LATEST_DIR="${OUTPUT_BASE}/executive_closeout_pack_latest"
 mkdir -p "${OUT_DIR}/reports" "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh"
 
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
-  ./scripts/verify_docs_readiness.sh
+  bash ./scripts/verify_docs_readiness.sh
 fi
 
 if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
-  ./scripts/current_full_stack_status_snapshot.sh >/dev/null
-  ./scripts/verify_live_runtime_alignment.sh >/dev/null
-  ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
-  ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
-  ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
-  ./scripts/prepare_grant_visibility_pack.sh >/dev/null
+  bash ./scripts/current_full_stack_status_snapshot.sh >/dev/null
+  bash ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  bash ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
+  bash ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
+  bash ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
+  bash ./scripts/prepare_grant_visibility_pack.sh >/dev/null
 fi
 
 declare -a TOP_DOCS=(
   "README.md"
   "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md"
   "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
+  "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md"
   "docs/zh/当前全链状态与对齐快照_2026_06_27.md"
   "docs/zh/最终全链交付总览_2026_06_27.md"
+  "docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
   "docs/zh/合规就绪包_2026_06_13.md"
 )
 
@@ -118,6 +120,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 - [Closeout README](README.md)
 - [Current full-stack snapshot](${CURRENT_SNAPSHOT_REL})
+- [Truth matrix](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Live runtime alignment](${CURRENT_ALIGNMENT_REL})
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
@@ -162,6 +165,8 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "executive_readme": "README.md",
     "executive_checklist": "EXECUTIVE_CHECKLIST.md",
     "current_full_stack_snapshot_md": "${CURRENT_SNAPSHOT_REL}",
+    "truth_matrix_en": "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md",
+    "truth_matrix_zh": "docs/zh/YNX_全栈真相矩阵_2026_06_27.md",
     "runtime_alignment_md": "${CURRENT_ALIGNMENT_REL}",
     "bridge_blocker_packet_md": "reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md",
     "live_alignment_rollout_packet_md": "reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md",
@@ -179,13 +184,14 @@ Recommended open order:
 
 1. `MANIFEST.md`
 2. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
-3. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
-4. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
-5. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
-6. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-7. `reports/grant_visibility_pack_latest/MANIFEST.md`
-8. `ARTIFACT_INDEX.json`
-9. `SHA256SUMS.txt`
+3. `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
+4. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
+5. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
+6. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
+7. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+8. `reports/grant_visibility_pack_latest/MANIFEST.md`
+9. `ARTIFACT_INDEX.json`
+10. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

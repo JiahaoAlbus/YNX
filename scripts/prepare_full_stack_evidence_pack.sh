@@ -69,31 +69,33 @@ LATEST_DIR="${OUTPUT_BASE}/full_stack_evidence_pack_latest"
 mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh" "${OUT_DIR}/reports"
 
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
-  ./scripts/verify_docs_readiness.sh
+  bash ./scripts/verify_docs_readiness.sh
 fi
 if [[ "${RUN_SNAPSHOT}" -eq 1 ]]; then
-  ./scripts/current_full_stack_status_snapshot.sh >/dev/null
+  bash ./scripts/current_full_stack_status_snapshot.sh >/dev/null
 fi
 if [[ "${RUN_ALIGNMENT}" -eq 1 ]]; then
-  ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  bash ./scripts/verify_live_runtime_alignment.sh >/dev/null
 fi
 if [[ "${RUN_BRIDGE_PACKET}" -eq 1 ]]; then
-  ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
+  bash ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
 fi
 if [[ "${RUN_ROLLOUT_PACKET}" -eq 1 ]]; then
-  ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
+  bash ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
 fi
 
 declare -a COPY_FILES=(
   "README.md"
   "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md"
   "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
+  "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md"
   "docs/en/MAINNET_AND_INDUSTRY_READINESS_GATES.md"
   "docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md"
   "docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md"
   "docs/zh/当前全链状态与对齐快照_2026_06_27.md"
   "docs/zh/最终全链交付总览_2026_06_27.md"
+  "docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
   "docs/zh/合规就绪包_2026_06_13.md"
   "docs/zh/主网与行业级上线门禁.md"
   "docs/zh/安全响应策略_2026_06_13.md"
@@ -131,6 +133,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 ## Included stable reports
 
 - [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Truth matrix](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Live runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
@@ -178,6 +181,7 @@ Open these first:
 - `MANIFEST.md`
 - `HANDOFF_CHECKLIST.md`
 - `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+- `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 - `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`

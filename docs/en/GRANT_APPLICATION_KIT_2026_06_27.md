@@ -137,6 +137,7 @@ for onchain systems.
 Use the smallest relevant set:
 
 - [Start here for support](/Users/huangjiahao/Desktop/YNX/START_HERE_FOR_SUPPORT.md)
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Current full-stack status](/Users/huangjiahao/Desktop/YNX/docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md)
 - [Final full-stack handoff](/Users/huangjiahao/Desktop/YNX/docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md)
 - [Grant and visibility targets](/Users/huangjiahao/Desktop/YNX/docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md)

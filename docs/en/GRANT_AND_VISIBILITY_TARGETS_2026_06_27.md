@@ -220,6 +220,7 @@ High-signal near-term visibility work:
   - `X: @YNXChain`
   - `Telegram: @YNXChain`
 - keep every post aligned with:
+  - `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
   - `docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md`
   - `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md`
 
@@ -229,6 +230,7 @@ The following materials are now strong enough to support outreach:
 
 - [Current full-stack status](/Users/huangjiahao/Desktop/YNX/docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md)
 - [Final full-stack handoff](/Users/huangjiahao/Desktop/YNX/docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md)
+- [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Compliance readiness packet](/Users/huangjiahao/Desktop/YNX/docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
 - [External response pack](/Users/huangjiahao/Desktop/YNX/docs/en/EXTERNAL_RESPONSE_PACK_2026_06_19.md)
 - [Follow-up templates](/Users/huangjiahao/Desktop/YNX/docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md)

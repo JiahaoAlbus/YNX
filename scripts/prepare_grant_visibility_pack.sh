@@ -131,19 +131,19 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 ## Included reports
 
-- [Latest full-stack snapshot](${OUT_DIR}/reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
-- [Latest runtime alignment](${OUT_DIR}/reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
+- [Latest full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Latest runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 EOF
 
 if [[ -d "${OUT_DIR}/reports/full_stack_evidence_pack_latest" ]]; then
   cat >> "${OUT_DIR}/MANIFEST.md" <<EOF
-- [Latest full-stack evidence pack manifest](${OUT_DIR}/reports/full_stack_evidence_pack_latest/MANIFEST.md)
+- [Latest full-stack evidence pack manifest](reports/full_stack_evidence_pack_latest/MANIFEST.md)
 EOF
 fi
 
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
   cat >> "${OUT_DIR}/MANIFEST.md" <<EOF
-- [Docs verification report](${OUT_DIR}/reports/$(basename "${LATEST_DOC_REPORT}"))
+- [Docs verification report](reports/$(basename "${LATEST_DOC_REPORT}"))
 EOF
 fi
 
@@ -167,6 +167,19 @@ cat > "${OUT_DIR}/OUTREACH_CHECKLIST.md" <<'EOF'
 - [ ] Use X / Telegram kit for public posting
 - [ ] Use diligence / hard-questions docs for follow-up replies
 - [ ] Do not imply custody, completed legal sign-off, or finished mainnet
+EOF
+
+cat > "${OUT_DIR}/README.md" <<'EOF'
+# YNX Grant / Visibility Pack
+
+Open these first:
+
+- `MANIFEST.md`
+- `OUTREACH_CHECKLIST.md`
+- `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+- `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
+- `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md`
+- `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md`
 EOF
 
 rm -rf "${LATEST_DIR}"

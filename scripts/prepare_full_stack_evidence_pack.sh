@@ -88,8 +88,6 @@ if [[ -n "${LATEST_DOC_REPORT}" ]]; then
   cp "${LATEST_DOC_REPORT}" "${OUT_DIR}/reports/"
 fi
 
-CURRENT_SNAPSHOT_MD="${OUT_DIR}/reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md"
-CURRENT_ALIGN_MD="${OUT_DIR}/reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md"
 DOC_REPORT_BASENAME="$(basename "${LATEST_DOC_REPORT:-}")"
 ALIGNMENT_STATUS="$(jq -r '.overall_status' "${OUTPUT_BASE}/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json" 2>/dev/null || echo "UNKNOWN")"
 BRIDGE_FULL_LOOP="$(jq -r '.findings[] | select(.id=="bridge_truth") | .detail' "${OUTPUT_BASE}/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json" 2>/dev/null || echo "")"
@@ -105,13 +103,13 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 ## Included stable reports
 
-- [Current full-stack snapshot](${CURRENT_SNAPSHOT_MD})
-- [Live runtime alignment](${CURRENT_ALIGN_MD})
+- [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Live runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 EOF
 
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
   cat >> "${OUT_DIR}/MANIFEST.md" <<EOF
-- [Docs verification report](${OUT_DIR}/reports/${DOC_REPORT_BASENAME})
+- [Docs verification report](reports/${DOC_REPORT_BASENAME})
 EOF
 fi
 
@@ -141,6 +139,17 @@ cat > "${OUT_DIR}/HANDOFF_CHECKLIST.md" <<'EOF'
 - [ ] Review mainnet and industry readiness gates
 - [ ] Review security response policy
 - [ ] Use this pack as the founder/operator reference before external outreach
+EOF
+
+cat > "${OUT_DIR}/README.md" <<'EOF'
+# YNX Full-Stack Evidence Pack
+
+Open these first:
+
+- `MANIFEST.md`
+- `HANDOFF_CHECKLIST.md`
+- `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+- `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 EOF
 
 rm -rf "${LATEST_DIR}"

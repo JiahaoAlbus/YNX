@@ -233,6 +233,10 @@ const DEFAULT_ALLOWED_ACTIONS = [
   "ai.trace.report",
   "ai.payment.read",
   "ai.payment.charge",
+  "card.create",
+  "card.read",
+  "card.admin",
+  "card.authorize",
   "audit.read",
   "tool.execute",
 ];
@@ -247,6 +251,8 @@ function normalizeState(loaded) {
     claims: Array.isArray(source.claims) ? source.claims : [],
     policies: Array.isArray(source.policies) ? source.policies : [],
     sessions: Array.isArray(source.sessions) ? source.sessions : [],
+    cards: Array.isArray(source.cards) ? source.cards : [],
+    card_authorizations: Array.isArray(source.card_authorizations) ? source.card_authorizations : [],
     tools: Array.isArray(source.tools) ? source.tools : [],
     tool_calls: Array.isArray(source.tool_calls) ? source.tool_calls : [],
     wallet_bootstraps: Array.isArray(source.wallet_bootstraps) ? source.wallet_bootstraps : [],
@@ -294,6 +300,8 @@ const WEB4_MAX_INTENTS = parseInt(process.env.WEB4_MAX_INTENTS || "200000", 10);
 const WEB4_MAX_CLAIMS = parseInt(process.env.WEB4_MAX_CLAIMS || "200000", 10);
 const WEB4_MAX_POLICIES = parseInt(process.env.WEB4_MAX_POLICIES || "100000", 10);
 const WEB4_MAX_SESSIONS = parseInt(process.env.WEB4_MAX_SESSIONS || "300000", 10);
+const WEB4_MAX_CARDS = parseInt(process.env.WEB4_MAX_CARDS || "100000", 10);
+const WEB4_MAX_CARD_AUTHORIZATIONS = parseInt(process.env.WEB4_MAX_CARD_AUTHORIZATIONS || "500000", 10);
 const WEB4_MAX_TOOLS = parseInt(process.env.WEB4_MAX_TOOLS || "50000", 10);
 const WEB4_MAX_TOOL_CALLS = parseInt(process.env.WEB4_MAX_TOOL_CALLS || "500000", 10);
 const WEB4_MAX_BOOTSTRAPS = parseInt(process.env.WEB4_MAX_BOOTSTRAPS || "100000", 10);
@@ -336,6 +344,10 @@ function trimStateForRetention() {
   if (WEB4_MAX_CLAIMS > 0 && state.claims.length > WEB4_MAX_CLAIMS) state.claims = state.claims.slice(0, WEB4_MAX_CLAIMS);
   if (WEB4_MAX_POLICIES > 0 && state.policies.length > WEB4_MAX_POLICIES) state.policies = state.policies.slice(0, WEB4_MAX_POLICIES);
   if (WEB4_MAX_SESSIONS > 0 && state.sessions.length > WEB4_MAX_SESSIONS) state.sessions = state.sessions.slice(0, WEB4_MAX_SESSIONS);
+  if (WEB4_MAX_CARDS > 0 && state.cards.length > WEB4_MAX_CARDS) state.cards = state.cards.slice(0, WEB4_MAX_CARDS);
+  if (WEB4_MAX_CARD_AUTHORIZATIONS > 0 && state.card_authorizations.length > WEB4_MAX_CARD_AUTHORIZATIONS) {
+    state.card_authorizations = state.card_authorizations.slice(0, WEB4_MAX_CARD_AUTHORIZATIONS);
+  }
   if (WEB4_MAX_TOOLS > 0 && state.tools.length > WEB4_MAX_TOOLS) state.tools = state.tools.slice(0, WEB4_MAX_TOOLS);
   if (WEB4_MAX_TOOL_CALLS > 0 && state.tool_calls.length > WEB4_MAX_TOOL_CALLS) state.tool_calls = state.tool_calls.slice(0, WEB4_MAX_TOOL_CALLS);
   if (WEB4_MAX_BOOTSTRAPS > 0 && state.wallet_bootstraps.length > WEB4_MAX_BOOTSTRAPS) {
@@ -400,6 +412,10 @@ function findPolicy(policyId) {
 
 function findTool(toolId) {
   return state.tools.find((item) => item.tool_id === toolId);
+}
+
+function findCard(cardId) {
+  return state.cards.find((item) => item.card_id === cardId);
 }
 
 function findBootstrapByApiKey(apiKey) {
@@ -501,6 +517,8 @@ function summarizeStats() {
     claims: state.claims.length,
     policies: state.policies.length,
     sessions_active: state.sessions.filter((item) => item.status === "active").length,
+    cards: state.cards.length,
+    card_authorizations: state.card_authorizations.length,
     tools: state.tools.length,
     tool_calls: state.tool_calls.length,
     bootstraps: state.wallet_bootstraps.length,
@@ -516,6 +534,94 @@ function resetPolicyDaily(policy) {
     policy.spent_day_key = key;
     policy.spent_day = 0;
   }
+}
+
+function resetCardDaily(card) {
+  const key = todayKey();
+  if (card.spent_day_key !== key) {
+    card.spent_day_key = key;
+    card.spent_day = 0;
+  }
+}
+
+function normalizeCodeList(items) {
+  return uniqueStrings(items).map((item) => String(item).trim().toUpperCase()).filter(Boolean);
+}
+
+function normalizeNameList(items) {
+  return uniqueStrings(items).map((item) => String(item).trim().toLowerCase()).filter(Boolean);
+}
+
+function createCard(body, policy) {
+  return {
+    card_id: body.card_id || randomId("card"),
+    policy_id: policy.policy_id,
+    owner: policy.owner,
+    owner_wallet_address: policy.owner_wallet_address || "",
+    label: body.label || "YNX Card Mock",
+    status: "active",
+    network: body.network || "mock-visa",
+    currency: String(body.currency || "USD").toUpperCase(),
+    asset_ref: body.asset_ref || "YUSD.test",
+    vault_id: body.vault_id || "",
+    allowed_agents: uniqueStrings(body.allowed_agents),
+    allowed_merchants: normalizeNameList(body.allowed_merchants),
+    blocked_merchants: normalizeNameList(body.blocked_merchants),
+    allowed_mccs: normalizeCodeList(body.allowed_mccs),
+    blocked_mccs: normalizeCodeList(body.blocked_mccs),
+    allowed_countries: normalizeCodeList(body.allowed_countries),
+    blocked_countries: normalizeCodeList(body.blocked_countries),
+    require_agent: body.require_agent === true,
+    max_per_txn: toNumber(body.max_per_txn, 0),
+    max_daily_spend: toNumber(body.max_daily_spend, 0),
+    max_total_spend: toNumber(body.max_total_spend, 0),
+    spent_total: 0,
+    spent_day: 0,
+    spent_day_key: todayKey(),
+    metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : {},
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
+}
+
+function sanitizeCard(card) {
+  return { ...card };
+}
+
+function evaluateCardAuthorization(card, body) {
+  const amount = toNumber(body.amount, 0);
+  const merchant = String(body.merchant || body.merchant_name || "").trim();
+  const merchantNormalized = merchant.toLowerCase();
+  const mcc = String(body.mcc || body.merchant_category || "").trim().toUpperCase();
+  const country = String(body.country || body.country_code || "").trim().toUpperCase();
+  const agentId = String(body.agent_id || "").trim();
+  const reasons = [];
+
+  resetCardDaily(card);
+
+  if (card.status !== "active") reasons.push("card_inactive");
+  if (amount <= 0) reasons.push("amount_invalid");
+  if (card.require_agent && !agentId) reasons.push("agent_required");
+  if (agentId && card.allowed_agents.length > 0 && !card.allowed_agents.includes(agentId)) reasons.push("agent_not_allowed");
+  if (merchantNormalized && card.allowed_merchants.length > 0 && !card.allowed_merchants.includes(merchantNormalized)) reasons.push("merchant_not_allowed");
+  if (merchantNormalized && card.blocked_merchants.includes(merchantNormalized)) reasons.push("merchant_blocked");
+  if (mcc && card.allowed_mccs.length > 0 && !card.allowed_mccs.includes(mcc)) reasons.push("mcc_not_allowed");
+  if (mcc && card.blocked_mccs.includes(mcc)) reasons.push("mcc_blocked");
+  if (country && card.allowed_countries.length > 0 && !card.allowed_countries.includes(country)) reasons.push("country_not_allowed");
+  if (country && card.blocked_countries.includes(country)) reasons.push("country_blocked");
+  if (card.max_per_txn > 0 && amount > card.max_per_txn) reasons.push("card_per_txn_limit_exceeded");
+  if (card.max_daily_spend > 0 && card.spent_day + amount > card.max_daily_spend) reasons.push("card_daily_limit_exceeded");
+  if (card.max_total_spend > 0 && card.spent_total + amount > card.max_total_spend) reasons.push("card_total_limit_exceeded");
+
+  return {
+    approved: reasons.length === 0,
+    reasons,
+    amount,
+    merchant,
+    mcc,
+    country,
+    agent_id: agentId,
+  };
 }
 
 function verifyOwner(req, policy) {
@@ -890,6 +996,7 @@ const server = http.createServer(async (req, res) => {
         features: [
           "wallet-identity bootstrap",
           "owner-rule-session sovereignty model",
+          "mock programmable card controls",
           "intent market",
           "claim/challenge/finalize lifecycle",
           "controlled self-modification and replication",
@@ -907,6 +1014,34 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/web4/stats") {
     return json(res, 200, { ok: true, ...summarizeStats() });
+  }
+
+  if (req.method === "GET" && url.pathname === "/web4/cards") {
+    return json(res, 200, { ok: true, items: state.cards.map(sanitizeCard) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/web4/cards") {
+    const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const policyId = String(body.policy_id || "").trim();
+    if (!policyId) return json(res, 400, { ok: false, error: "policy_id_required" });
+    const policy = findPolicy(policyId);
+    if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+    if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+    if (body.card_id && !ensureUnique(state.cards, "card_id", body.card_id)) {
+      return json(res, 409, { ok: false, error: "card_id_exists" });
+    }
+    const card = createCard(body, policy);
+    state.cards.unshift(card);
+    addAudit("card.created", {
+      policy_id: policy.policy_id,
+      card_id: card.card_id,
+      label: card.label,
+      asset_ref: card.asset_ref,
+      vault_id: card.vault_id,
+    });
+    persist();
+    return json(res, 201, { ok: true, card: sanitizeCard(card) });
   }
 
   if (req.method === "GET" && url.pathname === "/web4/audit") {
@@ -1248,6 +1383,130 @@ const server = http.createServer(async (req, res) => {
       addAudit("policy.revoked", { policy_id: policyId });
       persist();
       return json(res, 200, { ok: true, policy: { ...policy, owner_secret_hash: undefined } });
+    }
+  }
+
+  if (segments[0] === "web4" && segments[1] === "cards" && segments[2]) {
+    const cardId = segments[2];
+    const action = segments[3] || "";
+    const card = findCard(cardId);
+    if (!card) return json(res, 404, { ok: false, error: "card_not_found" });
+
+    if (req.method === "GET" && !action) {
+      const items = state.card_authorizations.filter((item) => item.card_id === cardId).slice(0, 100);
+      return json(res, 200, { ok: true, card: sanitizeCard(card), authorizations: items });
+    }
+
+    if (req.method === "POST" && action === "freeze") {
+      const policy = findPolicy(card.policy_id);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+      card.status = "paused";
+      card.updated_at = nowIso();
+      addAudit("card.frozen", { policy_id: card.policy_id, card_id: card.card_id });
+      persist();
+      return json(res, 200, { ok: true, card: sanitizeCard(card) });
+    }
+
+    if (req.method === "POST" && action === "resume") {
+      const policy = findPolicy(card.policy_id);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+      card.status = "active";
+      card.updated_at = nowIso();
+      addAudit("card.resumed", { policy_id: card.policy_id, card_id: card.card_id });
+      persist();
+      return json(res, 200, { ok: true, card: sanitizeCard(card) });
+    }
+
+    if (req.method === "POST" && action === "authorize") {
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      const policyId = String(body.policy_id || card.policy_id || "").trim();
+      if (policyId !== card.policy_id) return json(res, 400, { ok: false, error: "card_policy_mismatch" });
+      const policy = findPolicy(policyId);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      const token = readHeader(req, "x-ynx-session");
+      if (!token) return json(res, 401, { ok: false, error: "session_required" });
+      const session = findSessionByToken(token);
+      if (!session || session.policy_id !== policyId) return json(res, 401, { ok: false, error: "invalid_session" });
+      const sessionCheck = validateSessionForAction(session, "card.authorize", toNumber(body.amount, 0));
+      if (!sessionCheck.ok) {
+        return json(res, 403, {
+          ok: false,
+          error: sessionCheck.error,
+          decision: {
+            approved: false,
+            reasons: [sessionCheck.error],
+            card_id: card.card_id,
+            policy_id: policyId,
+          },
+        });
+      }
+      const policyCheck = validatePolicyAction(policy, toNumber(body.amount, 0));
+      if (!policyCheck.ok) {
+        return json(res, 403, {
+          ok: false,
+          error: policyCheck.error,
+          decision: {
+            approved: false,
+            reasons: [policyCheck.error],
+            card_id: card.card_id,
+            policy_id: policyId,
+          },
+        });
+      }
+      const agentId = String(body.agent_id || "").trim();
+      if (agentId && !findAgent(agentId)) {
+        return json(res, 400, { ok: false, error: "agent_not_found" });
+      }
+      const evaluation = evaluateCardAuthorization(card, body);
+      const auth = {
+        authorization_id: body.authorization_id || randomId("cardauth"),
+        card_id: card.card_id,
+        policy_id: policyId,
+        session_id: session.session_id,
+        agent_id: evaluation.agent_id,
+        amount: evaluation.amount,
+        currency: String(body.currency || card.currency || "USD").toUpperCase(),
+        merchant: evaluation.merchant,
+        mcc: evaluation.mcc,
+        country: evaluation.country,
+        approved: evaluation.approved,
+        reasons: evaluation.reasons,
+        created_at: nowIso(),
+      };
+
+      if (evaluation.approved) {
+        applySpend(policy, session, evaluation.amount);
+        resetCardDaily(card);
+        card.spent_total += evaluation.amount;
+        card.spent_day += evaluation.amount;
+        card.updated_at = nowIso();
+      }
+
+      state.card_authorizations.unshift(auth);
+      addAudit(evaluation.approved ? "card.authorized" : "card.declined", {
+        policy_id: policyId,
+        card_id: card.card_id,
+        authorization_id: auth.authorization_id,
+        amount: auth.amount,
+        merchant: auth.merchant,
+        mcc: auth.mcc,
+        country: auth.country,
+        approved: auth.approved,
+        reasons: auth.reasons,
+        agent_id: auth.agent_id,
+      });
+      persist();
+
+      return json(res, evaluation.approved ? 200 : 403, {
+        ok: evaluation.approved,
+        card: sanitizeCard(card),
+        authorization: auth,
+        remaining_ops: Math.max(0, session.max_ops - session.ops_used),
+        remaining_spend: Math.max(0, session.max_spend - session.spend_used),
+      });
     }
   }
 

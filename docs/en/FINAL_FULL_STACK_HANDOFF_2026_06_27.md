@@ -155,6 +155,11 @@ The latest generated bridge blocker remediation packet is available at:
 - [BRIDGE_BLOCKER_PACKET.md](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [BRIDGE_BLOCKER_PACKET.json](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.json)
 
+The latest generated live alignment rollout packet is available at:
+
+- [LIVE_ALIGNMENT_ROLLOUT_PACKET.md](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
+- [LIVE_ALIGNMENT_ROLLOUT_PACKET.json](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.json)
+
 Current live truth at the time of the latest captured snapshot:
 
 - RPC online on `ynx_9102-1`

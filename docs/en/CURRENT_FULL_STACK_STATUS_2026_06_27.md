@@ -42,6 +42,8 @@ Stable latest generated artifacts:
 - [Latest runtime alignment json](/Users/huangjiahao/Desktop/YNX/output/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json)
 - [Latest bridge blocker packet markdown](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Latest bridge blocker packet json](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.json)
+- [Latest live alignment rollout packet markdown](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
+- [Latest live alignment rollout packet json](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.json)
 
 ## 2. Live public facts verified on 2026-06-27
 
@@ -136,6 +138,11 @@ Stable remediation packet for the current blockers:
 
 - [BRIDGE_BLOCKER_PACKET.md](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [BRIDGE_BLOCKER_PACKET.json](/Users/huangjiahao/Desktop/YNX/output/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.json)
+
+Stable rollout packet for the remaining live/local gaps:
+
+- [LIVE_ALIGNMENT_ROLLOUT_PACKET.md](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
+- [LIVE_ALIGNMENT_ROLLOUT_PACKET.json](/Users/huangjiahao/Desktop/YNX/output/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.json)
 
 ## 4. Local repository state versus live public state
 

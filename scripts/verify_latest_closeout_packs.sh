@@ -50,6 +50,12 @@ need_file "output/executive_closeout_pack_latest/ARTIFACT_INDEX.json"
 need_file "output/executive_closeout_pack_latest/EXECUTIVE_CHECKLIST.md"
 need_file "output/full_stack_evidence_pack_latest/HANDOFF_CHECKLIST.md"
 need_file "output/grant_visibility_pack_latest/OUTREACH_CHECKLIST.md"
+need_file "output/full_stack_evidence_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
+need_file "output/full_stack_evidence_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
+need_file "output/grant_visibility_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
+need_file "output/grant_visibility_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
+need_file "output/executive_closeout_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
+need_file "output/executive_closeout_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 
 while IFS= read -r rel; do
   [[ -z "$rel" ]] && continue
@@ -65,5 +71,13 @@ grep -q 'reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md' 
 grep -q 'reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md' \
   output/grant_visibility_pack_latest/MANIFEST.md \
   || fail "grant visibility pack manifest missing alignment link"
+
+grep -q 'reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md' \
+  output/full_stack_evidence_pack_latest/MANIFEST.md \
+  || fail "full-stack evidence pack manifest missing rollout packet link"
+
+grep -q 'reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md' \
+  output/executive_closeout_pack_latest/MANIFEST.md \
+  || fail "executive closeout pack manifest missing bridge blocker packet link"
 
 echo "PASS: latest closeout packs are present, hashed, and internally linked."

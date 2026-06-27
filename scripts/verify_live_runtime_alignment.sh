@@ -70,7 +70,7 @@ jq -n --slurpfile snapshot "${SNAPSHOT_JSON}" '
     };
 
   ($snapshot[0]) as $s
-  | ($s.live.rpc.catching_up == false) as $rpc_ok
+  | ($s.live.rpc.catching_up == false and (($s.live.rpc.chain_id // "") != "") and (($s.live.rpc.height // "") != "")) as $rpc_ok
   | ($s.live.indexer.ok == true) as $indexer_ok
   | ($s.live.ai.ok == true and $s.live.ai.policy_enforced == true and $s.live.ai.has_web4_authorizer == true) as $ai_ok
   | ($s.live.web4.ok == true and $s.live.web4.policy_enforcement == true and $s.live.web4.internal_authorizer == true) as $web4_ok

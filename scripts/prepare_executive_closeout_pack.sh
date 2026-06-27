@@ -64,6 +64,8 @@ fi
 if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
   ./scripts/current_full_stack_status_snapshot.sh >/dev/null
   ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
+  ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
   ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
   ./scripts/prepare_grant_visibility_pack.sh >/dev/null
 fi
@@ -85,6 +87,8 @@ done
 
 cp -R "${OUTPUT_BASE}/current_full_stack_status_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/grant_visibility_pack_latest" "${OUT_DIR}/reports/"
 
@@ -115,6 +119,8 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Closeout README](README.md)
 - [Current full-stack snapshot](${CURRENT_SNAPSHOT_REL})
 - [Live runtime alignment](${CURRENT_ALIGNMENT_REL})
+- [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
+- [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Founder/operator evidence pack](${FULL_STACK_PACK_REL})
 - [Grant/visibility pack](${GRANT_PACK_REL})
 
@@ -157,6 +163,8 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "executive_checklist": "EXECUTIVE_CHECKLIST.md",
     "current_full_stack_snapshot_md": "${CURRENT_SNAPSHOT_REL}",
     "runtime_alignment_md": "${CURRENT_ALIGNMENT_REL}",
+    "bridge_blocker_packet_md": "reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md",
+    "live_alignment_rollout_packet_md": "reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md",
     "full_stack_evidence_manifest": "${FULL_STACK_PACK_REL}",
     "grant_visibility_manifest": "${GRANT_PACK_REL}",
     "sha256sums": "SHA256SUMS.txt"
@@ -172,10 +180,12 @@ Recommended open order:
 1. `MANIFEST.md`
 2. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
 3. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
-4. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-5. `reports/grant_visibility_pack_latest/MANIFEST.md`
-6. `ARTIFACT_INDEX.json`
-7. `SHA256SUMS.txt`
+4. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
+5. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
+6. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+7. `reports/grant_visibility_pack_latest/MANIFEST.md`
+8. `ARTIFACT_INDEX.json`
+9. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

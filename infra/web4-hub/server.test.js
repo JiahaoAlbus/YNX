@@ -904,3 +904,200 @@ test("rejects third-party tool calls outside registered paths", async (t) => {
   assert.equal(denied.body.error, "tool_path_denied");
   assert.equal(toolServer.calls.length, 0);
 });
+
+test("creates a YNX Card mock and authorizes an agent-bounded spend within rules", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-card-mock-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "card-owner",
+        allowed_actions: ["agent.create", "card.authorize"],
+        max_total_spend: 500,
+        max_daily_spend: 500,
+      },
+    }),
+    201
+  );
+
+  const ownerSession = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["agent.create", "card.authorize"],
+        max_ops: 10,
+        max_spend: 100,
+      },
+    }),
+    201
+  );
+
+  const agent = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/agents`, {
+      method: "POST",
+      headers: { "x-ynx-session": ownerSession.token },
+      body: {
+        policy_id: created.policy.policy_id,
+        owner: "card-owner",
+        name: "shopping-agent",
+        capabilities: ["spend"],
+      },
+    }),
+    201
+  );
+
+  const card = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        policy_id: created.policy.policy_id,
+        label: "Ops Card",
+        asset_ref: "YUSD.test",
+        require_agent: true,
+        allowed_agents: [agent.agent.agent_id],
+        allowed_merchants: ["OpenAI"],
+        allowed_mccs: ["5734"],
+        max_per_txn: 50,
+        max_daily_spend: 100,
+      },
+    }),
+    201
+  );
+  assert.equal(card.card.label, "Ops Card");
+
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["card.authorize"],
+        max_ops: 3,
+        max_spend: 80,
+      },
+    }),
+    201
+  );
+
+  const approved = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/authorize`, {
+      method: "POST",
+      headers: { "x-ynx-session": session.token },
+      body: {
+        policy_id: created.policy.policy_id,
+        agent_id: agent.agent.agent_id,
+        amount: 20,
+        merchant: "OpenAI",
+        mcc: "5734",
+        country: "US",
+      },
+    }),
+    200
+  );
+  assert.equal(approved.ok, true);
+  assert.equal(approved.authorization.approved, true);
+  assert.equal(approved.authorization.amount, 20);
+  assert.equal(approved.remaining_spend, 60);
+
+  const detail = assertJson(await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}`), 200);
+  assert.equal(detail.card.spent_total, 20);
+  assert.equal(detail.authorizations[0].approved, true);
+});
+
+test("declines YNX Card mock spends outside rules and records the denial", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-card-decline-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "decline-owner",
+        allowed_actions: ["card.authorize", "audit.read"],
+        max_total_spend: 500,
+        max_daily_spend: 500,
+      },
+    }),
+    201
+  );
+
+  const card = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        policy_id: created.policy.policy_id,
+        label: "Strict Card",
+        allowed_merchants: ["Notion"],
+        max_per_txn: 10,
+      },
+    }),
+    201
+  );
+
+  const session = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["card.authorize", "audit.read"],
+        max_ops: 5,
+        max_spend: 100,
+      },
+    }),
+    201
+  );
+
+  const denied = await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/authorize`, {
+    method: "POST",
+    headers: { "x-ynx-session": session.token },
+    body: {
+      policy_id: created.policy.policy_id,
+      amount: 25,
+      merchant: "OpenAI",
+      mcc: "5734",
+      country: "US",
+    },
+  });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.body.ok, false);
+  assert.equal(denied.body.authorization.approved, false);
+  assert.deepEqual(denied.body.authorization.reasons.sort(), ["card_per_txn_limit_exceeded", "merchant_not_allowed"].sort());
+
+  const audit = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/audit?policy_id=${encodeURIComponent(created.policy.policy_id)}`, {
+      headers: { "x-ynx-session": session.token },
+    }),
+    200
+  );
+  assert.equal(audit.items.some((item) => item.event === "card.declined"), true);
+});

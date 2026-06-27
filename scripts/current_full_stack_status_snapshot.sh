@@ -16,6 +16,7 @@ Generate a current YNX full-stack status snapshot from live public endpoints.
 
 Environment:
   YNX_FETCH_TIMEOUT_SEC     default: 15
+  YNX_FETCH_RETRIES         default: 3
   YNX_RPC_STATUS_URL        default: https://rpc.ynxweb4.com/status
   YNX_INDEXER_HEALTH_URL    default: https://indexer.ynxweb4.com/health
   YNX_AI_HEALTH_URL         default: https://ai.ynxweb4.com/health
@@ -50,6 +51,7 @@ LATEST_DIR="${OUTPUT_BASE_DIR}/current_full_stack_status_latest"
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
 NOW_UTC="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 FETCH_TIMEOUT_SEC="${YNX_FETCH_TIMEOUT_SEC:-15}"
+FETCH_RETRIES="${YNX_FETCH_RETRIES:-3}"
 
 if [[ -z "${OUTPUT_DIR:-}" ]]; then
   OUTPUT_DIR="${OUTPUT_BASE_DIR}/current_full_stack_status_${STAMP_LOCAL}"
@@ -68,9 +70,13 @@ WEBSITE_AI_URL="${YNX_WEBSITE_AI_URL:-https://www.ynxweb4.com/ai}"
 fetch_json() {
   local name="$1"
   local url="$2"
-  if curl -fsS --max-time "${FETCH_TIMEOUT_SEC}" "${url}" > "${OUTPUT_DIR}/responses/${name}.json"; then
-    return 0
-  fi
+  local attempt=1
+  while [[ "${attempt}" -le "${FETCH_RETRIES}" ]]; do
+    if curl -fsS --max-time "${FETCH_TIMEOUT_SEC}" "${url}" > "${OUTPUT_DIR}/responses/${name}.json"; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
   echo "{\"ok\":false,\"error\":\"fetch_failed\",\"url\":\"${url}\"}" > "${OUTPUT_DIR}/responses/${name}.json"
   return 1
 }
@@ -78,9 +84,13 @@ fetch_json() {
 fetch_headers() {
   local name="$1"
   local url="$2"
-  if curl -I -sS --max-time "${FETCH_TIMEOUT_SEC}" "${url}" > "${OUTPUT_DIR}/responses/${name}.headers"; then
-    return 0
-  fi
+  local attempt=1
+  while [[ "${attempt}" -le "${FETCH_RETRIES}" ]]; do
+    if curl -I -sS --max-time "${FETCH_TIMEOUT_SEC}" "${url}" > "${OUTPUT_DIR}/responses/${name}.headers"; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
   : > "${OUTPUT_DIR}/responses/${name}.headers"
   return 1
 }
@@ -93,6 +103,18 @@ fetch_json bridge_health "${BRIDGE_HEALTH_URL}" || true
 fetch_json bridge_routes "${BRIDGE_ROUTES_URL}" || true
 fetch_headers explorer "${EXPLORER_URL}" || true
 fetch_headers website_ai "${WEBSITE_AI_URL}" || true
+
+normalize_json_bool() {
+  local value="${1:-}"
+  case "${value}" in
+    true|false)
+      printf '%s' "${value}"
+      ;;
+    *)
+      printf 'false'
+      ;;
+  esac
+}
 
 export SNAPSHOT_OUTPUT_DIR="${OUTPUT_DIR}"
 export SNAPSHOT_NOW_UTC="${NOW_UTC}"
@@ -128,6 +150,18 @@ web4_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev
 web4_policy_enforcement="$(jq -r '.checks.policy_enforcement // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 web4_internal_authorizer="$(jq -r '.checks.internal_authorizer // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 bridge_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/bridge_health.json" 2>/dev/null || true)"
+
+indexer_ok="$(normalize_json_bool "${indexer_ok}")"
+ai_ok="$(normalize_json_bool "${ai_ok}")"
+ai_policy_enforced="$(normalize_json_bool "${ai_policy_enforced}")"
+ai_has_web4_authorizer="$(normalize_json_bool "${ai_has_web4_authorizer}")"
+ai_onchain_ready="$(normalize_json_bool "${ai_onchain_ready}")"
+ai_stats_has_forensics_review="$(normalize_json_bool "${ai_stats_has_forensics_review}")"
+ai_stats_has_forensics_escalation="$(normalize_json_bool "${ai_stats_has_forensics_escalation}")"
+web4_ok="$(normalize_json_bool "${web4_ok}")"
+web4_policy_enforcement="$(normalize_json_bool "${web4_policy_enforcement}")"
+web4_internal_authorizer="$(normalize_json_bool "${web4_internal_authorizer}")"
+bridge_ok="$(normalize_json_bool "${bridge_ok}")"
 
 jq -n \
   --arg generated_at_utc "${NOW_UTC}" \

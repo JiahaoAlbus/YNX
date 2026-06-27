@@ -87,7 +87,9 @@ AI jobs, result commits, challenge/slash, and reward finalization:
 Docs:
 
 - EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
+- EN: [`docs/en/YNX_CARD_MOCK.md`](docs/en/YNX_CARD_MOCK.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
+- ZH: [`docs/zh/YNX_Card_Mock_说明.md`](docs/zh/YNX_Card_Mock_说明.md)
 
 ### 4) Asset status and speed-first trading direction
 
@@ -227,6 +229,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Live status snapshot generator: `./scripts/current_full_stack_status_snapshot.sh`
 - Live runtime alignment audit: `./scripts/verify_live_runtime_alignment.sh`
 - Bridge blocker remediation packet: `./scripts/prepare_bridge_blocker_packet.sh`
+- Live alignment rollout packet: `./scripts/prepare_live_alignment_rollout_packet.sh`
 - Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 - Grant / visibility pack: `./scripts/prepare_grant_visibility_pack.sh`
 - Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`

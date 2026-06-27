@@ -90,7 +90,41 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/agents/:agent_id/replicate`
   - Creates child agent under policy constraints
 
-## 7. Intent Lifecycle
+## 7. YNX Card Mock
+
+- `GET /web4/cards`
+- `POST /web4/cards` (owner header required)
+- `GET /web4/cards/:card_id`
+- `POST /web4/cards/:card_id/authorize`
+  - Required header:
+    - `x-ynx-session`
+  - Required body fields:
+    - `policy_id`
+    - `amount`
+  - Typical body fields:
+    - `agent_id`
+    - `merchant`
+    - `mcc`
+    - `country`
+  - Rules can include:
+    - `require_agent`
+    - `allowed_agents`
+    - `allowed_merchants`
+    - `blocked_merchants`
+    - `allowed_mccs`
+    - `blocked_mccs`
+    - `allowed_countries`
+    - `blocked_countries`
+    - `max_per_txn`
+    - `max_daily_spend`
+    - `max_total_spend`
+- `POST /web4/cards/:card_id/freeze` (owner header required)
+- `POST /web4/cards/:card_id/resume` (owner header required)
+
+This is currently a programmable mock-card control layer, not a real issuer
+integration.
+
+## 8. Intent Lifecycle
 
 - `GET /web4/intents`
 - `POST /web4/intents`
@@ -99,14 +133,14 @@ YNX v2 Web4 APIs follow sovereignty order:
 - `POST /web4/intents/:intent_id/challenge`
 - `POST /web4/intents/:intent_id/finalize`
 
-## 8. Observability
+## 9. Observability
 
 - `GET /health`
 - `GET /web4/overview`
 - `GET /web4/stats`
 - `GET /web4/audit` — policy-scoped; expect `policy_id` + `x-ynx-session`
 
-## 9. Error Patterns
+## 10. Error Patterns
 
 Common error strings:
 
@@ -119,3 +153,10 @@ Common error strings:
 - `policy_service_host_denied`
 - `replication_limit_reached`
 - `replication_cooldown`
+- `card_inactive`
+- `merchant_not_allowed`
+- `merchant_blocked`
+- `mcc_not_allowed`
+- `mcc_blocked`
+- `country_not_allowed`
+- `country_blocked`

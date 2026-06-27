@@ -64,6 +64,8 @@ fi
 if [[ "${RUN_SNAPSHOT}" -eq 1 ]]; then
   ./scripts/current_full_stack_status_snapshot.sh >/dev/null
   ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
+  ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
 fi
 if [[ "${RUN_EVIDENCE_PACK}" -eq 1 ]]; then
   ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
@@ -104,6 +106,8 @@ done
 
 cp -R "${OUTPUT_BASE}/current_full_stack_status_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 if [[ -d "${OUTPUT_BASE}/full_stack_evidence_pack_latest" ]]; then
   cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
 fi
@@ -142,6 +146,8 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 - [Latest full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
 - [Latest runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
+- [Latest bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
+- [Latest live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 EOF
 
 if [[ -d "${OUT_DIR}/reports/full_stack_evidence_pack_latest" ]]; then
@@ -187,6 +193,8 @@ Open these first:
 - `OUTREACH_CHECKLIST.md`
 - `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
+- `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
+- `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md`
 - `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md`
 - `SHA256SUMS.txt`

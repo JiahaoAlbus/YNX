@@ -41,6 +41,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
+if command -v shasum >/dev/null 2>&1; then
+  HASH_CMD="shasum -a 256"
+elif command -v sha256sum >/dev/null 2>&1; then
+  HASH_CMD="sha256sum"
+else
+  echo "shasum or sha256sum is required" >&2
+  exit 1
+fi
+
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
 NOW_UTC="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 OUTPUT_BASE="${REPO_ROOT}/output"
@@ -150,7 +159,13 @@ Open these first:
 - `HANDOFF_CHECKLIST.md`
 - `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
+- `SHA256SUMS.txt`
 EOF
+
+(
+  cd "${OUT_DIR}"
+  find . -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 ${HASH_CMD} > SHA256SUMS.txt
+)
 
 rm -rf "${LATEST_DIR}"
 mkdir -p "${LATEST_DIR}"

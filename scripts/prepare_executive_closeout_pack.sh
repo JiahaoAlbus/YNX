@@ -2,6 +2,7 @@
 set -euo pipefail
 
 RUN_DOCS=1
+REFRESH_DEPENDENCIES=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -9,10 +10,14 @@ while [[ $# -gt 0 ]]; do
       RUN_DOCS=0
       shift
       ;;
+    --reuse-latest)
+      REFRESH_DEPENDENCIES=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_executive_closeout_pack.sh [--skip-docs]
+  scripts/prepare_executive_closeout_pack.sh [--skip-docs] [--reuse-latest]
 
 Generate the highest-level YNX closeout pack that orchestrates:
   - latest live snapshot
@@ -35,6 +40,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
+if command -v shasum >/dev/null 2>&1; then
+  HASH_CMD="shasum -a 256"
+elif command -v sha256sum >/dev/null 2>&1; then
+  HASH_CMD="sha256sum"
+else
+  echo "shasum or sha256sum is required" >&2
+  exit 1
+fi
+
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
 NOW_UTC="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 OUTPUT_BASE="${REPO_ROOT}/output"
@@ -47,10 +61,12 @@ if [[ "${RUN_DOCS}" -eq 1 ]]; then
   ./scripts/verify_docs_readiness.sh
 fi
 
-./scripts/current_full_stack_status_snapshot.sh >/dev/null
-./scripts/verify_live_runtime_alignment.sh >/dev/null
-./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
-./scripts/prepare_grant_visibility_pack.sh >/dev/null
+if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
+  ./scripts/current_full_stack_status_snapshot.sh >/dev/null
+  ./scripts/verify_live_runtime_alignment.sh >/dev/null
+  ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
+  ./scripts/prepare_grant_visibility_pack.sh >/dev/null
+fi
 
 declare -a TOP_DOCS=(
   "README.md"
@@ -80,6 +96,10 @@ fi
 ALIGNMENT_STATUS="$(jq -r '.overall_status' "${OUTPUT_BASE}/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json" 2>/dev/null || echo "UNKNOWN")"
 BRIDGE_DETAIL="$(jq -r '.findings[] | select(.id=="bridge_truth") | .detail' "${OUTPUT_BASE}/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json" 2>/dev/null || echo "")"
 FORENSICS_DETAIL="$(jq -r '.findings[] | select(.id=="ai_forensics_visibility") | .detail' "${OUTPUT_BASE}/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.json" 2>/dev/null || echo "")"
+CURRENT_SNAPSHOT_REL="reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md"
+CURRENT_ALIGNMENT_REL="reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md"
+FULL_STACK_PACK_REL="reports/full_stack_evidence_pack_latest/MANIFEST.md"
+GRANT_PACK_REL="reports/grant_visibility_pack_latest/MANIFEST.md"
 
 cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 # YNX Executive Closeout Pack
@@ -93,10 +113,10 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 ## Open these first
 
 - [Closeout README](README.md)
-- [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
-- [Live runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
-- [Founder/operator evidence pack](reports/full_stack_evidence_pack_latest/MANIFEST.md)
-- [Grant/visibility pack](reports/grant_visibility_pack_latest/MANIFEST.md)
+- [Current full-stack snapshot](${CURRENT_SNAPSHOT_REL})
+- [Live runtime alignment](${CURRENT_ALIGNMENT_REL})
+- [Founder/operator evidence pack](${FULL_STACK_PACK_REL})
+- [Grant/visibility pack](${GRANT_PACK_REL})
 
 ## Current truth anchors
 
@@ -120,6 +140,30 @@ if [[ -n "${LATEST_DOC_REPORT}" ]]; then
 EOF
 fi
 
+cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
+{
+  "generated_at_utc": "${NOW_UTC}",
+  "branch": "$(git branch --show-current)",
+  "commit": "$(git rev-parse HEAD)",
+  "commit_short": "$(git rev-parse --short HEAD)",
+  "runtime_alignment_status": "${ALIGNMENT_STATUS}",
+  "truth": {
+    "bridge": "${BRIDGE_DETAIL}",
+    "ai_forensics_visibility": "${FORENSICS_DETAIL}"
+  },
+  "artifacts": {
+    "executive_manifest": "MANIFEST.md",
+    "executive_readme": "README.md",
+    "executive_checklist": "EXECUTIVE_CHECKLIST.md",
+    "current_full_stack_snapshot_md": "${CURRENT_SNAPSHOT_REL}",
+    "runtime_alignment_md": "${CURRENT_ALIGNMENT_REL}",
+    "full_stack_evidence_manifest": "${FULL_STACK_PACK_REL}",
+    "grant_visibility_manifest": "${GRANT_PACK_REL}",
+    "sha256sums": "SHA256SUMS.txt"
+  }
+}
+EOF
+
 cat > "${OUT_DIR}/README.md" <<'EOF'
 # YNX Executive Closeout Pack
 
@@ -130,6 +174,8 @@ Recommended open order:
 3. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 4. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
 5. `reports/grant_visibility_pack_latest/MANIFEST.md`
+6. `ARTIFACT_INDEX.json`
+7. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'
@@ -142,6 +188,11 @@ cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'
 - [ ] Review grant/visibility pack before outreach
 - [ ] Keep all external wording inside current truthful public-testnet scope
 EOF
+
+(
+  cd "${OUT_DIR}"
+  find . -type f ! -name 'SHA256SUMS.txt' -print0 | sort -z | xargs -0 ${HASH_CMD} > SHA256SUMS.txt
+)
 
 rm -rf "${LATEST_DIR}"
 mkdir -p "${LATEST_DIR}"

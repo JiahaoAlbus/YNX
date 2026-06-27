@@ -19,6 +19,8 @@ Last updated: 2026-04-30
 - `docs/en/YNX_v2_WEB4_SPEC.md` — v2 Web4 architecture and protocol requirements
 - `docs/en/YNX_v2_WEB4_API.md` — v2 Web4 API reference
 - `docs/en/YNX_CARD_MOCK.md` — current programmable mock-card control layer and future issuer-integration boundary
+- `docs/en/YNX_CARD_MOCK_DEMO.md` — runnable wallet-to-policy-to-card mock demo flow
+- `docs/en/AI_AGENT_SPENDING.md` — bounded AI-agent spending model across vault and card-control rails
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
 - `docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md` — adopted V2 accountability / forensics architecture decision
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo for policy, session, job, and vault reward flow

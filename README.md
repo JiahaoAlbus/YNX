@@ -88,8 +88,12 @@ Docs:
 
 - EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
 - EN: [`docs/en/YNX_CARD_MOCK.md`](docs/en/YNX_CARD_MOCK.md)
+- EN: [`docs/en/YNX_CARD_MOCK_DEMO.md`](docs/en/YNX_CARD_MOCK_DEMO.md)
+- EN: [`docs/en/AI_AGENT_SPENDING.md`](docs/en/AI_AGENT_SPENDING.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
 - ZH: [`docs/zh/YNX_Card_Mock_说明.md`](docs/zh/YNX_Card_Mock_说明.md)
+- ZH: [`docs/zh/YNX_Card_Mock_演示.md`](docs/zh/YNX_Card_Mock_演示.md)
+- ZH: [`docs/zh/AI_Agent_Spending_说明.md`](docs/zh/AI_Agent_Spending_说明.md)
 
 ### 4) Asset status and speed-first trading direction
 

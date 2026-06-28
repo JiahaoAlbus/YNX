@@ -22,7 +22,7 @@ This file is the routing layer for those audiences.
 
 | Audience | Start here | Next artifact | Safe framing | Do not imply |
 |---|---|---|---|---|
-| Developers / builders | `docs/en/BUILDER_QUICKSTART.md` | `README.md`, Web4/AI OpenAPI, local demos | runnable Web4 + AI + testnet infra surfaces | finished mainnet financial stack |
+| Developers / builders | `docs/en/BUILDER_QUICKSTART.md` | `output/builder_readiness_pack_latest/MANIFEST.md` | runnable Web4 + AI + testnet infra surfaces | finished mainnet financial stack |
 | Grant reviewers / sponsors | `START_HERE_FOR_SUPPORT.md` | `output/grant_visibility_pack_latest/MANIFEST.md` | early public-testnet infra with real evidence and strong documentation | finished company, full audit, 5/5 bridge completion |
 | Card providers / processors | `docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md` | `output/card_provider_readiness_pack_latest/MANIFEST.md` | programmable card-control foundation, pre-provider and audit-friendly | live issuer integration, PCI production card environment |
 | Founders / operators | `docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md` | `output/executive_closeout_pack_latest/MANIFEST.md` | current truth, blockers, alignment, closeout evidence | that local and live deployment are already perfectly equal |
@@ -35,11 +35,12 @@ This file is the routing layer for those audiences.
 
 Open in this order:
 
-1. [Builder Quickstart](/Users/huangjiahao/Desktop/YNX/docs/en/BUILDER_QUICKSTART.md)
-2. [README](/Users/huangjiahao/Desktop/YNX/README.md)
-3. [Web4 API](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_v2_WEB4_API.md)
-4. [AI Settlement API](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_v2_AI_SETTLEMENT_API.md)
-5. [Card Mock Demo](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_MOCK_DEMO.md)
+1. [Builder Readiness Pack](/Users/huangjiahao/Desktop/YNX/output/builder_readiness_pack_latest/MANIFEST.md)
+2. [Builder Quickstart](/Users/huangjiahao/Desktop/YNX/docs/en/BUILDER_QUICKSTART.md)
+3. [README](/Users/huangjiahao/Desktop/YNX/README.md)
+4. [Web4 API](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_v2_WEB4_API.md)
+5. [AI Settlement API](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_v2_AI_SETTLEMENT_API.md)
+6. [Card Mock Demo](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_MOCK_DEMO.md)
 
 ### 3.2 Grant reviewers / sponsors
 
@@ -85,7 +86,7 @@ Keep community copy away from:
 
 ## 4. Best single packet by audience
 
-- Developers: no single best tarball yet; start from docs and runnable demos
+- Developers: `output/builder_readiness_pack_latest`
 - Grant reviewers: `output/grant_visibility_pack_latest`
 - Providers: `output/card_provider_readiness_pack_latest`
 - Founders/operators: `output/executive_closeout_pack_latest`

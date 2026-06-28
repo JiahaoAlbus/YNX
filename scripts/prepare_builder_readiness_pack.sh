@@ -12,10 +12,10 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_audience_map_pack.sh [--skip-docs]
+  scripts/prepare_builder_readiness_pack.sh [--skip-docs]
 
-Generate a routing pack that tells developers, grant reviewers, providers,
-operators, and community readers where to start and which latest packet to use.
+Generate a builder-facing pack for the live public-testnet developer surfaces:
+EVM, Web4 Hub, AI Gateway, trace/indexer, and local demo entrypoints.
 EOF
       exit 0
       ;;
@@ -42,10 +42,10 @@ fi
 STAMP_LOCAL="$(date +"%Y%m%d_%H%M%S")"
 NOW_UTC="$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 OUTPUT_BASE="${REPO_ROOT}/output"
-OUT_DIR="${OUTPUT_BASE}/audience_map_pack_${STAMP_LOCAL}"
-LATEST_DIR="${OUTPUT_BASE}/audience_map_pack_latest"
+OUT_DIR="${OUTPUT_BASE}/builder_readiness_pack_${STAMP_LOCAL}"
+LATEST_DIR="${OUTPUT_BASE}/builder_readiness_pack_latest"
 
-mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh" "${OUT_DIR}/reports"
+mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/infra/openapi" "${OUT_DIR}/reports"
 
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
   bash ./scripts/verify_docs_readiness.sh >/dev/null
@@ -53,15 +53,15 @@ fi
 
 declare -a COPY_FILES=(
   "README.md"
-  "START_HERE_FOR_SUPPORT.md"
-  "docs/en/YNX_AUDIENCE_MAP_2026_06_28.md"
-  "docs/zh/YNX_受众地图_2026_06_28.md"
   "docs/en/BUILDER_QUICKSTART.md"
-  "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
-  "docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md"
-  "docs/en/GRANT_APPLICATION_KIT_2026_06_27.md"
-  "docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md"
-  "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
+  "docs/en/YNX_v2_WEB4_API.md"
+  "docs/en/YNX_v2_AI_SETTLEMENT_API.md"
+  "docs/en/AI_WEB4_OFFICIAL_DEMO.md"
+  "docs/en/YNX_CARD_MOCK_DEMO.md"
+  "docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md"
+  "docs/en/PUBLIC_ASSET_STATUS.md"
+  "infra/openapi/ynx-v2-ai.yaml"
+  "infra/openapi/ynx-v2-web4.yaml"
 )
 
 for file in "${COPY_FILES[@]}"; do
@@ -70,18 +70,14 @@ for file in "${COPY_FILES[@]}"; do
 done
 
 for report_dir in \
-  builder_readiness_pack_latest \
+  current_full_stack_status_latest \
   full_stack_capability_audit_latest \
-  grant_visibility_pack_latest \
-  card_provider_readiness_pack_latest \
-  executive_closeout_pack_latest \
-  full_stack_evidence_pack_latest \
-  current_full_stack_status_latest; do
+  full_stack_evidence_pack_latest; do
   cp -R "${OUTPUT_BASE}/${report_dir}" "${OUT_DIR}/reports/" 2>/dev/null || true
 done
 
 cat > "${OUT_DIR}/MANIFEST.md" <<EOF
-# YNX Audience Map Pack
+# YNX Builder Readiness Pack
 
 - Generated: ${NOW_UTC}
 - Branch: $(git branch --show-current)
@@ -90,13 +86,11 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 ## Open these first
 
-- [Audience map](docs/en/YNX_AUDIENCE_MAP_2026_06_28.md)
-- [Builder readiness pack](reports/builder_readiness_pack_latest/MANIFEST.md)
-- [Current capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
+- [Builder quickstart](docs/en/BUILDER_QUICKSTART.md)
+- [Web4 API](docs/en/YNX_v2_WEB4_API.md)
+- [AI settlement API](docs/en/YNX_v2_AI_SETTLEMENT_API.md)
 - [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
-- [Grant / visibility pack](reports/grant_visibility_pack_latest/MANIFEST.md)
-- [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
-- [Executive closeout pack](reports/executive_closeout_pack_latest/MANIFEST.md)
+- [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 
 ## Included docs
 
@@ -107,19 +101,18 @@ for file in "${COPY_FILES[@]}"; do
 done
 
 cat > "${OUT_DIR}/README.md" <<'EOF'
-# YNX Audience Map Pack
+# YNX Builder Readiness Pack
 
 Recommended open order:
 
 1. `MANIFEST.md`
-2. `docs/en/YNX_AUDIENCE_MAP_2026_06_28.md`
-3. `reports/builder_readiness_pack_latest/MANIFEST.md`
-4. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-5. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
-6. `reports/grant_visibility_pack_latest/MANIFEST.md`
-7. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
-8. `reports/executive_closeout_pack_latest/MANIFEST.md`
-9. `SHA256SUMS.txt`
+2. `docs/en/BUILDER_QUICKSTART.md`
+3. `docs/en/YNX_v2_WEB4_API.md`
+4. `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
+5. `docs/en/AI_WEB4_OFFICIAL_DEMO.md`
+6. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+8. `SHA256SUMS.txt`
 EOF
 
 (
@@ -140,11 +133,11 @@ rm -rf "${OLD_LATEST_DIR}" 2>/dev/null || true
 
 (
   cd "${OUTPUT_BASE}"
-  tar -czf "audience_map_pack_${STAMP_LOCAL}.tar.gz" "audience_map_pack_${STAMP_LOCAL}"
+  tar -czf "builder_readiness_pack_${STAMP_LOCAL}.tar.gz" "builder_readiness_pack_${STAMP_LOCAL}"
 )
 
-echo "Audience map pack ready:"
+echo "Builder readiness pack ready:"
 echo "- Folder: ${OUT_DIR}"
-echo "- Archive: ${OUTPUT_BASE}/audience_map_pack_${STAMP_LOCAL}.tar.gz"
-echo "Stable latest audience map pack:"
+echo "- Archive: ${OUTPUT_BASE}/builder_readiness_pack_${STAMP_LOCAL}.tar.gz"
+echo "Stable latest builder readiness pack:"
 echo "- Folder: ${LATEST_DIR}"

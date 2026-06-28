@@ -250,6 +250,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`
 - Card provider readiness pack: `./scripts/prepare_card_provider_readiness_pack.sh`
 - Audience map pack: `./scripts/prepare_audience_map_pack.sh`
+- Builder readiness pack: `./scripts/prepare_builder_readiness_pack.sh`
 - Verify latest closeout packs: `./scripts/verify_latest_closeout_packs.sh`
 
 ### 6) Node Operators / Validators

@@ -52,6 +52,10 @@ Public HTTPS endpoints:
 
 ## Start Here
 
+- External launchpad: [`docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md`](docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)
+- Audience routing: [`docs/en/YNX_AUDIENCE_MAP_2026_06_28.md`](docs/en/YNX_AUDIENCE_MAP_2026_06_28.md)
+- External launchpad pack: `output/external_launchpad_pack_latest`
+
 ### 1) End users (no install)
 
 ```bash
@@ -217,6 +221,8 @@ Current funding boundary:
 - ZH follow-up templates: [`docs/zh/跟进模板_2026_06_19.md`](docs/zh/跟进模板_2026_06_19.md)
 - EN audience map: [`docs/en/YNX_AUDIENCE_MAP_2026_06_28.md`](docs/en/YNX_AUDIENCE_MAP_2026_06_28.md)
 - ZH audience map: [`docs/zh/YNX_受众地图_2026_06_28.md`](docs/zh/YNX_受众地图_2026_06_28.md)
+- EN external launchpad: [`docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md`](docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)
+- ZH external launchpad: [`docs/zh/YNX_对外统一入口_2026_06_28.md`](docs/zh/YNX_对外统一入口_2026_06_28.md)
 - EN: [`docs/en/INVESTOR_DATA_ROOM_2026_06_13.md`](docs/en/INVESTOR_DATA_ROOM_2026_06_13.md)
 - EN: [`docs/en/FUNDRAISING_MEMO_2026_06_13.md`](docs/en/FUNDRAISING_MEMO_2026_06_13.md)
 - EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
@@ -251,6 +257,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Card provider readiness pack: `./scripts/prepare_card_provider_readiness_pack.sh`
 - Audience map pack: `./scripts/prepare_audience_map_pack.sh`
 - Builder readiness pack: `./scripts/prepare_builder_readiness_pack.sh`
+- External launchpad pack: `./scripts/prepare_external_launchpad_pack.sh`
 - Verify latest closeout packs: `./scripts/verify_latest_closeout_packs.sh`
 
 ### 6) Node Operators / Validators

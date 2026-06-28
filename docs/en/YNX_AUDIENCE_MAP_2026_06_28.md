@@ -18,6 +18,10 @@ The problem is that different readers should not start from the same file:
 
 This file is the routing layer for those audiences.
 
+If the reader has not yet been pre-qualified by audience, start with:
+
+- [YNX External Launchpad](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)
+
 ## 2. Fast audience map
 
 | Audience | Start here | Next artifact | Safe framing | Do not imply |
@@ -91,6 +95,7 @@ Keep community copy away from:
 - Providers: `output/card_provider_readiness_pack_latest`
 - Founders/operators: `output/executive_closeout_pack_latest`
 - Mixed diligence: `output/full_stack_evidence_pack_latest`
+- First neutral external handoff: `output/external_launchpad_pack_latest`
 
 ## 5. Strongest universal companion docs
 

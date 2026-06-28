@@ -53,8 +53,10 @@ Public HTTPS endpoints:
 ## Start Here
 
 - External launchpad: [`docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md`](docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)
+- Current state board: [`docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`](docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md)
 - Audience routing: [`docs/en/YNX_AUDIENCE_MAP_2026_06_28.md`](docs/en/YNX_AUDIENCE_MAP_2026_06_28.md)
 - External launchpad pack: `output/external_launchpad_pack_latest`
+- Current state board pack: `output/current_state_board_pack_latest`
 
 ### 1) End users (no install)
 
@@ -223,6 +225,8 @@ Current funding boundary:
 - ZH audience map: [`docs/zh/YNX_受众地图_2026_06_28.md`](docs/zh/YNX_受众地图_2026_06_28.md)
 - EN external launchpad: [`docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md`](docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)
 - ZH external launchpad: [`docs/zh/YNX_对外统一入口_2026_06_28.md`](docs/zh/YNX_对外统一入口_2026_06_28.md)
+- EN current state board: [`docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`](docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md)
+- ZH current state board: [`docs/zh/YNX_当前状态看板_2026_06_28.md`](docs/zh/YNX_当前状态看板_2026_06_28.md)
 - EN: [`docs/en/INVESTOR_DATA_ROOM_2026_06_13.md`](docs/en/INVESTOR_DATA_ROOM_2026_06_13.md)
 - EN: [`docs/en/FUNDRAISING_MEMO_2026_06_13.md`](docs/en/FUNDRAISING_MEMO_2026_06_13.md)
 - EN: [`docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md`](docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md)
@@ -258,6 +262,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Audience map pack: `./scripts/prepare_audience_map_pack.sh`
 - Builder readiness pack: `./scripts/prepare_builder_readiness_pack.sh`
 - External launchpad pack: `./scripts/prepare_external_launchpad_pack.sh`
+- Current state board pack: `./scripts/prepare_current_state_board_pack.sh`
 - Verify latest closeout packs: `./scripts/verify_latest_closeout_packs.sh`
 
 ### 6) Node Operators / Validators

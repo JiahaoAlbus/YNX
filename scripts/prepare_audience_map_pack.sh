@@ -75,7 +75,6 @@ for report_dir in \
   full_stack_capability_audit_latest \
   grant_visibility_pack_latest \
   card_provider_readiness_pack_latest \
-  executive_closeout_pack_latest \
   full_stack_evidence_pack_latest \
   current_full_stack_status_latest; do
   cp -R "${OUTPUT_BASE}/${report_dir}" "${OUT_DIR}/reports/" 2>/dev/null || true
@@ -93,12 +92,13 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 - [Audience map](docs/en/YNX_AUDIENCE_MAP_2026_06_28.md)
 - [External launchpad pack](reports/external_launchpad_pack_latest/MANIFEST.md)
+- [Current state board](docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md)
 - [Builder readiness pack](reports/builder_readiness_pack_latest/MANIFEST.md)
 - [Current capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 - [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
 - [Grant / visibility pack](reports/grant_visibility_pack_latest/MANIFEST.md)
 - [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
-- [Executive closeout pack](reports/executive_closeout_pack_latest/MANIFEST.md)
+- [Executive closeout pack](../../output/executive_closeout_pack_latest/MANIFEST.md)
 
 ## Included docs
 
@@ -116,13 +116,14 @@ Recommended open order:
 1. `MANIFEST.md`
 2. `docs/en/YNX_AUDIENCE_MAP_2026_06_28.md`
 3. `reports/external_launchpad_pack_latest/MANIFEST.md`
-4. `reports/builder_readiness_pack_latest/MANIFEST.md`
-5. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-6. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
-7. `reports/grant_visibility_pack_latest/MANIFEST.md`
-8. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
-9. `reports/executive_closeout_pack_latest/MANIFEST.md`
-10. `SHA256SUMS.txt`
+4. `docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`
+5. `reports/builder_readiness_pack_latest/MANIFEST.md`
+6. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+7. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+8. `reports/grant_visibility_pack_latest/MANIFEST.md`
+9. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
+10. `../../output/executive_closeout_pack_latest/MANIFEST.md`
+11. `SHA256SUMS.txt`
 EOF
 
 (

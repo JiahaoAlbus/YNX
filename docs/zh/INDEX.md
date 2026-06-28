@@ -37,6 +37,7 @@
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布 thread / channel 简介草案
 - `docs/zh/YNX_受众地图_2026_06_28.md`：开发者、grant reviewer、provider、operator、社区读者的统一路由图
 - `docs/zh/YNX_对外统一入口_2026_06_28.md`：所有外部读者先打开的统一入口，再分流到正确最新包
+- `docs/zh/YNX_当前状态看板_2026_06_28.md`：最短 current-state 真相看板，直接说明 live、mock、受保护和外部依赖
 - `docs/zh/核心护城河与边界_2026_06_13.md`：最诚实的护城河定义与架构边界
 - `docs/zh/投资人十大尖锐问题_2026_06_13.md`：投资人与 grant 尽调最难问题标准答法
 - `docs/zh/安全响应策略_2026_06_13.md`：正式化的测试网阶段安全响应与 incident 流程

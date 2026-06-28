@@ -9,6 +9,7 @@ RUN_ROLLOUT_PACKET=1
 RUN_CAPABILITY_AUDIT=1
 RUN_CARD_PROVIDER_PACK=1
 RUN_BUILDER_PACK=1
+RUN_AUDIENCE_PACK=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -44,10 +45,14 @@ while [[ $# -gt 0 ]]; do
       RUN_BUILDER_PACK=0
       shift
       ;;
+    --skip-audience-pack)
+      RUN_AUDIENCE_PACK=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet] [--skip-capability-audit] [--skip-card-provider-pack] [--skip-builder-pack]
+  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet] [--skip-capability-audit] [--skip-card-provider-pack] [--skip-builder-pack] [--skip-audience-pack]
 
 Generate a founder/operator-ready full-stack evidence pack that bundles the
 latest live snapshot, runtime alignment audit, and supporting readiness docs
@@ -106,6 +111,9 @@ if [[ "${RUN_CARD_PROVIDER_PACK}" -eq 1 ]]; then
 fi
 if [[ "${RUN_BUILDER_PACK}" -eq 1 ]]; then
   bash ./scripts/prepare_builder_readiness_pack.sh --skip-docs >/dev/null
+fi
+if [[ "${RUN_AUDIENCE_PACK}" -eq 1 ]]; then
+  bash ./scripts/prepare_audience_map_pack.sh --skip-docs >/dev/null
 fi
 
 declare -a COPY_FILES=(

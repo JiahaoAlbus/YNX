@@ -36,6 +36,10 @@ Safe current boundary:
 - YNX should not yet be described as a formed operating company, a completed
   legal/compliance stack, or a production custody/payment network
 
+Fastest current-state board:
+
+- [YNX Current State Board](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md)
+
 ## 3. Who should open what first
 
 | Audience | Open first | Then open | Safe framing |

@@ -69,6 +69,7 @@ if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
   bash ./scripts/prepare_card_provider_readiness_pack.sh >/dev/null
   bash ./scripts/prepare_builder_readiness_pack.sh >/dev/null
   bash ./scripts/prepare_external_launchpad_pack.sh >/dev/null
+  bash ./scripts/prepare_current_state_board_pack.sh >/dev/null
   bash ./scripts/prepare_audience_map_pack.sh >/dev/null
   bash ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
   bash ./scripts/prepare_grant_visibility_pack.sh >/dev/null
@@ -77,10 +78,12 @@ fi
 declare -a TOP_DOCS=(
   "README.md"
   "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md"
+  "docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md"
   "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
   "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md"
   "docs/zh/当前全链状态与对齐快照_2026_06_27.md"
+  "docs/zh/YNX_当前状态看板_2026_06_28.md"
   "docs/zh/最终全链交付总览_2026_06_27.md"
   "docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
   "docs/zh/合规就绪包_2026_06_13.md"
@@ -135,6 +138,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 - [External launchpad pack](reports/external_launchpad_pack_latest/MANIFEST.md)
+- [Current state board](docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md)
 - [Builder readiness pack](reports/builder_readiness_pack_latest/MANIFEST.md)
 - [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
 - [Audience map pack](reports/audience_map_pack_latest/MANIFEST.md)
@@ -186,6 +190,8 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "live_alignment_rollout_packet_md": "reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md",
     "capability_audit_md": "reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md",
     "external_launchpad_manifest": "reports/external_launchpad_pack_latest/MANIFEST.md",
+    "current_state_board_en": "docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md",
+    "current_state_board_zh": "docs/zh/YNX_当前状态看板_2026_06_28.md",
     "builder_readiness_manifest": "reports/builder_readiness_pack_latest/MANIFEST.md",
     "card_provider_readiness_manifest": "reports/card_provider_readiness_pack_latest/MANIFEST.md",
     "audience_map_manifest": "reports/audience_map_pack_latest/MANIFEST.md",
@@ -209,13 +215,14 @@ Recommended open order:
 6. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
 7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
 8. `reports/external_launchpad_pack_latest/MANIFEST.md`
-9. `reports/builder_readiness_pack_latest/MANIFEST.md`
-10. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
-11. `reports/audience_map_pack_latest/MANIFEST.md`
-12. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-13. `reports/grant_visibility_pack_latest/MANIFEST.md`
-14. `ARTIFACT_INDEX.json`
-15. `SHA256SUMS.txt`
+9. `docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`
+10. `reports/builder_readiness_pack_latest/MANIFEST.md`
+11. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
+12. `reports/audience_map_pack_latest/MANIFEST.md`
+13. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+14. `reports/grant_visibility_pack_latest/MANIFEST.md`
+15. `ARTIFACT_INDEX.json`
+16. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

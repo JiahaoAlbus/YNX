@@ -17,6 +17,7 @@ fi
 PACKS=(
   "output/builder_readiness_pack_latest"
   "output/external_launchpad_pack_latest"
+  "output/current_state_board_pack_latest"
   "output/audience_map_pack_latest"
   "output/full_stack_evidence_pack_latest"
   "output/grant_visibility_pack_latest"
@@ -120,6 +121,14 @@ grep -q 'reports/external_launchpad_pack_latest/MANIFEST.md' \
   output/audience_map_pack_latest/MANIFEST.md \
   || fail "audience map pack manifest missing external launchpad link"
 
+grep -q 'docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md' \
+  output/audience_map_pack_latest/MANIFEST.md \
+  || fail "audience map pack manifest missing current state board link"
+
+grep -q '../../output/executive_closeout_pack_latest/MANIFEST.md' \
+  output/audience_map_pack_latest/MANIFEST.md \
+  || fail "audience map pack manifest missing executive closeout reference"
+
 grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md' \
   output/grant_visibility_pack_latest/MANIFEST.md \
   || fail "grant visibility pack manifest missing capability audit link"
@@ -143,6 +152,10 @@ grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.
 grep -q 'reports/external_launchpad_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing external launchpad link"
+
+grep -q 'docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md' \
+  output/executive_closeout_pack_latest/MANIFEST.md \
+  || fail "executive closeout pack manifest missing current state board link"
 
 grep -q 'reports/builder_readiness_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \

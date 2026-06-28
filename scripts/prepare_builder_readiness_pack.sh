@@ -2,6 +2,7 @@
 set -euo pipefail
 
 RUN_DOCS=1
+RUN_CARD_DEMO=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -9,10 +10,14 @@ while [[ $# -gt 0 ]]; do
       RUN_DOCS=0
       shift
       ;;
+    --skip-card-demo)
+      RUN_CARD_DEMO=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_builder_readiness_pack.sh [--skip-docs]
+  scripts/prepare_builder_readiness_pack.sh [--skip-docs] [--skip-card-demo]
 
 Generate a builder-facing pack for the live public-testnet developer surfaces:
 EVM, Web4 Hub, AI Gateway, trace/indexer, and local demo entrypoints.
@@ -50,6 +55,9 @@ mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/infra/openapi" "${OUT_DIR}/reports"
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
   bash ./scripts/verify_docs_readiness.sh >/dev/null
 fi
+if [[ "${RUN_CARD_DEMO}" -eq 1 ]]; then
+  bash ./scripts/ynx_card_mock_demo.sh >/dev/null
+fi
 
 declare -a COPY_FILES=(
   "README.md"
@@ -72,7 +80,8 @@ done
 for report_dir in \
   current_full_stack_status_latest \
   full_stack_capability_audit_latest \
-  full_stack_evidence_pack_latest; do
+  full_stack_evidence_pack_latest \
+  ynx_card_demo_latest; do
   cp -R "${OUTPUT_BASE}/${report_dir}" "${OUT_DIR}/reports/" 2>/dev/null || true
 done
 
@@ -89,6 +98,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Builder quickstart](docs/en/BUILDER_QUICKSTART.md)
 - [Web4 API](docs/en/YNX_v2_WEB4_API.md)
 - [AI settlement API](docs/en/YNX_v2_AI_SETTLEMENT_API.md)
+- [Latest YNX Card demo evidence](reports/ynx_card_demo_latest/README.md)
 - [Current full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
 - [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 
@@ -110,9 +120,10 @@ Recommended open order:
 3. `docs/en/YNX_v2_WEB4_API.md`
 4. `docs/en/YNX_v2_AI_SETTLEMENT_API.md`
 5. `docs/en/AI_WEB4_OFFICIAL_DEMO.md`
-6. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
-7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-8. `SHA256SUMS.txt`
+6. `reports/ynx_card_demo_latest/README.md`
+7. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+8. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+9. `SHA256SUMS.txt`
 EOF
 
 (

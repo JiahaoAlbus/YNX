@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUN_ID="${RUN_ID:-card_demo_$(date -u +%Y%m%dT%H%M%SZ)}"
+RUN_ID="${RUN_ID:-card_demo_$(date -u +%Y%m%dT%H%M%SZ)_$$}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/output/ynx_card_demo/$RUN_ID}"
 LATEST_DIR="$ROOT_DIR/output/ynx_card_demo_latest"
 
@@ -335,15 +335,11 @@ cat > "$OUTPUT_DIR/README.md" <<EOF
 EOF
 
 TMP_LATEST_DIR="${LATEST_DIR}.tmp.$$"
-OLD_LATEST_DIR="${LATEST_DIR}.old.$$"
-rm -rf "$TMP_LATEST_DIR" "$OLD_LATEST_DIR" 2>/dev/null || true
+rm -rf "$TMP_LATEST_DIR" 2>/dev/null || true
 mkdir -p "$TMP_LATEST_DIR"
 cp -R "$OUTPUT_DIR/." "$TMP_LATEST_DIR/"
-if [[ -e "$LATEST_DIR" ]]; then
-  mv "$LATEST_DIR" "$OLD_LATEST_DIR"
-fi
+rm -rf "$LATEST_DIR" 2>/dev/null || true
 mv "$TMP_LATEST_DIR" "$LATEST_DIR"
-rm -rf "$OLD_LATEST_DIR" 2>/dev/null || true
 
 echo
 echo "Demo complete."

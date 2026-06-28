@@ -16,8 +16,11 @@
 - bounded agent creation
 - YNX Card Mock creation
 - 规则内消费通过
+- 对已通过授权登记 mock 结算
+- 对剩余额度登记 mock 冲正
+- 对已结算金额登记 mock 退款
 - 规则外消费拒绝
-- 两种结果都有 audit evidence
+- 授权结果和后续流水结果都有 audit evidence
 
 所以重点不是“卡片 UI”，而是 YNX 已经有了给 Web4 钱包和 AI Agent 用的可编程消费控制面。
 
@@ -46,8 +49,11 @@ output/ynx_card_demo/<run-id>/
 7. 创建受限 agent
 8. 创建绑定同一 policy 的 YNX Card Mock
 9. 跑一笔规则内消费并通过
-10. 跑一笔规则外消费并拒绝
-11. 拉取 card detail 和 audit 记录
+10. 登记一笔 mock settlement
+11. 登记一笔 mock reversal
+12. 登记一笔 mock refund
+13. 跑一笔规则外消费并拒绝
+14. 拉取 card detail 和 audit 记录
 
 ## 4. 对已有 Web4 服务运行
 

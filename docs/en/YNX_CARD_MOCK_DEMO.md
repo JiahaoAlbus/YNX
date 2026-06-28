@@ -16,8 +16,11 @@ It shows a complete mock control loop:
 - bounded agent creation
 - YNX Card Mock creation
 - approved spend inside rules
+- mock settlement against the approved authorization
+- mock reversal against the remaining authorization hold
+- mock refund against the settled amount
 - declined spend outside rules
-- audit evidence for both outcomes
+- audit evidence for authorization and reconciliation outcomes
 
 So the point is not “fake card UI.” The point is that YNX already has a
 programmable spending-control surface for Web4 wallets and AI agents.
@@ -48,8 +51,11 @@ output/ynx_card_demo/<run-id>/
 7. creates a bounded agent
 8. creates a YNX Card Mock tied to the same policy
 9. approves a valid spend attempt
-10. declines an invalid spend attempt
-11. fetches card detail and audit records
+10. records a mock settlement
+11. records a mock reversal
+12. records a mock refund
+13. declines an invalid spend attempt
+14. fetches card detail and audit records
 
 ## 4. Run against an existing Web4 service
 

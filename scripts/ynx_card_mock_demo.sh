@@ -228,7 +228,44 @@ approve_body="$(jq -n \
   }')"
 approve_json="$(post_json "$WEB4_URL/web4/cards/$card_id/authorize" "$approve_body" -H "x-ynx-session: $card_session_token")"
 save_step "08_authorize_approved" "$approve_json"
+authorization_id="$(printf '%s\n' "$approve_json" | jq -r '.authorization.authorization_id')"
 echo "8. Approved bounded spend attempt"
+
+settle_body="$(jq -n \
+  --arg authorization_id "$authorization_id" \
+  '{
+    authorization_id: $authorization_id,
+    amount: 12,
+    external_ref: "demo-settle-1",
+    note: "mock settlement leg"
+  }')"
+settle_json="$(post_json "$WEB4_URL/web4/cards/$card_id/settle" "$settle_body" -H "x-ynx-owner: $owner_secret")"
+save_step "09_settle" "$settle_json"
+echo "9. Recorded mock settlement"
+
+reverse_body="$(jq -n \
+  --arg authorization_id "$authorization_id" \
+  '{
+    authorization_id: $authorization_id,
+    amount: 8,
+    external_ref: "demo-reverse-1",
+    note: "mock auth reversal leg"
+  }')"
+reverse_json="$(post_json "$WEB4_URL/web4/cards/$card_id/reverse" "$reverse_body" -H "x-ynx-owner: $owner_secret")"
+save_step "10_reverse" "$reverse_json"
+echo "10. Recorded mock authorization reversal"
+
+refund_body="$(jq -n \
+  --arg authorization_id "$authorization_id" \
+  '{
+    authorization_id: $authorization_id,
+    amount: 4,
+    external_ref: "demo-refund-1",
+    note: "mock post-settlement refund leg"
+  }')"
+refund_json="$(post_json "$WEB4_URL/web4/cards/$card_id/refund" "$refund_body" -H "x-ynx-owner: $owner_secret")"
+save_step "11_refund" "$refund_json"
+echo "11. Recorded mock refund"
 
 decline_body="$(jq -n \
   --arg policy_id "$policy_id" \
@@ -242,7 +279,7 @@ decline_body="$(jq -n \
     mcc: "5999",
     country: "US"
   }')"
-decline_response_file="$OUTPUT_DIR/09_authorize_declined.raw"
+decline_response_file="$OUTPUT_DIR/12_authorize_declined.raw"
 decline_status="$(
   curl -sS -o "$decline_response_file" -w "%{http_code}" \
     "$WEB4_URL/web4/cards/$card_id/authorize" \
@@ -250,14 +287,14 @@ decline_status="$(
     -H "x-ynx-session: $card_session_token" \
     --data "$decline_body"
 )"
-jq . "$decline_response_file" > "$OUTPUT_DIR/09_authorize_declined.json"
-echo "9. Declined out-of-policy spend attempt (HTTP $decline_status)"
+jq . "$decline_response_file" > "$OUTPUT_DIR/12_authorize_declined.json"
+echo "12. Declined out-of-policy spend attempt (HTTP $decline_status)"
 
 card_detail_json="$(curl -fsS "$WEB4_URL/web4/cards/$card_id")"
-save_step "10_card_detail" "$card_detail_json"
+save_step "13_card_detail" "$card_detail_json"
 
 audit_json="$(curl -fsS "$WEB4_URL/web4/audit?policy_id=$policy_id" -H "x-ynx-session: $card_session_token")"
-save_step "11_audit" "$audit_json"
+save_step "14_audit" "$audit_json"
 
 cat > "$OUTPUT_DIR/README.md" <<EOF
 # YNX Card Mock Demo Evidence
@@ -276,8 +313,11 @@ cat > "$OUTPUT_DIR/README.md" <<EOF
 - bounded agent creation under policy
 - YNX Card Mock creation tied to the same policy
 - approved mock spend inside rules
+- mock settlement entry against approved spend
+- mock authorization reversal against remaining hold
+- mock refund against settled amount
 - declined mock spend outside rules
-- audit visibility for card authorization outcomes
+- audit visibility for authorization and reconciliation outcomes
 
 ## Open these files first
 
@@ -285,9 +325,12 @@ cat > "$OUTPUT_DIR/README.md" <<EOF
 - \`05_agent.json\`
 - \`06_card.json\`
 - \`08_authorize_approved.json\`
-- \`09_authorize_declined.json\`
-- \`10_card_detail.json\`
-- \`11_audit.json\`
+- \`09_settle.json\`
+- \`10_reverse.json\`
+- \`11_refund.json\`
+- \`12_authorize_declined.json\`
+- \`13_card_detail.json\`
+- \`14_audit.json\`
 EOF
 
 echo

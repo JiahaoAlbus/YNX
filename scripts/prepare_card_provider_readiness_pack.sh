@@ -63,6 +63,8 @@ declare -a COPY_FILES=(
   "README.md"
   "docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md"
   "docs/zh/YNX_Card_服务商对接准备包_2026_06_28.md"
+  "docs/en/YNX_CARD_PROVIDER_GO_LIVE_GATES_2026_06_28.md"
+  "docs/zh/YNX_Card_服务商上线门禁_2026_06_28.md"
   "docs/en/YNX_CARD_MOCK.md"
   "docs/zh/YNX_Card_Mock_说明.md"
   "docs/en/YNX_CARD_MOCK_DEMO.md"
@@ -101,6 +103,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 ## Open these first
 
 - [Provider readiness packet](docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md)
+- [Provider go-live gates](docs/en/YNX_CARD_PROVIDER_GO_LIVE_GATES_2026_06_28.md)
 - [Current capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 - [YNX Card Mock](docs/en/YNX_CARD_MOCK.md)
 - [YNX Card Mock Demo](docs/en/YNX_CARD_MOCK_DEMO.md)
@@ -135,14 +138,15 @@ Recommended open order:
 
 1. `MANIFEST.md`
 2. `docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md`
-3. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-4. `docs/en/YNX_CARD_MOCK.md`
-5. `docs/en/YNX_CARD_MOCK_DEMO.md`
-6. `docs/en/AI_AGENT_SPENDING.md`
-7. `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
-8. `infra/openapi/ynx-v2-web4.yaml`
-9. `PROVIDER_CHECKLIST.md`
-10. `SHA256SUMS.txt`
+3. `docs/en/YNX_CARD_PROVIDER_GO_LIVE_GATES_2026_06_28.md`
+4. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+5. `docs/en/YNX_CARD_MOCK.md`
+6. `docs/en/YNX_CARD_MOCK_DEMO.md`
+7. `docs/en/AI_AGENT_SPENDING.md`
+8. `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
+9. `infra/openapi/ynx-v2-web4.yaml`
+10. `PROVIDER_CHECKLIST.md`
+11. `SHA256SUMS.txt`
 EOF
 
 (

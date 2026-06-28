@@ -72,6 +72,7 @@ Primary evidence:
 - [YNX Card Mock](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_MOCK.md)
 - [YNX Card Mock Demo](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_MOCK_DEMO.md)
 - [AI Agent Spending](/Users/huangjiahao/Desktop/YNX/docs/en/AI_AGENT_SPENDING.md)
+- [YNX Card Provider Go-Live Gates](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_PROVIDER_GO_LIVE_GATES_2026_06_28.md)
 - [YNX v2 Web4 API](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_v2_WEB4_API.md)
 - [Web4 OpenAPI](/Users/huangjiahao/Desktop/YNX/infra/openapi/ynx-v2-web4.yaml)
 
@@ -186,6 +187,7 @@ The best next step is a scoped provider conversation using this packet plus:
 - current capability audit
 - current truth matrix
 - current card mock demo evidence
+- current provider go-live gates
 - current compliance boundary docs
 
 That is the right bridge between "mock logic proven" and "real provider integration planned responsibly."

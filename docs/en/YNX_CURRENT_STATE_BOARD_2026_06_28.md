@@ -54,6 +54,10 @@ Safe wording:
 - YNX Card currently proves programmable control logic and auditability
 - it does **not** yet prove a live regulated card program
 
+Fastest provider gate doc:
+
+- [YNX Card Provider Go-Live Gates](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_CARD_PROVIDER_GO_LIVE_GATES_2026_06_28.md)
+
 ## 5. What is blocked by external dependencies
 
 - bridge `5/5 full_loop_tested`

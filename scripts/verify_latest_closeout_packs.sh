@@ -16,6 +16,7 @@ fi
 
 PACKS=(
   "output/builder_readiness_pack_latest"
+  "output/card_provider_readiness_pack_latest"
   "output/external_launchpad_pack_latest"
   "output/current_state_board_pack_latest"
   "output/audience_map_pack_latest"
@@ -54,6 +55,16 @@ need_file "output/executive_closeout_pack_latest/ARTIFACT_INDEX.json"
 need_file "output/executive_closeout_pack_latest/EXECUTIVE_CHECKLIST.md"
 need_file "output/full_stack_evidence_pack_latest/HANDOFF_CHECKLIST.md"
 need_file "output/grant_visibility_pack_latest/OUTREACH_CHECKLIST.md"
+need_dir "output/ynx_card_demo_latest"
+need_file "output/ynx_card_demo_latest/README.md"
+need_file "output/ynx_card_demo_latest/15_verification.json"
+need_file "output/ynx_card_demo_latest/VERIFICATION.md"
+need_file "output/card_provider_readiness_pack_latest/reports/ynx_card_demo_latest/README.md"
+need_file "output/card_provider_readiness_pack_latest/reports/ynx_card_demo_latest/15_verification.json"
+need_file "output/card_provider_readiness_pack_latest/reports/ynx_card_demo_latest/VERIFICATION.md"
+need_file "output/builder_readiness_pack_latest/reports/ynx_card_demo_latest/README.md"
+need_file "output/builder_readiness_pack_latest/reports/ynx_card_demo_latest/15_verification.json"
+need_file "output/builder_readiness_pack_latest/reports/ynx_card_demo_latest/VERIFICATION.md"
 need_file "output/full_stack_evidence_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
@@ -164,6 +175,26 @@ grep -q 'reports/builder_readiness_pack_latest/MANIFEST.md' \
 grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing card provider readiness link"
+
+grep -q 'reports/ynx_card_demo_latest/README.md' \
+  output/builder_readiness_pack_latest/MANIFEST.md \
+  || fail "builder readiness pack manifest missing latest card demo evidence link"
+
+grep -q 'reports/ynx_card_demo_latest/README.md' \
+  output/card_provider_readiness_pack_latest/MANIFEST.md \
+  || fail "card provider readiness pack manifest missing latest card demo evidence link"
+
+jq -e '.overall_status == "pass" and .fail_count == 0' \
+  output/ynx_card_demo_latest/15_verification.json >/dev/null \
+  || fail "latest card demo verification did not pass"
+
+jq -e '.overall_status == "pass" and .fail_count == 0' \
+  output/builder_readiness_pack_latest/reports/ynx_card_demo_latest/15_verification.json >/dev/null \
+  || fail "builder readiness pack embedded card demo verification did not pass"
+
+jq -e '.overall_status == "pass" and .fail_count == 0' \
+  output/card_provider_readiness_pack_latest/reports/ynx_card_demo_latest/15_verification.json >/dev/null \
+  || fail "card provider readiness pack embedded card demo verification did not pass"
 
 grep -q 'reports/audience_map_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \

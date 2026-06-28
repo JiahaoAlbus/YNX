@@ -15,6 +15,8 @@ else
 fi
 
 PACKS=(
+  "output/builder_readiness_pack_latest"
+  "output/audience_map_pack_latest"
   "output/full_stack_evidence_pack_latest"
   "output/grant_visibility_pack_latest"
   "output/executive_closeout_pack_latest"
@@ -53,13 +55,16 @@ need_file "output/grant_visibility_pack_latest/OUTREACH_CHECKLIST.md"
 need_file "output/full_stack_evidence_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
+need_file "output/full_stack_evidence_pack_latest/reports/builder_readiness_pack_latest/MANIFEST.md"
 need_file "output/full_stack_evidence_pack_latest/reports/card_provider_readiness_pack_latest/MANIFEST.md"
+need_file "output/full_stack_evidence_pack_latest/reports/audience_map_pack_latest/MANIFEST.md"
 need_file "output/grant_visibility_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/grant_visibility_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/grant_visibility_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
 need_file "output/executive_closeout_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/executive_closeout_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/executive_closeout_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
+need_file "output/executive_closeout_pack_latest/reports/builder_readiness_pack_latest/MANIFEST.md"
 need_file "output/executive_closeout_pack_latest/reports/card_provider_readiness_pack_latest/MANIFEST.md"
 need_file "output/executive_closeout_pack_latest/reports/audience_map_pack_latest/MANIFEST.md"
 need_file "output/full_stack_evidence_pack_latest/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
@@ -96,9 +101,17 @@ grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.
   output/full_stack_evidence_pack_latest/MANIFEST.md \
   || fail "full-stack evidence pack manifest missing capability audit link"
 
+grep -q 'reports/builder_readiness_pack_latest/MANIFEST.md' \
+  output/full_stack_evidence_pack_latest/MANIFEST.md \
+  || fail "full-stack evidence pack manifest missing builder readiness link"
+
 grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
   output/full_stack_evidence_pack_latest/MANIFEST.md \
   || fail "full-stack evidence pack manifest missing card provider readiness link"
+
+grep -q 'reports/audience_map_pack_latest/MANIFEST.md' \
+  output/full_stack_evidence_pack_latest/MANIFEST.md \
+  || fail "full-stack evidence pack manifest missing audience map link"
 
 grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md' \
   output/grant_visibility_pack_latest/MANIFEST.md \
@@ -120,6 +133,10 @@ grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing capability audit link"
 
+grep -q 'reports/builder_readiness_pack_latest/MANIFEST.md' \
+  output/executive_closeout_pack_latest/MANIFEST.md \
+  || fail "executive closeout pack manifest missing builder readiness link"
+
 grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing card provider readiness link"
@@ -127,5 +144,9 @@ grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
 grep -q 'reports/audience_map_pack_latest/MANIFEST.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing audience map link"
+
+grep -q 'reports/builder_readiness_pack_latest/MANIFEST.md' \
+  output/audience_map_pack_latest/MANIFEST.md \
+  || fail "audience map pack manifest missing builder readiness link"
 
 echo "PASS: latest closeout packs are present, hashed, and internally linked."

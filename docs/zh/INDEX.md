@@ -35,6 +35,7 @@
 - `docs/zh/Grant与曝光目标清单_2026_06_27.md`：基于官方来源整理的当前 grant / 曝光目标清单
 - `docs/zh/Grant申请模板包_2026_06_27.md`：可直接改写的 grant 申请模板与 milestone 骨架
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布 thread / channel 简介草案
+- `docs/zh/YNX_受众地图_2026_06_28.md`：开发者、grant reviewer、provider、operator、社区读者的统一路由图
 - `docs/zh/核心护城河与边界_2026_06_13.md`：最诚实的护城河定义与架构边界
 - `docs/zh/投资人十大尖锐问题_2026_06_13.md`：投资人与 grant 尽调最难问题标准答法
 - `docs/zh/安全响应策略_2026_06_13.md`：正式化的测试网阶段安全响应与 incident 流程

@@ -46,6 +46,7 @@ Last updated: 2026-04-30
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md` — current official-source shortlist for grants and visibility targets
 - `docs/en/GRANT_APPLICATION_KIT_2026_06_27.md` — practical grant-ready application template kit
 - `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md` — truthful X / Telegram outreach copy kit
+- `docs/en/YNX_AUDIENCE_MAP_2026_06_28.md` — routing map for developers, grant reviewers, providers, operators, and community readers
 - `docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md` — honest moat definition and architectural boundary
 - `docs/en/INVESTOR_HARD_QUESTIONS_2026_06_13.md` — direct answers to the hardest investor diligence questions
 - `docs/en/SECURITY_RESPONSE_POLICY_2026_06_13.md` — formalized testnet-era security and incident-response policy

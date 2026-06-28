@@ -94,6 +94,7 @@ cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/card_provider_readiness_pack_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
+cp -R "${OUTPUT_BASE}/audience_map_pack_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
 cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/grant_visibility_pack_latest" "${OUT_DIR}/reports/"
 
@@ -129,6 +130,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 - [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
+- [Audience map pack](reports/audience_map_pack_latest/MANIFEST.md)
 - [Founder/operator evidence pack](${FULL_STACK_PACK_REL})
 - [Grant/visibility pack](${GRANT_PACK_REL})
 
@@ -177,6 +179,7 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "live_alignment_rollout_packet_md": "reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md",
     "capability_audit_md": "reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md",
     "card_provider_readiness_manifest": "reports/card_provider_readiness_pack_latest/MANIFEST.md",
+    "audience_map_manifest": "reports/audience_map_pack_latest/MANIFEST.md",
     "full_stack_evidence_manifest": "${FULL_STACK_PACK_REL}",
     "grant_visibility_manifest": "${GRANT_PACK_REL}",
     "sha256sums": "SHA256SUMS.txt"
@@ -197,10 +200,11 @@ Recommended open order:
 6. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
 7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
 8. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
-9. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-10. `reports/grant_visibility_pack_latest/MANIFEST.md`
-11. `ARTIFACT_INDEX.json`
-12. `SHA256SUMS.txt`
+9. `reports/audience_map_pack_latest/MANIFEST.md`
+10. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+11. `reports/grant_visibility_pack_latest/MANIFEST.md`
+12. `ARTIFACT_INDEX.json`
+13. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

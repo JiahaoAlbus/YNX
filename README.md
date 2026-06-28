@@ -95,6 +95,8 @@ Docs:
 - EN: [`docs/en/AI_WEB4_OFFICIAL_DEMO.md`](docs/en/AI_WEB4_OFFICIAL_DEMO.md)
 - EN: [`docs/en/YNX_CARD_MOCK.md`](docs/en/YNX_CARD_MOCK.md)
 - EN: [`docs/en/YNX_CARD_MOCK_DEMO.md`](docs/en/YNX_CARD_MOCK_DEMO.md)
+- EN: Card mock now includes mock settlement, reversal, refund, and
+  reconciliation history after authorization
 - EN: [`docs/en/AI_AGENT_SPENDING.md`](docs/en/AI_AGENT_SPENDING.md)
 - EN: [`docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md`](docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)

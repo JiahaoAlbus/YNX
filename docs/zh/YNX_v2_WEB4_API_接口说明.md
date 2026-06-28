@@ -118,6 +118,15 @@ YNX v2 Web4 API 的执行顺序是：
     - `max_per_txn`
     - `max_daily_spend`
     - `max_total_spend`
+- `POST /web4/cards/:card_id/settle`（需要 `x-ynx-owner`）
+  - 请求体至少应包含：
+    - `authorization_id`
+- `POST /web4/cards/:card_id/reverse`（需要 `x-ynx-owner`）
+  - 请求体至少应包含：
+    - `authorization_id`
+- `POST /web4/cards/:card_id/refund`（需要 `x-ynx-owner`）
+  - 请求体至少应包含：
+    - `authorization_id`
 - `POST /web4/cards/:card_id/freeze`（需要 `x-ynx-owner`）
 - `POST /web4/cards/:card_id/resume`（需要 `x-ynx-owner`）
 

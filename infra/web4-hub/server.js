@@ -253,6 +253,7 @@ function normalizeState(loaded) {
     sessions: Array.isArray(source.sessions) ? source.sessions : [],
     cards: Array.isArray(source.cards) ? source.cards : [],
     card_authorizations: Array.isArray(source.card_authorizations) ? source.card_authorizations : [],
+    card_transactions: Array.isArray(source.card_transactions) ? source.card_transactions : [],
     tools: Array.isArray(source.tools) ? source.tools : [],
     tool_calls: Array.isArray(source.tool_calls) ? source.tool_calls : [],
     wallet_bootstraps: Array.isArray(source.wallet_bootstraps) ? source.wallet_bootstraps : [],
@@ -302,6 +303,7 @@ const WEB4_MAX_POLICIES = parseInt(process.env.WEB4_MAX_POLICIES || "100000", 10
 const WEB4_MAX_SESSIONS = parseInt(process.env.WEB4_MAX_SESSIONS || "300000", 10);
 const WEB4_MAX_CARDS = parseInt(process.env.WEB4_MAX_CARDS || "100000", 10);
 const WEB4_MAX_CARD_AUTHORIZATIONS = parseInt(process.env.WEB4_MAX_CARD_AUTHORIZATIONS || "500000", 10);
+const WEB4_MAX_CARD_TRANSACTIONS = parseInt(process.env.WEB4_MAX_CARD_TRANSACTIONS || "500000", 10);
 const WEB4_MAX_TOOLS = parseInt(process.env.WEB4_MAX_TOOLS || "50000", 10);
 const WEB4_MAX_TOOL_CALLS = parseInt(process.env.WEB4_MAX_TOOL_CALLS || "500000", 10);
 const WEB4_MAX_BOOTSTRAPS = parseInt(process.env.WEB4_MAX_BOOTSTRAPS || "100000", 10);
@@ -347,6 +349,9 @@ function trimStateForRetention() {
   if (WEB4_MAX_CARDS > 0 && state.cards.length > WEB4_MAX_CARDS) state.cards = state.cards.slice(0, WEB4_MAX_CARDS);
   if (WEB4_MAX_CARD_AUTHORIZATIONS > 0 && state.card_authorizations.length > WEB4_MAX_CARD_AUTHORIZATIONS) {
     state.card_authorizations = state.card_authorizations.slice(0, WEB4_MAX_CARD_AUTHORIZATIONS);
+  }
+  if (WEB4_MAX_CARD_TRANSACTIONS > 0 && state.card_transactions.length > WEB4_MAX_CARD_TRANSACTIONS) {
+    state.card_transactions = state.card_transactions.slice(0, WEB4_MAX_CARD_TRANSACTIONS);
   }
   if (WEB4_MAX_TOOLS > 0 && state.tools.length > WEB4_MAX_TOOLS) state.tools = state.tools.slice(0, WEB4_MAX_TOOLS);
   if (WEB4_MAX_TOOL_CALLS > 0 && state.tool_calls.length > WEB4_MAX_TOOL_CALLS) state.tool_calls = state.tool_calls.slice(0, WEB4_MAX_TOOL_CALLS);
@@ -416,6 +421,10 @@ function findTool(toolId) {
 
 function findCard(cardId) {
   return state.cards.find((item) => item.card_id === cardId);
+}
+
+function findCardAuthorization(authorizationId) {
+  return state.card_authorizations.find((item) => item.authorization_id === authorizationId);
 }
 
 function findBootstrapByApiKey(apiKey) {
@@ -519,6 +528,7 @@ function summarizeStats() {
     sessions_active: state.sessions.filter((item) => item.status === "active").length,
     cards: state.cards.length,
     card_authorizations: state.card_authorizations.length,
+    card_transactions: state.card_transactions.length,
     tools: state.tools.length,
     tool_calls: state.tool_calls.length,
     bootstraps: state.wallet_bootstraps.length,
@@ -586,6 +596,59 @@ function createCard(body, policy) {
 
 function sanitizeCard(card) {
   return { ...card };
+}
+
+function cardAuthorizationRemaining(auth) {
+  return Math.max(0, Number(auth.amount || 0) - Number(auth.capture_total || 0) - Number(auth.reversed_total || 0));
+}
+
+function cardAuthorizationNetSettled(auth) {
+  return Math.max(0, Number(auth.capture_total || 0) - Number(auth.refunded_total || 0));
+}
+
+function cardAuthorizationStatus(auth) {
+  if (!auth.approved) return "declined";
+  const remaining = cardAuthorizationRemaining(auth);
+  const captured = Number(auth.capture_total || 0);
+  const refunded = Number(auth.refunded_total || 0);
+  const reversed = Number(auth.reversed_total || 0);
+  const netSettled = cardAuthorizationNetSettled(auth);
+  if (refunded > 0 && netSettled === 0 && captured > 0) return "refunded";
+  if (refunded > 0) return "partially_refunded";
+  if (captured === 0 && reversed >= Number(auth.amount || 0)) return "reversed";
+  if (captured > 0 && remaining === 0) return "settled";
+  if (captured > 0) return "partially_settled";
+  if (reversed > 0 && remaining > 0) return "partially_reversed";
+  return "authorized";
+}
+
+function decorateCardAuthorization(auth) {
+  return {
+    ...auth,
+    remaining_authorized: cardAuthorizationRemaining(auth),
+    net_settled_total: cardAuthorizationNetSettled(auth),
+    status: cardAuthorizationStatus(auth),
+  };
+}
+
+function createCardTransaction(type, card, auth, body) {
+  return {
+    transaction_id: body.transaction_id || randomId("cardtxn"),
+    type,
+    card_id: card.card_id,
+    authorization_id: auth.authorization_id,
+    policy_id: auth.policy_id,
+    session_id: auth.session_id,
+    agent_id: auth.agent_id,
+    amount: toNumber(body.amount, 0),
+    currency: String(body.currency || auth.currency || card.currency || "USD").toUpperCase(),
+    merchant: auth.merchant,
+    mcc: auth.mcc,
+    country: auth.country,
+    external_ref: String(body.external_ref || body.provider_ref || "").trim(),
+    note: String(body.note || "").trim(),
+    created_at: nowIso(),
+  };
 }
 
 function evaluateCardAuthorization(card, body) {
@@ -1393,8 +1456,12 @@ const server = http.createServer(async (req, res) => {
     if (!card) return json(res, 404, { ok: false, error: "card_not_found" });
 
     if (req.method === "GET" && !action) {
-      const items = state.card_authorizations.filter((item) => item.card_id === cardId).slice(0, 100);
-      return json(res, 200, { ok: true, card: sanitizeCard(card), authorizations: items });
+      const authorizations = state.card_authorizations
+        .filter((item) => item.card_id === cardId)
+        .slice(0, 100)
+        .map(decorateCardAuthorization);
+      const transactions = state.card_transactions.filter((item) => item.card_id === cardId).slice(0, 100);
+      return json(res, 200, { ok: true, card: sanitizeCard(card), authorizations, transactions });
     }
 
     if (req.method === "POST" && action === "freeze") {
@@ -1474,7 +1541,11 @@ const server = http.createServer(async (req, res) => {
         country: evaluation.country,
         approved: evaluation.approved,
         reasons: evaluation.reasons,
+        capture_total: 0,
+        reversed_total: 0,
+        refunded_total: 0,
         created_at: nowIso(),
+        updated_at: nowIso(),
       };
 
       if (evaluation.approved) {
@@ -1503,9 +1574,117 @@ const server = http.createServer(async (req, res) => {
       return json(res, evaluation.approved ? 200 : 403, {
         ok: evaluation.approved,
         card: sanitizeCard(card),
-        authorization: auth,
+        authorization: decorateCardAuthorization(auth),
         remaining_ops: Math.max(0, session.max_ops - session.ops_used),
         remaining_spend: Math.max(0, session.max_spend - session.spend_used),
+      });
+    }
+
+    if (req.method === "POST" && action === "settle") {
+      const policy = findPolicy(card.policy_id);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      const authorizationId = String(body.authorization_id || "").trim();
+      if (!authorizationId) return json(res, 400, { ok: false, error: "authorization_id_required" });
+      const auth = findCardAuthorization(authorizationId);
+      if (!auth || auth.card_id !== card.card_id) return json(res, 404, { ok: false, error: "authorization_not_found" });
+      if (!auth.approved) return json(res, 400, { ok: false, error: "authorization_not_approved" });
+      const amount = toNumber(body.amount, auth.amount);
+      const remaining = cardAuthorizationRemaining(auth);
+      if (!(amount > 0)) return json(res, 400, { ok: false, error: "amount_invalid" });
+      if (amount > remaining) return json(res, 400, { ok: false, error: "settlement_amount_exceeds_authorized_remaining" });
+      const txn = createCardTransaction("settled", card, auth, { ...body, amount });
+      auth.capture_total += amount;
+      auth.updated_at = nowIso();
+      state.card_transactions.unshift(txn);
+      addAudit("card.settled", {
+        policy_id: auth.policy_id,
+        card_id: card.card_id,
+        authorization_id: auth.authorization_id,
+        transaction_id: txn.transaction_id,
+        amount,
+        external_ref: txn.external_ref,
+      });
+      persist();
+      return json(res, 200, {
+        ok: true,
+        card: sanitizeCard(card),
+        authorization: decorateCardAuthorization(auth),
+        transaction: txn,
+      });
+    }
+
+    if (req.method === "POST" && action === "reverse") {
+      const policy = findPolicy(card.policy_id);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      const authorizationId = String(body.authorization_id || "").trim();
+      if (!authorizationId) return json(res, 400, { ok: false, error: "authorization_id_required" });
+      const auth = findCardAuthorization(authorizationId);
+      if (!auth || auth.card_id !== card.card_id) return json(res, 404, { ok: false, error: "authorization_not_found" });
+      if (!auth.approved) return json(res, 400, { ok: false, error: "authorization_not_approved" });
+      const remaining = cardAuthorizationRemaining(auth);
+      const amount = toNumber(body.amount, remaining);
+      if (!(amount > 0)) return json(res, 400, { ok: false, error: "amount_invalid" });
+      if (amount > remaining) return json(res, 400, { ok: false, error: "reversal_amount_exceeds_authorized_remaining" });
+      const txn = createCardTransaction("reversed", card, auth, { ...body, amount });
+      auth.reversed_total += amount;
+      auth.updated_at = nowIso();
+      state.card_transactions.unshift(txn);
+      addAudit("card.reversed", {
+        policy_id: auth.policy_id,
+        card_id: card.card_id,
+        authorization_id: auth.authorization_id,
+        transaction_id: txn.transaction_id,
+        amount,
+        external_ref: txn.external_ref,
+      });
+      persist();
+      return json(res, 200, {
+        ok: true,
+        card: sanitizeCard(card),
+        authorization: decorateCardAuthorization(auth),
+        transaction: txn,
+      });
+    }
+
+    if (req.method === "POST" && action === "refund") {
+      const policy = findPolicy(card.policy_id);
+      if (!policy) return json(res, 404, { ok: false, error: "policy_not_found" });
+      if (!verifyOwner(req, policy)) return json(res, 401, { ok: false, error: "owner_auth_failed" });
+      const body = await parseBody(req, WEB4_BODY_LIMIT_BYTES);
+      if (!requireValidBody(res, body)) return;
+      const authorizationId = String(body.authorization_id || "").trim();
+      if (!authorizationId) return json(res, 400, { ok: false, error: "authorization_id_required" });
+      const auth = findCardAuthorization(authorizationId);
+      if (!auth || auth.card_id !== card.card_id) return json(res, 404, { ok: false, error: "authorization_not_found" });
+      if (!auth.approved) return json(res, 400, { ok: false, error: "authorization_not_approved" });
+      const refundable = cardAuthorizationNetSettled(auth);
+      const amount = toNumber(body.amount, refundable);
+      if (!(amount > 0)) return json(res, 400, { ok: false, error: "amount_invalid" });
+      if (amount > refundable) return json(res, 400, { ok: false, error: "refund_amount_exceeds_net_settled" });
+      const txn = createCardTransaction("refunded", card, auth, { ...body, amount });
+      auth.refunded_total += amount;
+      auth.updated_at = nowIso();
+      state.card_transactions.unshift(txn);
+      addAudit("card.refunded", {
+        policy_id: auth.policy_id,
+        card_id: card.card_id,
+        authorization_id: auth.authorization_id,
+        transaction_id: txn.transaction_id,
+        amount,
+        external_ref: txn.external_ref,
+      });
+      persist();
+      return json(res, 200, {
+        ok: true,
+        card: sanitizeCard(card),
+        authorization: decorateCardAuthorization(auth),
+        transaction: txn,
       });
     }
   }

@@ -1018,6 +1018,7 @@ test("creates a YNX Card mock and authorizes an agent-bounded spend within rules
   const detail = assertJson(await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}`), 200);
   assert.equal(detail.card.spent_total, 20);
   assert.equal(detail.authorizations[0].approved, true);
+  assert.equal(detail.authorizations[0].status, "authorized");
 });
 
 test("declines YNX Card mock spends outside rules and records the denial", async (t) => {
@@ -1100,4 +1101,176 @@ test("declines YNX Card mock spends outside rules and records the denial", async
     200
   );
   assert.equal(audit.items.some((item) => item.event === "card.declined"), true);
+});
+
+test("records YNX Card mock settlement, reversal, and refund lifecycle events", async (t) => {
+  const port = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-card-ledger-");
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_9102-1",
+    },
+    `http://127.0.0.1:${port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const created = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies`, {
+      method: "POST",
+      body: {
+        owner: "ledger-owner",
+        allowed_actions: ["agent.create", "card.authorize", "audit.read"],
+        max_total_spend: 500,
+        max_daily_spend: 500,
+      },
+    }),
+    201
+  );
+
+  const ownerSession = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["agent.create", "card.authorize", "audit.read"],
+        max_ops: 10,
+        max_spend: 200,
+      },
+    }),
+    201
+  );
+
+  const agent = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/agents`, {
+      method: "POST",
+      headers: { "x-ynx-session": ownerSession.token },
+      body: {
+        policy_id: created.policy.policy_id,
+        owner: "ledger-owner",
+        name: "ledger-agent",
+        capabilities: ["spend"],
+      },
+    }),
+    201
+  );
+
+  const card = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        policy_id: created.policy.policy_id,
+        label: "Ledger Card",
+        asset_ref: "YUSD.test",
+        require_agent: true,
+        allowed_agents: [agent.agent.agent_id],
+        allowed_merchants: ["OpenAI"],
+        max_per_txn: 100,
+      },
+    }),
+    201
+  );
+
+  const spendSession = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/policies/${created.policy.policy_id}/sessions`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        capabilities: ["card.authorize", "audit.read"],
+        max_ops: 10,
+        max_spend: 150,
+      },
+    }),
+    201
+  );
+
+  const approved = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/authorize`, {
+      method: "POST",
+      headers: { "x-ynx-session": spendSession.token },
+      body: {
+        policy_id: created.policy.policy_id,
+        agent_id: agent.agent.agent_id,
+        amount: 40,
+        merchant: "OpenAI",
+        mcc: "5734",
+        country: "US",
+      },
+    }),
+    200
+  );
+  assert.equal(approved.authorization.status, "authorized");
+
+  const settled = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/settle`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        authorization_id: approved.authorization.authorization_id,
+        amount: 25,
+        external_ref: "issuer-settle-1",
+      },
+    }),
+    200
+  );
+  assert.equal(settled.authorization.capture_total, 25);
+  assert.equal(settled.authorization.remaining_authorized, 15);
+  assert.equal(settled.authorization.status, "partially_settled");
+  assert.equal(settled.transaction.type, "settled");
+
+  const reversed = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/reverse`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        authorization_id: approved.authorization.authorization_id,
+        amount: 15,
+        external_ref: "issuer-reversal-1",
+      },
+    }),
+    200
+  );
+  assert.equal(reversed.authorization.reversed_total, 15);
+  assert.equal(reversed.authorization.remaining_authorized, 0);
+  assert.equal(reversed.authorization.status, "settled");
+  assert.equal(reversed.transaction.type, "reversed");
+
+  const refunded = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}/refund`, {
+      method: "POST",
+      headers: { "x-ynx-owner": created.owner_secret },
+      body: {
+        authorization_id: approved.authorization.authorization_id,
+        amount: 5,
+        external_ref: "issuer-refund-1",
+      },
+    }),
+    200
+  );
+  assert.equal(refunded.authorization.refunded_total, 5);
+  assert.equal(refunded.authorization.net_settled_total, 20);
+  assert.equal(refunded.authorization.status, "partially_refunded");
+  assert.equal(refunded.transaction.type, "refunded");
+
+  const detail = assertJson(await requestJson(`http://127.0.0.1:${port}/web4/cards/${card.card.card_id}`), 200);
+  assert.equal(detail.authorizations[0].authorization_id, approved.authorization.authorization_id);
+  assert.equal(detail.authorizations[0].status, "partially_refunded");
+  assert.equal(detail.transactions.length, 3);
+  assert.deepEqual(detail.transactions.map((item) => item.type), ["refunded", "reversed", "settled"]);
+
+  const audit = assertJson(
+    await requestJson(`http://127.0.0.1:${port}/web4/audit?policy_id=${encodeURIComponent(created.policy.policy_id)}`, {
+      headers: { "x-ynx-session": spendSession.token },
+    }),
+    200
+  );
+  assert.equal(audit.items.some((item) => item.event === "card.settled"), true);
+  assert.equal(audit.items.some((item) => item.event === "card.reversed"), true);
+  assert.equal(audit.items.some((item) => item.event === "card.refunded"), true);
 });

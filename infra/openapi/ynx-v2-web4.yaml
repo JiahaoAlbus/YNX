@@ -268,6 +268,57 @@ paths:
           description: Approved
         "403":
           description: Declined
+  /web4/cards/{card_id}/settle:
+    post:
+      summary: Record a mock card settlement against an approved authorization
+      parameters:
+        - in: path
+          name: card_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/cards/{card_id}/reverse:
+    post:
+      summary: Record a mock authorization reversal against remaining authorized amount
+      parameters:
+        - in: path
+          name: card_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /web4/cards/{card_id}/refund:
+    post:
+      summary: Record a mock refund against net settled card spend
+      parameters:
+        - in: path
+          name: card_id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-ynx-owner
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
   /web4/cards/{card_id}/freeze:
     post:
       summary: Freeze YNX Card mock

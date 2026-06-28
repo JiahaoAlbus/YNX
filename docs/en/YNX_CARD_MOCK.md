@@ -13,9 +13,11 @@ future compliant card-program integrations:
 
 - mock card creation under an owner policy
 - bounded agent spending authorization
+- mock settlement / reversal / refund lifecycle after authorization
 - merchant / MCC / country / per-txn / daily / total rule evaluation
 - explicit approve or decline decision
-- audit logs for every create, authorize, decline, freeze, and resume action
+- audit logs and transaction history for create, authorize, decline, settle,
+  reverse, refund, freeze, and resume action
 
 This means YNX can already demonstrate the important part of the idea:
 
@@ -32,6 +34,7 @@ YNX Card Mock sits on top of the existing Web4 control plane:
 2. policy
 3. session
 4. card authorization attempt
+5. mock reconciliation event
 
 The spend path is intentionally layered:
 
@@ -39,6 +42,8 @@ The spend path is intentionally layered:
 - the session and policy spend ceilings must allow the attempt
 - the card mock rules must allow the merchant / MCC / country / amount
 - the decision is then recorded in audit and authorization history
+- the owner/operator can then record settlement, reversal, or refund entries
+  against that authorization
 
 This makes the card layer consistent with the rest of YNX instead of becoming a
 separate one-off demo.
@@ -51,6 +56,9 @@ Current Web4 Hub card-mock capabilities:
 - `GET /web4/cards`
 - `GET /web4/cards/:card_id`
 - `POST /web4/cards/:card_id/authorize`
+- `POST /web4/cards/:card_id/settle`
+- `POST /web4/cards/:card_id/reverse`
+- `POST /web4/cards/:card_id/refund`
 - `POST /web4/cards/:card_id/freeze`
 - `POST /web4/cards/:card_id/resume`
 
@@ -73,8 +81,23 @@ Current audit/event outputs:
 - `card.created`
 - `card.authorized`
 - `card.declined`
+- `card.settled`
+- `card.reversed`
+- `card.refunded`
 - `card.frozen`
 - `card.resumed`
+
+Current detail outputs:
+
+- authorization records expose:
+  - `capture_total`
+  - `reversed_total`
+  - `refunded_total`
+  - `remaining_authorized`
+  - `net_settled_total`
+  - lifecycle `status`
+- `GET /web4/cards/:card_id` now also returns a `transactions` list for
+  settlement / reversal / refund history
 
 ## 4. What this is not
 
@@ -113,7 +136,7 @@ need:
 - KYC / KYB / sanctions / AML workflow
 - provider API credentials and operational contracts
 - secure PCI-scoped card-data handling design
-- production reconciliation, dispute, refund, and incident workflows
+- provider-grade reconciliation, dispute, chargeback, and incident workflows
 
 The mock surface is intentionally the pre-provider foundation for that future
 integration, not a fake substitute for it.

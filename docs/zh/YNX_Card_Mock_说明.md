@@ -11,9 +11,11 @@ YNX Card Mock 是 YNX 当前的可编程卡控层。
 
 - 在 owner policy 下创建 mock card
 - 给 agent 有限消费权限
+- 支持授权后的 mock 结算 / 冲正 / 退款闭环
 - 按 merchant / MCC / country / 单笔 / 日限额 / 总限额做规则判断
 - 明确返回通过或拒绝
-- 每一次创建、通过、拒绝、冻结、恢复都有审计记录
+- 每一次创建、通过、拒绝、结算、冲正、退款、冻结、恢复都有审计
+  记录和交易流水
 
 这意味着 YNX 现在已经能证明最重要的事情：
 
@@ -30,6 +32,7 @@ YNX Card Mock 建立在现有 Web4 control plane 之上：
 2. policy
 3. session
 4. card authorization attempt
+5. mock reconciliation event
 
 消费路径是刻意分层的：
 
@@ -37,6 +40,7 @@ YNX Card Mock 建立在现有 Web4 control plane 之上：
 - session 和 policy 的 spend ceiling 必须先允许
 - 然后 card mock 规则再判断 merchant / MCC / country / amount
 - 最后把结论写入 audit 和 authorization history
+- owner / operator 之后可以继续登记 settlement、reversal、refund
 
 这样 Card 就不是一个孤立 demo，而是和 YNX 现有 Web4 / AI / audit 架构一致。
 
@@ -48,6 +52,9 @@ YNX Card Mock 建立在现有 Web4 control plane 之上：
 - `GET /web4/cards`
 - `GET /web4/cards/:card_id`
 - `POST /web4/cards/:card_id/authorize`
+- `POST /web4/cards/:card_id/settle`
+- `POST /web4/cards/:card_id/reverse`
+- `POST /web4/cards/:card_id/refund`
 - `POST /web4/cards/:card_id/freeze`
 - `POST /web4/cards/:card_id/resume`
 
@@ -70,8 +77,23 @@ YNX Card Mock 建立在现有 Web4 control plane 之上：
 - `card.created`
 - `card.authorized`
 - `card.declined`
+- `card.settled`
+- `card.reversed`
+- `card.refunded`
 - `card.frozen`
 - `card.resumed`
+
+当前详情页输出还包括：
+
+- authorization 记录里的：
+  - `capture_total`
+  - `reversed_total`
+  - `refunded_total`
+  - `remaining_authorized`
+  - `net_settled_total`
+  - `status`
+- `GET /web4/cards/:card_id` 现在也会返回 `transactions`，用于查看结算 /
+  冲正 / 退款流水
 
 ## 4. 它不是什么
 

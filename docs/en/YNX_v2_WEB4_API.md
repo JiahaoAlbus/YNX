@@ -118,11 +118,33 @@ YNX v2 Web4 APIs follow sovereignty order:
     - `max_per_txn`
     - `max_daily_spend`
     - `max_total_spend`
+- `POST /web4/cards/:card_id/settle` (owner header required)
+  - Required body fields:
+    - `authorization_id`
+  - Optional fields:
+    - `amount` (defaults to remaining authorized amount)
+    - `external_ref`
+    - `note`
+- `POST /web4/cards/:card_id/reverse` (owner header required)
+  - Required body fields:
+    - `authorization_id`
+  - Optional fields:
+    - `amount` (defaults to remaining authorized amount)
+    - `external_ref`
+    - `note`
+- `POST /web4/cards/:card_id/refund` (owner header required)
+  - Required body fields:
+    - `authorization_id`
+  - Optional fields:
+    - `amount` (defaults to current net settled amount)
+    - `external_ref`
+    - `note`
 - `POST /web4/cards/:card_id/freeze` (owner header required)
 - `POST /web4/cards/:card_id/resume` (owner header required)
 
 This is currently a programmable mock-card control layer, not a real issuer
-integration.
+integration. `GET /web4/cards/:card_id` returns both authorization history and
+mock reconciliation transactions.
 
 ## 8. Intent Lifecycle
 

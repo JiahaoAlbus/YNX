@@ -55,6 +55,9 @@ Current audit events already implemented:
 - `card.created`
 - `card.authorized`
 - `card.declined`
+- `card.settled`
+- `card.reversed`
+- `card.refunded`
 - `card.frozen`
 - `card.resumed`
 
@@ -64,6 +67,9 @@ Current API surfaces:
 - `GET /web4/cards`
 - `GET /web4/cards/:card_id`
 - `POST /web4/cards/:card_id/authorize`
+- `POST /web4/cards/:card_id/settle`
+- `POST /web4/cards/:card_id/reverse`
+- `POST /web4/cards/:card_id/refund`
 - `POST /web4/cards/:card_id/freeze`
 - `POST /web4/cards/:card_id/resume`
 
@@ -84,7 +90,7 @@ YNX does **not** currently claim:
 - live PAN / CVV handling
 - PCI card-data production environment
 - live authorization routing into Visa / Mastercard / issuer processor rails
-- production settlement / reconciliation / chargeback / refund operations
+- provider-grade settlement / reconciliation / chargeback / refund operations
 - YNX-operated consumer KYC as a base protocol business
 
 This packet is intentionally pre-provider and pre-production.
@@ -122,7 +128,7 @@ not become a disguised custody or issuer operator by default.
 | card issuance | not implemented | provider responsibility |
 | PAN/CVV lifecycle | not implemented | provider responsibility in PCI scope |
 | KYC/KYB/AML | not implemented by YNX base protocol | regulated partner responsibility unless legal structure changes |
-| settlement / disputes / refunds | not implemented | provider responsibility plus agreed YNX/operator workflow |
+| settlement / disputes / refunds | mock ledger now implemented; provider-grade ops not implemented | provider responsibility plus agreed YNX/operator workflow |
 
 ## 6. Technical requirements before a real integration
 
@@ -133,9 +139,9 @@ Before moving beyond mock, YNX would still need:
 - provider-side idempotency and reference mapping
 - event webhooks or polling model
 - secure storage model for provider credentials
-- production reconciliation ledger and exception handling
+- provider-grade reconciliation ledger and exception handling
 - refund / reversal / dispute / incident workflows
-- audit mapping from YNX `card.authorized` / `card.declined` events to provider event ids
+- audit mapping from YNX `card.authorized` / `card.declined` / `card.settled` / `card.refunded` events to provider event ids
 
 ## 7. Security boundary YNX wants to preserve
 

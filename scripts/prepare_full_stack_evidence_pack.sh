@@ -7,6 +7,7 @@ RUN_ALIGNMENT=1
 RUN_BRIDGE_PACKET=1
 RUN_ROLLOUT_PACKET=1
 RUN_CAPABILITY_AUDIT=1
+RUN_CARD_PROVIDER_PACK=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,10 +35,14 @@ while [[ $# -gt 0 ]]; do
       RUN_CAPABILITY_AUDIT=0
       shift
       ;;
+    --skip-card-provider-pack)
+      RUN_CARD_PROVIDER_PACK=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet] [--skip-capability-audit]
+  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet] [--skip-capability-audit] [--skip-card-provider-pack]
 
 Generate a founder/operator-ready full-stack evidence pack that bundles the
 latest live snapshot, runtime alignment audit, and supporting readiness docs
@@ -91,6 +96,9 @@ fi
 if [[ "${RUN_CAPABILITY_AUDIT}" -eq 1 ]]; then
   bash ./scripts/prepare_full_stack_capability_audit.sh --skip-snapshot >/dev/null
 fi
+if [[ "${RUN_CARD_PROVIDER_PACK}" -eq 1 ]]; then
+  bash ./scripts/prepare_card_provider_readiness_pack.sh --skip-docs --skip-capability-audit >/dev/null
+fi
 
 declare -a COPY_FILES=(
   "README.md"
@@ -120,6 +128,7 @@ cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/card_provider_readiness_pack_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
 
 LATEST_DOC_REPORT="$(ls -1t "${OUTPUT_BASE}"/docs_verification_report_*.md 2>/dev/null | head -n 1 || true)"
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
@@ -147,6 +156,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
+- [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
 EOF
 
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
@@ -196,6 +206,7 @@ Open these first:
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 - `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
 - `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+- `reports/card_provider_readiness_pack_latest/MANIFEST.md`
 - `SHA256SUMS.txt`
 EOF
 

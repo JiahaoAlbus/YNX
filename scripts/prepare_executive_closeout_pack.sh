@@ -66,6 +66,7 @@ if [[ "${REFRESH_DEPENDENCIES}" -eq 1 ]]; then
   bash ./scripts/verify_live_runtime_alignment.sh >/dev/null
   bash ./scripts/prepare_bridge_blocker_packet.sh >/dev/null
   bash ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
+  bash ./scripts/prepare_card_provider_readiness_pack.sh >/dev/null
   bash ./scripts/prepare_full_stack_evidence_pack.sh >/dev/null
   bash ./scripts/prepare_grant_visibility_pack.sh >/dev/null
 fi
@@ -92,6 +93,7 @@ cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/card_provider_readiness_pack_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
 cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/grant_visibility_pack_latest" "${OUT_DIR}/reports/"
 
@@ -126,6 +128,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
 - [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
+- [Card provider readiness pack](reports/card_provider_readiness_pack_latest/MANIFEST.md)
 - [Founder/operator evidence pack](${FULL_STACK_PACK_REL})
 - [Grant/visibility pack](${GRANT_PACK_REL})
 
@@ -173,6 +176,7 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "bridge_blocker_packet_md": "reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md",
     "live_alignment_rollout_packet_md": "reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md",
     "capability_audit_md": "reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md",
+    "card_provider_readiness_manifest": "reports/card_provider_readiness_pack_latest/MANIFEST.md",
     "full_stack_evidence_manifest": "${FULL_STACK_PACK_REL}",
     "grant_visibility_manifest": "${GRANT_PACK_REL}",
     "sha256sums": "SHA256SUMS.txt"
@@ -192,10 +196,11 @@ Recommended open order:
 5. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 6. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
 7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-8. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-9. `reports/grant_visibility_pack_latest/MANIFEST.md`
-10. `ARTIFACT_INDEX.json`
-11. `SHA256SUMS.txt`
+8. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
+9. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+10. `reports/grant_visibility_pack_latest/MANIFEST.md`
+11. `ARTIFACT_INDEX.json`
+12. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

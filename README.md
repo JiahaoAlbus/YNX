@@ -90,10 +90,12 @@ Docs:
 - EN: [`docs/en/YNX_CARD_MOCK.md`](docs/en/YNX_CARD_MOCK.md)
 - EN: [`docs/en/YNX_CARD_MOCK_DEMO.md`](docs/en/YNX_CARD_MOCK_DEMO.md)
 - EN: [`docs/en/AI_AGENT_SPENDING.md`](docs/en/AI_AGENT_SPENDING.md)
+- EN: [`docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md`](docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md)
 - ZH: [`docs/zh/AI_WEB4_官方演示.md`](docs/zh/AI_WEB4_官方演示.md)
 - ZH: [`docs/zh/YNX_Card_Mock_说明.md`](docs/zh/YNX_Card_Mock_说明.md)
 - ZH: [`docs/zh/YNX_Card_Mock_演示.md`](docs/zh/YNX_Card_Mock_演示.md)
 - ZH: [`docs/zh/AI_Agent_Spending_说明.md`](docs/zh/AI_Agent_Spending_说明.md)
+- ZH: [`docs/zh/YNX_Card_服务商对接准备包_2026_06_28.md`](docs/zh/YNX_Card_服务商对接准备包_2026_06_28.md)
 
 ### 4) Asset status and speed-first trading direction
 
@@ -244,6 +246,7 @@ Use the builder quickstart for EVM RPC, Web4 Hub, AI Gateway, and local demo ent
 - Full-stack evidence pack: `./scripts/prepare_full_stack_evidence_pack.sh`
 - Grant / visibility pack: `./scripts/prepare_grant_visibility_pack.sh`
 - Executive closeout pack: `./scripts/prepare_executive_closeout_pack.sh`
+- Card provider readiness pack: `./scripts/prepare_card_provider_readiness_pack.sh`
 - Verify latest closeout packs: `./scripts/verify_latest_closeout_packs.sh`
 
 ### 6) Node Operators / Validators

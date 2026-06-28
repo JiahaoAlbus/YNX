@@ -21,6 +21,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_CARD_MOCK.md` — current programmable mock-card control layer and future issuer-integration boundary
 - `docs/en/YNX_CARD_MOCK_DEMO.md` — runnable wallet-to-policy-to-card mock demo flow
 - `docs/en/AI_AGENT_SPENDING.md` — bounded AI-agent spending model across vault and card-control rails
+- `docs/en/YNX_CARD_PROVIDER_READINESS_PACKET_2026_06_28.md` — provider-facing packet for future issuer / processor integration review
 - `docs/en/YNX_v2_AI_SETTLEMENT_API.md` — v2 AI settlement API contract
 - `docs/en/ACCOUNTABILITY_FORENSICS_ENGINE.md` — adopted V2 accountability / forensics architecture decision
 - `docs/en/AI_WEB4_OFFICIAL_DEMO.md` — runnable AI/Web4 settlement demo for policy, session, job, and vault reward flow

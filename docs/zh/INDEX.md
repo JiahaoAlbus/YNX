@@ -16,6 +16,7 @@
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图
 - `docs/zh/AI_WEB4_官方演示.md`：可运行的 AI/Web4 结算闭环演示
+- `docs/zh/YNX_Card_服务商对接准备包_2026_06_28.md`：给 issuer / processor / 服务商看的 YNX Card 对接准备包
 - `docs/zh/问责与取证引擎.md`：YNX 当前问责 / 取证架构决议与边界
 - `docs/zh/V2_高保证加密与抗量子安全模型.md`：高保证加密与抗量子迁移基线
 - `docs/zh/YNX_ARES_混合抗量子加密协议.md`：YNX ARES 混合抗量子协议说明

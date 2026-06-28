@@ -53,12 +53,14 @@ need_file "output/grant_visibility_pack_latest/OUTREACH_CHECKLIST.md"
 need_file "output/full_stack_evidence_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/full_stack_evidence_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
+need_file "output/full_stack_evidence_pack_latest/reports/card_provider_readiness_pack_latest/MANIFEST.md"
 need_file "output/grant_visibility_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/grant_visibility_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/grant_visibility_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
 need_file "output/executive_closeout_pack_latest/reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md"
 need_file "output/executive_closeout_pack_latest/reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md"
 need_file "output/executive_closeout_pack_latest/reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md"
+need_file "output/executive_closeout_pack_latest/reports/card_provider_readiness_pack_latest/MANIFEST.md"
 need_file "output/full_stack_evidence_pack_latest/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
 need_file "output/full_stack_evidence_pack_latest/docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
 need_file "output/grant_visibility_pack_latest/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
@@ -93,6 +95,10 @@ grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.
   output/full_stack_evidence_pack_latest/MANIFEST.md \
   || fail "full-stack evidence pack manifest missing capability audit link"
 
+grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
+  output/full_stack_evidence_pack_latest/MANIFEST.md \
+  || fail "full-stack evidence pack manifest missing card provider readiness link"
+
 grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md' \
   output/grant_visibility_pack_latest/MANIFEST.md \
   || fail "grant visibility pack manifest missing capability audit link"
@@ -112,5 +118,9 @@ grep -q 'docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md' \
 grep -q 'reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md' \
   output/executive_closeout_pack_latest/MANIFEST.md \
   || fail "executive closeout pack manifest missing capability audit link"
+
+grep -q 'reports/card_provider_readiness_pack_latest/MANIFEST.md' \
+  output/executive_closeout_pack_latest/MANIFEST.md \
+  || fail "executive closeout pack manifest missing card provider readiness link"
 
 echo "PASS: latest closeout packs are present, hashed, and internally linked."

@@ -38,6 +38,12 @@
 output/ynx_card_demo/<run-id>/
 ```
 
+同时还会刷新一个稳定 latest 目录：
+
+```text
+output/ynx_card_demo_latest/
+```
+
 ## 3. 脚本实际做了什么
 
 1. 创建 demo 钱包

@@ -3,6 +3,7 @@ set -euo pipefail
 
 RUN_DOCS=1
 RUN_CAPABILITY_AUDIT=1
+RUN_CARD_DEMO=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -14,10 +15,14 @@ while [[ $# -gt 0 ]]; do
       RUN_CAPABILITY_AUDIT=0
       shift
       ;;
+    --skip-card-demo)
+      RUN_CARD_DEMO=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_card_provider_readiness_pack.sh [--skip-docs] [--skip-capability-audit]
+  scripts/prepare_card_provider_readiness_pack.sh [--skip-docs] [--skip-capability-audit] [--skip-card-demo]
 
 Generate a provider-facing YNX Card readiness pack with current mock logic,
 compliance boundary, capability audit, and provider-integration checklist.
@@ -58,6 +63,9 @@ fi
 if [[ "${RUN_CAPABILITY_AUDIT}" -eq 1 ]]; then
   bash ./scripts/prepare_full_stack_capability_audit.sh --skip-snapshot >/dev/null
 fi
+if [[ "${RUN_CARD_DEMO}" -eq 1 ]]; then
+  bash ./scripts/ynx_card_mock_demo.sh >/dev/null
+fi
 
 declare -a COPY_FILES=(
   "README.md"
@@ -91,6 +99,7 @@ done
 
 cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
+cp -R "${OUTPUT_BASE}/ynx_card_demo_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
 
 cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 # YNX Card Provider Readiness Pack
@@ -107,6 +116,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Current capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 - [YNX Card Mock](docs/en/YNX_CARD_MOCK.md)
 - [YNX Card Mock Demo](docs/en/YNX_CARD_MOCK_DEMO.md)
+- [Latest card demo evidence](reports/ynx_card_demo_latest/README.md)
 - [AI Agent Spending](docs/en/AI_AGENT_SPENDING.md)
 - [Compliance boundary](docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md)
 - [Web4 OpenAPI](infra/openapi/ynx-v2-web4.yaml)
@@ -142,11 +152,12 @@ Recommended open order:
 4. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
 5. `docs/en/YNX_CARD_MOCK.md`
 6. `docs/en/YNX_CARD_MOCK_DEMO.md`
-7. `docs/en/AI_AGENT_SPENDING.md`
-8. `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
-9. `infra/openapi/ynx-v2-web4.yaml`
-10. `PROVIDER_CHECKLIST.md`
-11. `SHA256SUMS.txt`
+7. `reports/ynx_card_demo_latest/README.md`
+8. `docs/en/AI_AGENT_SPENDING.md`
+9. `docs/en/NON_CUSTODIAL_BUSINESS_AND_COMPLIANCE_BOUNDARY.md`
+10. `infra/openapi/ynx-v2-web4.yaml`
+11. `PROVIDER_CHECKLIST.md`
+12. `SHA256SUMS.txt`
 EOF
 
 (

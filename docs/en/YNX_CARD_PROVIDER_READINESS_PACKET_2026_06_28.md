@@ -192,7 +192,7 @@ The best next step is a scoped provider conversation using this packet plus:
 
 - current capability audit
 - current truth matrix
-- current card mock demo evidence
+- current card mock demo evidence (`reports/ynx_card_demo_latest/`)
 - current provider go-live gates
 - current compliance boundary docs
 

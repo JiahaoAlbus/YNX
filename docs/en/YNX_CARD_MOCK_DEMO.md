@@ -40,6 +40,12 @@ evidence under:
 output/ynx_card_demo/<run-id>/
 ```
 
+It also refreshes a stable latest pointer at:
+
+```text
+output/ynx_card_demo_latest/
+```
+
 ## 3. What the script does
 
 1. creates a demo wallet

@@ -6,6 +6,7 @@ RUN_SNAPSHOT=1
 RUN_ALIGNMENT=1
 RUN_BRIDGE_PACKET=1
 RUN_ROLLOUT_PACKET=1
+RUN_CAPABILITY_AUDIT=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -29,10 +30,14 @@ while [[ $# -gt 0 ]]; do
       RUN_ROLLOUT_PACKET=0
       shift
       ;;
+    --skip-capability-audit)
+      RUN_CAPABILITY_AUDIT=0
+      shift
+      ;;
     -h|--help)
       cat <<'EOF'
 Usage:
-  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet]
+  scripts/prepare_full_stack_evidence_pack.sh [--skip-docs] [--skip-snapshot] [--skip-alignment] [--skip-bridge-packet] [--skip-rollout-packet] [--skip-capability-audit]
 
 Generate a founder/operator-ready full-stack evidence pack that bundles the
 latest live snapshot, runtime alignment audit, and supporting readiness docs
@@ -83,6 +88,9 @@ fi
 if [[ "${RUN_ROLLOUT_PACKET}" -eq 1 ]]; then
   bash ./scripts/prepare_live_alignment_rollout_packet.sh --reuse-latest >/dev/null
 fi
+if [[ "${RUN_CAPABILITY_AUDIT}" -eq 1 ]]; then
+  bash ./scripts/prepare_full_stack_capability_audit.sh --skip-snapshot >/dev/null
+fi
 
 declare -a COPY_FILES=(
   "README.md"
@@ -111,6 +119,7 @@ cp -R "${OUTPUT_BASE}/current_full_stack_status_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
 
 LATEST_DOC_REPORT="$(ls -1t "${OUTPUT_BASE}"/docs_verification_report_*.md 2>/dev/null | head -n 1 || true)"
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
@@ -137,6 +146,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Live runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
+- [Capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 EOF
 
 if [[ -n "${LATEST_DOC_REPORT}" ]]; then
@@ -185,6 +195,7 @@ Open these first:
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 - `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
+- `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
 - `SHA256SUMS.txt`
 EOF
 

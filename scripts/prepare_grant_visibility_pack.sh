@@ -110,6 +110,7 @@ cp -R "${OUTPUT_BASE}/current_full_stack_status_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_runtime_alignment_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
+cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
 if [[ -d "${OUTPUT_BASE}/full_stack_evidence_pack_latest" ]]; then
   cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
 fi
@@ -151,6 +152,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 - [Latest runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [Latest bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
 - [Latest live alignment rollout packet](reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md)
+- [Latest capability audit](reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md)
 EOF
 
 if [[ -d "${OUT_DIR}/reports/full_stack_evidence_pack_latest" ]]; then
@@ -199,6 +201,7 @@ Open these first:
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
 - `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
+- `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
 - `docs/en/GRANT_AND_VISIBILITY_TARGETS_2026_06_27.md`
 - `docs/en/X_TELEGRAM_OUTREACH_KIT_2026_06_27.md`
 - `SHA256SUMS.txt`

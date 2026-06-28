@@ -38,6 +38,27 @@ paths:
       responses:
         "200":
           description: OK
+  /ai/chat/stream:
+    post:
+      summary: Stream the YNX Intelligence Layer answer
+      description: Streams NDJSON events with a per-request requestId. Emits meta, delta, and done events; falls back to deterministic live context when no runtime LLM is available.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: NDJSON stream
+          content:
+            application/x-ndjson:
+              schema:
+                type: string
+                example: |
+                  {"requestId":"chat_123","type":"meta","status":"started","mode":"llm:ollama"}
+                  {"requestId":"chat_123","type":"delta","delta":"Hello ","done":false}
+                  {"requestId":"chat_123","type":"done","done":true,"mode":"llm:ollama","model":"qwen2.5:1.5b"}
   /ai/actions:
     get:
       summary: List supported AI actions

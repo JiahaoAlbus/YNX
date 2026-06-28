@@ -14,6 +14,44 @@ const {
 
 const serverPath = path.join(__dirname, "server.js");
 
+async function requestNdjsonStream(url, { method = "GET", body, headers = {} } = {}) {
+  const response = await fetch(url, {
+    method,
+    headers: {
+      ...(body !== undefined ? { "content-type": "application/json" } : {}),
+      ...headers,
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  const events = [];
+  if (response.body) {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    const reader = response.body.getReader();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        events.push(JSON.parse(line));
+      }
+    }
+    const tail = buffer + decoder.decode();
+    if (tail.trim()) events.push(JSON.parse(tail));
+  }
+
+  return {
+    status: response.status,
+    ok: response.ok,
+    headers: response.headers,
+    events,
+  };
+}
+
 function startMockIntelligenceUpstreams(port) {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
@@ -255,7 +293,6 @@ function startMockIntelligenceUpstreams(port) {
 function startMockOllama(port) {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://127.0.0.1:${port}`);
-    res.setHeader("content-type", "application/json");
     if (req.method === "POST" && url.pathname === "/api/chat") {
       let raw = "";
       req.on("data", (chunk) => {
@@ -263,6 +300,14 @@ function startMockOllama(port) {
       });
       req.on("end", () => {
         const body = raw ? JSON.parse(raw) : {};
+        if (body.stream) {
+          res.setHeader("content-type", "application/x-ndjson");
+          res.write(JSON.stringify({ model: body.model || "qwen2.5:1.5b", message: { role: "assistant", content: "mock " }, done: false }) + "\n");
+          res.write(JSON.stringify({ model: body.model || "qwen2.5:1.5b", message: { role: "assistant", content: "ollama " }, done: false }) + "\n");
+          res.write(JSON.stringify({ model: body.model || "qwen2.5:1.5b", message: { role: "assistant", content: "intelligence answer" }, done: true }) + "\n");
+          return res.end();
+        }
+        res.setHeader("content-type", "application/json");
         return res.end(JSON.stringify({
           model: body.model || "qwen2.5:1.5b",
           message: { role: "assistant", content: "mock ollama intelligence answer" },
@@ -270,6 +315,7 @@ function startMockOllama(port) {
       });
       return;
     }
+    res.setHeader("content-type", "application/json");
     res.statusCode = 404;
     return res.end(JSON.stringify({ ok: false, error: "not_found" }));
   });
@@ -2281,6 +2327,52 @@ test("answers intelligence chat through configured Ollama provider", async (t) =
   assert.equal(chat.model, "qwen2.5:1.5b");
   assert.equal(chat.answer, "mock ollama intelligence answer");
   assert.equal(chat.model_answer, "mock ollama intelligence answer");
+});
+
+test("streams intelligence chat through configured Ollama provider", async (t) => {
+  const aiPort = await getFreePort();
+  const mockPort = await getFreePort();
+  const ollamaPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-ai-ollama-stream-");
+  const mock = await startMockIntelligenceUpstreams(mockPort);
+  const ollama = await startMockOllama(ollamaPort);
+  t.after(() => new Promise((resolve) => mock.close(resolve)));
+  t.after(() => new Promise((resolve) => ollama.close(resolve)));
+
+  const ai = await startNodeServer(
+    serverPath,
+    {
+      AI_GATEWAY_PORT: String(aiPort),
+      AI_DATA_DIR: dataDir,
+      AI_ENFORCE_POLICY: "0",
+      AI_CHAIN_ID: "ynx_9102-1",
+      AI_LLM_PROVIDER: "ollama",
+      AI_LLM_MODEL: "qwen2.5:1.5b",
+      AI_LLM_BASE_URL: `http://127.0.0.1:${ollamaPort}/api/chat`,
+      AI_PUBLIC_BRIDGE_URL: `http://127.0.0.1:${mockPort}/bridge`,
+      AI_PUBLIC_WEB4_URL: `http://127.0.0.1:${mockPort}`,
+      AI_PUBLIC_INDEXER_URL: `http://127.0.0.1:${mockPort}`,
+    },
+    `http://127.0.0.1:${aiPort}/ready`
+  );
+  t.after(async () => ai.stop());
+
+  const stream = await requestNdjsonStream(`http://127.0.0.1:${aiPort}/ai/chat/stream`, {
+    method: "POST",
+    body: { message: "Summarize YNX." },
+  });
+  assert.equal(stream.status, 200);
+  assert.ok(stream.events.length >= 3);
+  assert.equal(stream.events[0].type, "meta");
+  assert.equal(stream.events[0].mode, "llm:ollama");
+  assert.ok(stream.events.every((event) => event.requestId === stream.events[0].requestId));
+  assert.equal(stream.events.at(-1).type, "done");
+  assert.equal(stream.events.at(-1).model, "qwen2.5:1.5b");
+  const answer = stream.events
+    .filter((event) => event.type === "delta")
+    .map((event) => event.delta)
+    .join("");
+  assert.equal(answer, "mock ollama intelligence answer");
 });
 
 test("answers latest transaction questions from live EVM RPC data", async (t) => {

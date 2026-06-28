@@ -19,7 +19,7 @@ The API is designed for:
 
 The public testnet has three AI layers:
 
-- Intelligence API: live YNX context and chat at `https://ai.ynxweb4.com/ai/chat`
+- Intelligence API: live YNX context and chat at `https://ai.ynxweb4.com/ai/chat` and native streaming at `https://ai.ynxweb4.com/ai/chat/stream`
 - Gateway settlement API: jobs, vaults, payments, x402, audit, and stats at `https://ai.ynxweb4.com`
 - On-chain settlement rail: `YNXAISettlement` at `0x87e8a50880584abaB283cDeC18d884A7BDc42Fcf`
 
@@ -39,6 +39,7 @@ Public Intelligence endpoints:
 ```text
 Brief:      https://ai.ynxweb4.com/ai/intelligence/brief
 Chat:       POST https://ai.ynxweb4.com/ai/chat
+Chat NDJSON: POST https://ai.ynxweb4.com/ai/chat/stream
 Mode:       live deterministic by default; Ollama or external LLM when configured
 ```
 
@@ -79,6 +80,7 @@ Finalize tx: 0xc9380f194927e15d0b7543a6ee8d7e5834e992a630501f4779aaca293f140ef2
 
 - `GET /ai/intelligence/brief` — live YNX context from Bridge, route readiness, assets, Web4, and AI settlement state
 - `POST /ai/chat` — live YNX assistant response
+- `POST /ai/chat/stream` — NDJSON streaming response with per-request `requestId`, `meta`, `delta`, and `done` events
 
 Example:
 
@@ -97,6 +99,15 @@ Response shape:
   "model": "",
   "answer": "..."
 }
+```
+
+Streaming response event shape:
+
+```json
+{"requestId":"chat_...","type":"meta","status":"started","mode":"llm:ollama"}
+{"requestId":"chat_...","type":"delta","delta":"mock ","done":false}
+{"requestId":"chat_...","type":"delta","delta":"answer","done":false}
+{"requestId":"chat_...","type":"done","done":true,"mode":"llm:ollama","model":"qwen2.5:1.5b"}
 ```
 
 When a runtime model is configured, the gateway keeps the same endpoint and

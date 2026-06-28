@@ -199,6 +199,77 @@ function postJson(targetUrl, payload, extraHeaders = {}, options = {}) {
   });
 }
 
+function textChunks(value) {
+  return String(value || "").match(/\S+\s*|[\r\n]+/g) || [];
+}
+
+async function readStreamLines(stream, onLine) {
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for await (const chunk of stream) {
+    buffer += decoder.decode(chunk, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) {
+      await onLine(line.replace(/\r$/, ""));
+    }
+  }
+  const tail = buffer + decoder.decode();
+  if (tail) await onLine(tail.replace(/\r$/, ""));
+}
+
+function llmSystemPrompt() {
+  return [
+    "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
+    "Use the provided live context. Be candid about testnet limits.",
+    "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
+    "For product or feature suggestions, avoid generic blockchain advice. Ground every suggestion in the current YNX context: live assets, AMM pairs, validators, bridge routes, Web4 policy, and AI settlement.",
+    "When discussing assets, distinguish live public-testnet assets from real mainnet custody, redemption, and liquidity.",
+    "Answer concisely in the user's language. Keep the answer complete and under 10 short bullets.",
+    "Do not output hidden chain-of-thought or <think> blocks.",
+  ].join(" ");
+}
+
+function llmUserPrompt(message, context) {
+  return `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, AI_LLM_CONTEXT_CHARS)}`;
+}
+
+function buildOllamaPayload(message, context, stream) {
+  return {
+    model: AI_LLM_MODEL,
+    stream,
+    think: false,
+    messages: [
+      { role: "system", content: llmSystemPrompt() },
+      { role: "user", content: llmUserPrompt(message, context) },
+    ],
+    options: {
+      temperature: 0.2,
+      num_ctx: AI_LLM_NUM_CTX,
+      num_predict: AI_LLM_NUM_PREDICT,
+    },
+  };
+}
+
+function buildOpenAiResponsesPayload(message, context, stream) {
+  return {
+    model: AI_LLM_MODEL,
+    stream,
+    instructions: llmSystemPrompt(),
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: llmUserPrompt(message, context),
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function getJson(targetUrl, options = {}) {
   return new Promise((resolve) => {
     const url = new URL(targetUrl);
@@ -2969,37 +3040,11 @@ function deterministicIntelligenceAnswer(message, context) {
 
 async function callConfiguredLlm(message, context) {
   if (!llmConfigured()) return null;
-  const system = [
-    "You are YNX Intelligence, the official AI layer for the YNX Web4 public testnet.",
-    "Use the provided live context. Be candid about testnet limits.",
-    "YNX AI is broader than agent authorization: it covers chain intelligence, bridge/trading guidance, AI job execution, machine payments, policy controls, on-chain settlement, monitoring, and developer support.",
-    "For product or feature suggestions, avoid generic blockchain advice. Ground every suggestion in the current YNX context: live assets, AMM pairs, validators, bridge routes, Web4 policy, and AI settlement.",
-    "When discussing assets, distinguish live public-testnet assets from real mainnet custody, redemption, and liquidity.",
-    "Answer concisely in the user's language. Keep the answer complete and under 10 short bullets.",
-    "Do not output hidden chain-of-thought or <think> blocks.",
-  ].join(" ");
-
   if (AI_LLM_PROVIDER === "ollama") {
     const response = await withTimeout(
       postJson(
         AI_LLM_BASE_URL,
-        {
-          model: AI_LLM_MODEL,
-          stream: false,
-          think: false,
-          messages: [
-            { role: "system", content: system },
-            {
-              role: "user",
-              content: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, AI_LLM_CONTEXT_CHARS)}`,
-            },
-          ],
-          options: {
-            temperature: 0.2,
-            num_ctx: AI_LLM_NUM_CTX,
-            num_predict: AI_LLM_NUM_PREDICT,
-          },
-        },
+        buildOllamaPayload(message, context, false),
         {},
         { timeout_ms: AI_LLM_TIMEOUT_MS },
       ),
@@ -3016,21 +3061,7 @@ async function callConfiguredLlm(message, context) {
     };
   }
 
-  const payload = {
-    model: AI_LLM_MODEL,
-    instructions: system,
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: `User question:\n${message}\n\nCompact live YNX context:\n${JSON.stringify(compactIntelligenceContext(context)).slice(0, AI_LLM_CONTEXT_CHARS)}`,
-          },
-        ],
-      },
-    ],
-  };
+  const payload = buildOpenAiResponsesPayload(message, context, false);
   const response = await withTimeout(
     postJson(
       AI_LLM_BASE_URL,
@@ -3056,6 +3087,99 @@ async function callConfiguredLlm(message, context) {
           .join("\n")
       : "");
   return { ok: true, text: outputText || deterministicIntelligenceAnswer(message, context), raw_model: response.payload.model || AI_LLM_MODEL };
+}
+
+async function streamConfiguredLlm(message, context, { signal, onDelta } = {}) {
+  if (!llmConfigured()) return null;
+
+  let response = null;
+  try {
+    response = await fetch(AI_LLM_BASE_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(AI_LLM_PROVIDER === "ollama" ? {} : { authorization: `Bearer ${AI_LLM_API_KEY}` }),
+      },
+      body: JSON.stringify(
+        AI_LLM_PROVIDER === "ollama" ? buildOllamaPayload(message, context, true) : buildOpenAiResponsesPayload(message, context, true)
+      ),
+      signal,
+    });
+  } catch (error) {
+    return { ok: false, error: error.message || "llm_request_failed" };
+  }
+
+  if (!response.ok) {
+    let raw = "";
+    try {
+      raw = await response.text();
+    } catch {
+      raw = "";
+    }
+    try {
+      const parsed = raw ? JSON.parse(raw) : {};
+      return {
+        ok: false,
+        error:
+          AI_LLM_PROVIDER === "ollama"
+            ? parsed?.error || `ollama_http_${response.status}`
+            : parsed?.error?.message || parsed?.error || `llm_http_${response.status}`,
+      };
+    } catch {
+      return { ok: false, error: raw || (AI_LLM_PROVIDER === "ollama" ? `ollama_http_${response.status}` : `llm_http_${response.status}`) };
+    }
+  }
+
+  if (!response.body) return { ok: false, error: "llm_stream_missing" };
+
+  let text = "";
+  let rawModel = AI_LLM_MODEL;
+  let streamError = "";
+
+  if (AI_LLM_PROVIDER === "ollama") {
+    await readStreamLines(response.body, async (line) => {
+      if (!line.trim()) return;
+      let event = null;
+      try {
+        event = JSON.parse(line);
+      } catch {
+        return;
+      }
+      if (event?.error) {
+        streamError = String(event.error);
+        return;
+      }
+      rawModel = event?.model || rawModel;
+      const delta = event?.message?.content || event?.response || "";
+      if (!delta) return;
+      text += delta;
+      if (onDelta) await onDelta(delta, { raw_model: rawModel });
+    });
+  } else {
+    await readStreamLines(response.body, async (line) => {
+      if (!line.startsWith("data:")) return;
+      const payloadText = line.slice(5).trim();
+      if (!payloadText || payloadText === "[DONE]") return;
+      let event = null;
+      try {
+        event = JSON.parse(payloadText);
+      } catch {
+        return;
+      }
+      if (event?.type === "error") {
+        streamError = event?.error?.message || event?.message || "llm_stream_failed";
+        return;
+      }
+      if (event?.response?.model) rawModel = event.response.model;
+      if (event?.type === "response.output_text.delta" && event.delta) {
+        text += event.delta;
+        if (onDelta) await onDelta(event.delta, { raw_model: rawModel });
+      }
+    });
+  }
+
+  if (streamError) return { ok: false, error: streamError };
+  return { ok: true, text: text || deterministicIntelligenceAnswer(message, context), raw_model: rawModel };
 }
 
 async function authorizeViaWeb4(req, action, options = {}) {
@@ -3580,6 +3704,93 @@ const server = http.createServer(async (req, res) => {
       llm_error: llm && !llm.ok ? llm.error : "",
       context: body.include_context === true || body.include_context === "1" ? context : undefined,
     });
+  }
+
+  if (req.method === "POST" && url.pathname === "/ai/chat/stream") {
+    if (!AI_INTELLIGENCE_ENABLED) return json(res, 503, { ok: false, error: "intelligence_disabled" });
+    const body = await parseBody(req, AI_BODY_LIMIT_BYTES);
+    if (!requireValidBody(res, body)) return;
+    const message = String(body.message || body.prompt || body.question || "").trim();
+    if (!message) return json(res, 400, { ok: false, error: "message_required" });
+
+    const requestId = String(req.headers["x-request-id"] || randomId("chat"));
+    const writeEvent = (payload) => res.write(`${JSON.stringify({ requestId, ...payload })}\n`);
+    const abortController = new AbortController();
+    req.on("close", () => abortController.abort());
+
+    res.writeHead(200, {
+      ...corsHeaders(req),
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      connection: "keep-alive",
+      "x-accel-buffering": "no",
+    });
+
+    const context = await enrichContextForQuestion(message, await collectIntelligenceContext());
+    const liveFactAnswer = wantsLiveStatusAnswer(message);
+    const deterministicAnswer = deterministicIntelligenceAnswer(message, context);
+    let usedLlm = false;
+    let llmError = "";
+    let rawModel = "";
+    let streamedChars = 0;
+
+    writeEvent({ type: "meta", status: "started", mode: liveFactAnswer ? "live-deterministic" : llmModeLabel() });
+
+    if (!liveFactAnswer) {
+      try {
+        const llm = await streamConfiguredLlm(message, context, {
+          signal: abortController.signal,
+          onDelta: async (delta, meta) => {
+            if (abortController.signal.aborted) return;
+            rawModel = meta?.raw_model || rawModel;
+            streamedChars += delta.length;
+            writeEvent({ type: "delta", delta, done: false });
+          },
+        });
+        if (llm && llm.ok) {
+          usedLlm = true;
+          rawModel = llm.raw_model || rawModel;
+          if (streamedChars === 0) {
+            for (const chunk of textChunks(llm.text)) {
+              if (abortController.signal.aborted) break;
+              streamedChars += chunk.length;
+              writeEvent({ type: "delta", delta: chunk, done: false });
+            }
+          }
+        } else if (llm && !llm.ok) {
+          llmError = llm.error || "llm_request_failed";
+        }
+      } catch (error) {
+        llmError = error.message || "llm_request_failed";
+      }
+    }
+
+    if (!usedLlm && !abortController.signal.aborted) {
+      if (llmError) writeEvent({ type: "meta", status: "fallback", mode: "live-deterministic", llm_error: llmError });
+      for (const chunk of textChunks(deterministicAnswer)) {
+        if (abortController.signal.aborted) break;
+        writeEvent({ type: "delta", delta: chunk, done: false });
+      }
+    }
+
+    addAudit("intelligence.chat", {
+      mode: usedLlm ? llmModeLabel() : "live-deterministic",
+      llm_error: llmError,
+      message_preview: message.slice(0, 160),
+      streamed: true,
+    });
+    persist();
+
+    if (!abortController.signal.aborted) {
+      writeEvent({
+        type: "done",
+        done: true,
+        mode: usedLlm ? llmModeLabel() : "live-deterministic",
+        model: usedLlm ? rawModel || AI_LLM_MODEL : "",
+      });
+      res.end();
+    }
+    return;
   }
 
   if (req.method === "GET" && url.pathname === "/ai/audit") {

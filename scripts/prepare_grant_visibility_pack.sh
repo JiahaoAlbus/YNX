@@ -58,6 +58,21 @@ LATEST_DIR="${OUTPUT_BASE}/grant_visibility_pack_latest"
 
 mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh" "${OUT_DIR}/reports"
 
+copy_pack_manifest_bundle() {
+  local src_dir="$1"
+  local dest_parent="$2"
+  local base
+  base="$(basename "${src_dir}")"
+  [[ -d "${src_dir}" ]] || return 0
+  mkdir -p "${dest_parent}/${base}"
+  for name in MANIFEST.md README.md SHA256SUMS.txt HANDOFF_CHECKLIST.md OUTREACH_CHECKLIST.md EXECUTIVE_CHECKLIST.md ARTIFACT_INDEX.json PROVIDER_CHECKLIST.md; do
+    if [[ -f "${src_dir}/${name}" ]]; then
+      cp "${src_dir}/${name}" "${dest_parent}/${base}/${name}"
+    fi
+  done
+  return 0
+}
+
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
   bash ./scripts/verify_docs_readiness.sh
 fi
@@ -114,7 +129,7 @@ cp -R "${OUTPUT_BASE}/bridge_blocker_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/live_alignment_rollout_packet_latest" "${OUT_DIR}/reports/"
 cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/"
 if [[ -d "${OUTPUT_BASE}/full_stack_evidence_pack_latest" ]]; then
-  cp -R "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports/"
+  copy_pack_manifest_bundle "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports"
 fi
 
 LATEST_DOC_REPORT="$(ls -1t "${OUTPUT_BASE}"/docs_verification_report_*.md 2>/dev/null | head -n 1 || true)"

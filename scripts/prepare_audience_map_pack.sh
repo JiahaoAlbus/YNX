@@ -47,6 +47,21 @@ LATEST_DIR="${OUTPUT_BASE}/audience_map_pack_latest"
 
 mkdir -p "${OUT_DIR}/docs/en" "${OUT_DIR}/docs/zh" "${OUT_DIR}/reports"
 
+copy_pack_manifest_bundle() {
+  local src_dir="$1"
+  local dest_parent="$2"
+  local base
+  base="$(basename "${src_dir}")"
+  [[ -d "${src_dir}" ]] || return 0
+  mkdir -p "${dest_parent}/${base}"
+  for name in MANIFEST.md README.md SHA256SUMS.txt HANDOFF_CHECKLIST.md OUTREACH_CHECKLIST.md EXECUTIVE_CHECKLIST.md ARTIFACT_INDEX.json PROVIDER_CHECKLIST.md; do
+    if [[ -f "${src_dir}/${name}" ]]; then
+      cp "${src_dir}/${name}" "${dest_parent}/${base}/${name}"
+    fi
+  done
+  return 0
+}
+
 if [[ "${RUN_DOCS}" -eq 1 ]]; then
   bash ./scripts/verify_docs_readiness.sh >/dev/null
 fi
@@ -69,16 +84,13 @@ for file in "${COPY_FILES[@]}"; do
   cp "${file}" "${OUT_DIR}/${file}"
 done
 
-for report_dir in \
-  builder_readiness_pack_latest \
-  external_launchpad_pack_latest \
-  full_stack_capability_audit_latest \
-  grant_visibility_pack_latest \
-  card_provider_readiness_pack_latest \
-  full_stack_evidence_pack_latest \
-  current_full_stack_status_latest; do
-  cp -R "${OUTPUT_BASE}/${report_dir}" "${OUT_DIR}/reports/" 2>/dev/null || true
-done
+copy_pack_manifest_bundle "${OUTPUT_BASE}/builder_readiness_pack_latest" "${OUT_DIR}/reports"
+copy_pack_manifest_bundle "${OUTPUT_BASE}/external_launchpad_pack_latest" "${OUT_DIR}/reports"
+cp -R "${OUTPUT_BASE}/full_stack_capability_audit_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
+copy_pack_manifest_bundle "${OUTPUT_BASE}/grant_visibility_pack_latest" "${OUT_DIR}/reports"
+copy_pack_manifest_bundle "${OUTPUT_BASE}/card_provider_readiness_pack_latest" "${OUT_DIR}/reports"
+copy_pack_manifest_bundle "${OUTPUT_BASE}/full_stack_evidence_pack_latest" "${OUT_DIR}/reports"
+cp -R "${OUTPUT_BASE}/current_full_stack_status_latest" "${OUT_DIR}/reports/" 2>/dev/null || true
 
 cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 # YNX Audience Map Pack

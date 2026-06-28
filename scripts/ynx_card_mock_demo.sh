@@ -332,7 +332,11 @@ cat > "$OUTPUT_DIR/README.md" <<EOF
 - \`12_authorize_declined.json\`
 - \`13_card_detail.json\`
 - \`14_audit.json\`
+- \`15_verification.json\`
+- \`VERIFICATION.md\`
 EOF
+
+bash "$ROOT_DIR/scripts/verify_ynx_card_demo_evidence.sh" "$OUTPUT_DIR" >/dev/null
 
 TMP_LATEST_DIR="${LATEST_DIR}.tmp.$$"
 rm -rf "$TMP_LATEST_DIR" 2>/dev/null || true

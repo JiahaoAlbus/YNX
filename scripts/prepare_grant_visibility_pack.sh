@@ -82,6 +82,7 @@ declare -a COPY_FILES=(
   "docs/en/EXTERNAL_RESPONSE_PACK_2026_06_19.md"
   "docs/en/FOLLOW_UP_TEMPLATES_2026_06_19.md"
   "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md"
+  "docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md"
   "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
   "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md"
   "docs/en/CORE_MOAT_AND_BOUNDARY_2026_06_13.md"
@@ -95,6 +96,7 @@ declare -a COPY_FILES=(
   "docs/zh/对外答复标准包_2026_06_19.md"
   "docs/zh/跟进模板_2026_06_19.md"
   "docs/zh/当前全链状态与对齐快照_2026_06_27.md"
+  "docs/zh/YNX_最终核验矩阵_2026_06_28.md"
   "docs/zh/最终全链交付总览_2026_06_27.md"
   "docs/zh/合规就绪包_2026_06_13.md"
   "docs/zh/核心护城河与边界_2026_06_13.md"
@@ -148,6 +150,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 ## Included reports
 
 - [Latest full-stack snapshot](reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
+- [Final verification matrix](docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md)
 - [Truth matrix](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Latest runtime alignment](reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md)
 - [Latest bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
@@ -197,6 +200,7 @@ Open these first:
 - `MANIFEST.md`
 - `OUTREACH_CHECKLIST.md`
 - `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
+- `docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md`
 - `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
 - `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
 - `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`

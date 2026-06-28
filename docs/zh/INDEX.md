@@ -38,6 +38,7 @@
 - `docs/zh/YNX_受众地图_2026_06_28.md`：开发者、grant reviewer、provider、operator、社区读者的统一路由图
 - `docs/zh/YNX_对外统一入口_2026_06_28.md`：所有外部读者先打开的统一入口，再分流到正确最新包
 - `docs/zh/YNX_当前状态看板_2026_06_28.md`：最短 current-state 真相看板，直接说明 live、mock、受保护和外部依赖
+- `docs/zh/YNX_最终核验矩阵_2026_06_28.md`：最终收口前的核验网格，明确 live、mock、provider 和外部阻塞边界
 - `docs/zh/核心护城河与边界_2026_06_13.md`：最诚实的护城河定义与架构边界
 - `docs/zh/投资人十大尖锐问题_2026_06_13.md`：投资人与 grant 尽调最难问题标准答法
 - `docs/zh/安全响应策略_2026_06_13.md`：正式化的测试网阶段安全响应与 incident 流程
@@ -76,6 +77,7 @@
 - `docs/zh/当前全链状态与对齐快照_2026_06_27.md`：当前全链真实状态、颗粒度边界和对齐说明
 - `docs/zh/最终全链交付总览_2026_06_27.md`：最终 handoff 总文档，方便创始人 / 运维 / 尽调统一查看
 - `docs/zh/YNX_全栈真相矩阵_2026_06_27.md`：最快速的全栈真相表，覆盖 chain / AI / bridge / trace / card / compliance
+- `docs/zh/YNX_最终核验矩阵_2026_06_28.md`：在说当前阶段 done 之前必须重新核对的最终矩阵
 - `docs/zh/Grant与曝光目标清单_2026_06_27.md`：当前对外申请和曝光目标优先级清单
 - `docs/zh/Grant申请模板包_2026_06_27.md`：grant-ready 文案模板包
 - `docs/zh/X与Telegram对外发布素材_2026_06_27.md`：对外发布文案包

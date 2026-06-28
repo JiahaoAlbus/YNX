@@ -87,6 +87,7 @@ Do not claim:
 
 ## 8. Companion truth anchors
 
+- [YNX Final Verification Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md)
 - [YNX Full-Stack Truth Matrix](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Current Full-Stack Status Snapshot](/Users/huangjiahao/Desktop/YNX/output/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md)
 - [YNX External Launchpad](/Users/huangjiahao/Desktop/YNX/docs/en/YNX_EXTERNAL_LAUNCHPAD_2026_06_28.md)

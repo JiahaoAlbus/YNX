@@ -20,6 +20,8 @@ Environment:
   YNX_RPC_STATUS_URL        default: https://rpc.ynxweb4.com/status
   YNX_INDEXER_HEALTH_URL    default: https://indexer.ynxweb4.com/health
   YNX_AI_HEALTH_URL         default: https://ai.ynxweb4.com/health
+  YNX_AI_CHAT_URL           default: https://ai.ynxweb4.com/ai/chat
+  YNX_AI_CHAT_STREAM_URL    default: https://ai.ynxweb4.com/ai/chat/stream
   YNX_WEB4_READY_URL        default: https://web4.ynxweb4.com/ready
   YNX_BRIDGE_HEALTH_URL     default: https://rpc.ynxweb4.com/bridge/health
   YNX_BRIDGE_ROUTES_URL     default: https://rpc.ynxweb4.com/bridge/route-readiness
@@ -61,6 +63,8 @@ mkdir -p "${OUTPUT_DIR}/responses"
 RPC_STATUS_URL="${YNX_RPC_STATUS_URL:-https://rpc.ynxweb4.com/status}"
 INDEXER_HEALTH_URL="${YNX_INDEXER_HEALTH_URL:-https://indexer.ynxweb4.com/health}"
 AI_HEALTH_URL="${YNX_AI_HEALTH_URL:-https://ai.ynxweb4.com/health}"
+AI_CHAT_URL="${YNX_AI_CHAT_URL:-https://ai.ynxweb4.com/ai/chat}"
+AI_CHAT_STREAM_URL="${YNX_AI_CHAT_STREAM_URL:-https://ai.ynxweb4.com/ai/chat/stream}"
 WEB4_READY_URL="${YNX_WEB4_READY_URL:-https://web4.ynxweb4.com/ready}"
 BRIDGE_HEALTH_URL="${YNX_BRIDGE_HEALTH_URL:-https://rpc.ynxweb4.com/bridge/health}"
 BRIDGE_ROUTES_URL="${YNX_BRIDGE_ROUTES_URL:-https://rpc.ynxweb4.com/bridge/route-readiness}"
@@ -95,9 +99,40 @@ fetch_headers() {
   return 1
 }
 
+probe_post() {
+  local name="$1"
+  local url="$2"
+  local body="$3"
+  local attempt=1
+  while [[ "${attempt}" -le "${FETCH_RETRIES}" ]]; do
+    local code
+    code="$(
+      curl -sS --max-time "${FETCH_TIMEOUT_SEC}" \
+        -H 'content-type: application/json' \
+        -X POST \
+        -d "${body}" \
+        -D "${OUTPUT_DIR}/responses/${name}.headers" \
+        -o "${OUTPUT_DIR}/responses/${name}.body" \
+        -w "%{http_code}" \
+        "${url}" || true
+    )"
+    if [[ -n "${code}" && "${code}" != "000" ]]; then
+      printf '%s' "${code}" > "${OUTPUT_DIR}/responses/${name}.status"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
+  : > "${OUTPUT_DIR}/responses/${name}.headers"
+  : > "${OUTPUT_DIR}/responses/${name}.body"
+  printf '000' > "${OUTPUT_DIR}/responses/${name}.status"
+  return 1
+}
+
 fetch_json rpc_status "${RPC_STATUS_URL}" || true
 fetch_json indexer_health "${INDEXER_HEALTH_URL}" || true
 fetch_json ai_health "${AI_HEALTH_URL}" || true
+probe_post ai_chat_post "${AI_CHAT_URL}" '{"message":"YNX ready check"}' || true
+probe_post ai_chat_stream_post "${AI_CHAT_STREAM_URL}" '{"message":"YNX ready check"}' || true
 fetch_json web4_ready "${WEB4_READY_URL}" || true
 fetch_json bridge_health "${BRIDGE_HEALTH_URL}" || true
 fetch_json bridge_routes "${BRIDGE_ROUTES_URL}" || true
@@ -121,6 +156,8 @@ export SNAPSHOT_NOW_UTC="${NOW_UTC}"
 export SNAPSHOT_RPC_STATUS_URL="${RPC_STATUS_URL}"
 export SNAPSHOT_INDEXER_HEALTH_URL="${INDEXER_HEALTH_URL}"
 export SNAPSHOT_AI_HEALTH_URL="${AI_HEALTH_URL}"
+export SNAPSHOT_AI_CHAT_URL="${AI_CHAT_URL}"
+export SNAPSHOT_AI_CHAT_STREAM_URL="${AI_CHAT_STREAM_URL}"
 export SNAPSHOT_WEB4_READY_URL="${WEB4_READY_URL}"
 export SNAPSHOT_BRIDGE_HEALTH_URL="${BRIDGE_HEALTH_URL}"
 export SNAPSHOT_BRIDGE_ROUTES_URL="${BRIDGE_ROUTES_URL}"
@@ -146,6 +183,10 @@ ai_persistence_writes="$(jq -r '.persistence.writes // ""' "${OUTPUT_DIR}/respon
 ai_persistence_last_persist_at="$(jq -r '.persistence.last_persist_at // ""' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_stats_has_forensics_review="$(jq -r '(.stats.forensic_cases_by_review_status | type) == "object"' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
 ai_stats_has_forensics_escalation="$(jq -r '(.stats.forensic_cases_by_escalation_status | type) == "object"' "${OUTPUT_DIR}/responses/ai_health.json" 2>/dev/null || true)"
+ai_chat_post_http="$(cat "${OUTPUT_DIR}/responses/ai_chat_post.status" 2>/dev/null || echo "000")"
+ai_chat_stream_post_http="$(cat "${OUTPUT_DIR}/responses/ai_chat_stream_post.status" 2>/dev/null || echo "000")"
+ai_chat_post_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/{sub(/\r$/,"",$0); sub(/^[^:]*:[[:space:]]*/,"",$0); print; exit}' "${OUTPUT_DIR}/responses/ai_chat_post.headers" 2>/dev/null || true)"
+ai_chat_stream_post_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/{sub(/\r$/,"",$0); sub(/^[^:]*:[[:space:]]*/,"",$0); print; exit}' "${OUTPUT_DIR}/responses/ai_chat_stream_post.headers" 2>/dev/null || true)"
 web4_ok="$(jq -r '.ok // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 web4_policy_enforcement="$(jq -r '.checks.policy_enforcement // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
 web4_internal_authorizer="$(jq -r '.checks.internal_authorizer // false' "${OUTPUT_DIR}/responses/web4_ready.json" 2>/dev/null || true)"
@@ -174,6 +215,8 @@ jq -n \
   --arg indexer_last_indexed "${indexer_last_indexed}" \
   --arg indexer_latest_seen "${indexer_latest_seen}" \
   --arg ai_url "${AI_HEALTH_URL}" \
+  --arg ai_chat_url "${AI_CHAT_URL}" \
+  --arg ai_chat_stream_url "${AI_CHAT_STREAM_URL}" \
   --argjson ai_ok "${ai_ok}" \
   --argjson ai_policy_enforced "${ai_policy_enforced}" \
   --argjson ai_has_web4_authorizer "${ai_has_web4_authorizer}" \
@@ -183,6 +226,10 @@ jq -n \
   --argjson ai_onchain_ready "${ai_onchain_ready}" \
   --arg ai_persistence_writes "${ai_persistence_writes}" \
   --arg ai_persistence_last_persist_at "${ai_persistence_last_persist_at}" \
+  --arg ai_chat_post_http "${ai_chat_post_http}" \
+  --arg ai_chat_post_content_type "${ai_chat_post_content_type}" \
+  --arg ai_chat_stream_post_http "${ai_chat_stream_post_http}" \
+  --arg ai_chat_stream_post_content_type "${ai_chat_stream_post_content_type}" \
   --argjson ai_stats_has_forensics_review "${ai_stats_has_forensics_review}" \
   --argjson ai_stats_has_forensics_escalation "${ai_stats_has_forensics_escalation}" \
   --arg web4_url "${WEB4_READY_URL}" \
@@ -222,6 +269,14 @@ jq -n \
         llm_model: $ai_llm_model,
         llm_mode: $ai_llm_mode,
         onchain_ready: $ai_onchain_ready,
+        public_endpoints: {
+          chat_url: $ai_chat_url,
+          chat_post_http: $ai_chat_post_http,
+          chat_post_content_type: $ai_chat_post_content_type,
+          chat_stream_url: $ai_chat_stream_url,
+          chat_stream_post_http: $ai_chat_stream_post_http,
+          chat_stream_post_content_type: $ai_chat_stream_post_content_type
+        },
         persistence: {
           writes: $ai_persistence_writes,
           last_persist_at: $ai_persistence_last_persist_at
@@ -304,6 +359,9 @@ mapped_route_only="$(jq -r '.live.bridge.summary.mapped_route_only // ""' "${OUT
 ai_forensics_review_visible="$(jq -r '.alignment.ai_runtime_visibility.forensics_review_breakdown_exposed_live // false' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 ai_forensics_escalation_visible="$(jq -r '.alignment.ai_runtime_visibility.forensics_escalation_breakdown_exposed_live // false' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 ai_alignment_note="$(jq -r '.alignment.ai_runtime_visibility.note // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_chat_post_http_live="$(jq -r '.live.ai.public_endpoints.chat_post_http // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_chat_stream_post_http_live="$(jq -r '.live.ai.public_endpoints.chat_stream_post_http // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
+ai_chat_stream_post_content_type_live="$(jq -r '.live.ai.public_endpoints.chat_stream_post_content_type // ""' "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.json")"
 
 cat > "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.md" <<EOF
 # YNX Current Full-Stack Status Snapshot
@@ -316,6 +374,7 @@ cat > "${OUTPUT_DIR}/CURRENT_FULL_STACK_STATUS.md" <<EOF
 - RPC: \`${rpc_chain_id}\` @ height \`${rpc_height}\`; catching_up=\`${rpc_catching_up}\`
 - Indexer: ok=\`${indexer_ok}\`; last_indexed=\`${indexer_last_indexed}\`; latest_seen=\`${indexer_latest_seen}\`
 - AI Gateway: ok=\`${ai_ok}\`; policy_enforced=\`${ai_policy_enforced}\`; web4_authorizer=\`${ai_has_web4_authorizer}\`; llm=\`${ai_llm_provider}\` / \`${ai_llm_model}\` / \`${ai_llm_mode}\`; onchain_ready=\`${ai_onchain_ready}\`
+- AI public endpoints: \`POST /ai/chat -> ${ai_chat_post_http_live}\`; \`POST /ai/chat/stream -> ${ai_chat_stream_post_http_live}\` (\`${ai_chat_stream_post_content_type_live:-unknown}\`)
 - Web4 Hub: ok=\`${web4_ok}\`; policy_enforcement=\`${web4_policy_enforcement}\`; internal_authorizer=\`${web4_internal_authorizer}\`
 - Explorer: \`${explorer_status:-unavailable}\`
 - Website /ai: \`${website_ai_status:-unavailable}\`

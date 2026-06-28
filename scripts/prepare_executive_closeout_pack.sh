@@ -78,11 +78,13 @@ fi
 declare -a TOP_DOCS=(
   "README.md"
   "docs/en/CURRENT_FULL_STACK_STATUS_2026_06_27.md"
+  "docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md"
   "docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md"
   "docs/en/FINAL_FULL_STACK_HANDOFF_2026_06_27.md"
   "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md"
   "docs/en/COMPLIANCE_READINESS_PACKET_2026_06_13.md"
   "docs/zh/当前全链状态与对齐快照_2026_06_27.md"
+  "docs/zh/YNX_最终核验矩阵_2026_06_28.md"
   "docs/zh/YNX_当前状态看板_2026_06_28.md"
   "docs/zh/最终全链交付总览_2026_06_27.md"
   "docs/zh/YNX_全栈真相矩阵_2026_06_27.md"
@@ -132,6 +134,7 @@ cat > "${OUT_DIR}/MANIFEST.md" <<EOF
 
 - [Closeout README](README.md)
 - [Current full-stack snapshot](${CURRENT_SNAPSHOT_REL})
+- [Final verification matrix](docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md)
 - [Truth matrix](docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md)
 - [Live runtime alignment](${CURRENT_ALIGNMENT_REL})
 - [Bridge blocker packet](reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md)
@@ -183,6 +186,8 @@ cat > "${OUT_DIR}/ARTIFACT_INDEX.json" <<EOF
     "executive_readme": "README.md",
     "executive_checklist": "EXECUTIVE_CHECKLIST.md",
     "current_full_stack_snapshot_md": "${CURRENT_SNAPSHOT_REL}",
+    "final_verification_matrix_en": "docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md",
+    "final_verification_matrix_zh": "docs/zh/YNX_最终核验矩阵_2026_06_28.md",
     "truth_matrix_en": "docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md",
     "truth_matrix_zh": "docs/zh/YNX_全栈真相矩阵_2026_06_27.md",
     "runtime_alignment_md": "${CURRENT_ALIGNMENT_REL}",
@@ -209,20 +214,21 @@ Recommended open order:
 
 1. `MANIFEST.md`
 2. `reports/current_full_stack_status_latest/CURRENT_FULL_STACK_STATUS.md`
-3. `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
-4. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
-5. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
-6. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
-7. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
-8. `reports/external_launchpad_pack_latest/MANIFEST.md`
-9. `docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`
-10. `reports/builder_readiness_pack_latest/MANIFEST.md`
-11. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
-12. `reports/audience_map_pack_latest/MANIFEST.md`
-13. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
-14. `reports/grant_visibility_pack_latest/MANIFEST.md`
-15. `ARTIFACT_INDEX.json`
-16. `SHA256SUMS.txt`
+3. `docs/en/YNX_FINAL_VERIFICATION_MATRIX_2026_06_28.md`
+4. `docs/en/YNX_FULL_STACK_TRUTH_MATRIX_2026_06_27.md`
+5. `reports/live_runtime_alignment_latest/LIVE_RUNTIME_ALIGNMENT.md`
+6. `reports/bridge_blocker_packet_latest/BRIDGE_BLOCKER_PACKET.md`
+7. `reports/live_alignment_rollout_packet_latest/LIVE_ALIGNMENT_ROLLOUT_PACKET.md`
+8. `reports/full_stack_capability_audit_latest/FULL_STACK_CAPABILITY_AUDIT.md`
+9. `reports/external_launchpad_pack_latest/MANIFEST.md`
+10. `docs/en/YNX_CURRENT_STATE_BOARD_2026_06_28.md`
+11. `reports/builder_readiness_pack_latest/MANIFEST.md`
+12. `reports/card_provider_readiness_pack_latest/MANIFEST.md`
+13. `reports/audience_map_pack_latest/MANIFEST.md`
+14. `reports/full_stack_evidence_pack_latest/MANIFEST.md`
+15. `reports/grant_visibility_pack_latest/MANIFEST.md`
+16. `ARTIFACT_INDEX.json`
+17. `SHA256SUMS.txt`
 EOF
 
 cat > "${OUT_DIR}/EXECUTIVE_CHECKLIST.md" <<'EOF'

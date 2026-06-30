@@ -13,6 +13,7 @@
 - `docs/zh/V2_验证节点加入手册.md`：从零部署“验证节点（不进共识）”完整手册
 - `docs/zh/V2_共识验证人加入手册.md`：从零到 BONDED 的“共识验证人”完整手册
 - `docs/zh/WEB4_在YNX中的定义.md`：YNX 对 Web4 的项目定义
+- `docs/zh/YNX_Chain_Web4_总纲.md`：YNX Chain 新一代 Web4 总纲、功能全集与资源经济定位
 - `docs/zh/YNX_v2_WEB4_API_接口说明.md`：Web4 API 中文说明
 - `docs/zh/YNX_v2_WEB4_蓝图.md`：v2 Web4 蓝图
 - `docs/zh/AI_WEB4_官方演示.md`：可运行的 AI/Web4 结算闭环演示

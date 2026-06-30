@@ -9,6 +9,7 @@ Last updated: 2026-04-30
 - `docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.md` — one-page public funding summary
 - `docs/en/YNX_OUTLIER_ONE_PAGER_2026_06_18.pdf` — PDF version of the one-page public funding summary
 - `docs/en/RELEASE_YNXWEB4.md` — consolidated Web4 release notes (`ynxweb4`)
+- `docs/en/YNX_CHAIN_WEB4_CHARTER.md` — next-generation YNX Chain Web4 charter, product scope, and resource-economy requirements
 - `docs/en/V2_PUBLIC_TESTNET_JOIN_GUIDE.md` — external public testnet onboarding (users/builders/validators)
 - `docs/en/BUILDER_QUICKSTART.md` — builder quickstart for EVM, Web4 Hub, and AI Gateway surfaces
 - `docs/en/PUBLIC_ASSET_STATUS.md` — current official public-testnet asset status and mainstream asset targets

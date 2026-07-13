@@ -263,6 +263,10 @@ function normalizeState(loaded) {
 
 const WEB4_PORT = parseInt(process.env.WEB4_PORT || "8091", 10);
 const WEB4_CHAIN_ID = process.env.WEB4_CHAIN_ID || "ynx_9102-1";
+const WEB4_REQUIRE_CHAIN_BINDING = process.env.WEB4_REQUIRE_CHAIN_BINDING === "1";
+const WEB4_CHAIN_STATUS_URL = String(process.env.WEB4_CHAIN_STATUS_URL || "").trim();
+const WEB4_CHAIN_STATUS_TIMEOUT_MS = Math.max(250, toNumber(process.env.WEB4_CHAIN_STATUS_TIMEOUT_MS, 3000));
+const WEB4_CHAIN_STATUS_CACHE_MS = Math.max(0, toNumber(process.env.WEB4_CHAIN_STATUS_CACHE_MS, 2000));
 const WEB4_TRACK = process.env.WEB4_TRACK || "v2-web4";
 const WEB4_DATA_DIR = process.env.WEB4_DATA_DIR || path.resolve(__dirname, "data");
 const WEB4_DATA_FILE = path.join(WEB4_DATA_DIR, "state.json");
@@ -315,6 +319,88 @@ const WEB4_REQUIRE_BOOTSTRAP_FOR_POLICY_CREATE = process.env.WEB4_REQUIRE_BOOTST
 const WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES = Math.max(0, parseInt(process.env.WEB4_BOOTSTRAP_API_KEY_MAX_POLICY_CREATES || "1", 10) || 0);
 const WEB4_BOOTSTRAP_CHALLENGE_TTL_SEC = Math.max(30, parseInt(process.env.WEB4_BOOTSTRAP_CHALLENGE_TTL_SEC || "900", 10) || 900);
 const WEB4_BOOTSTRAP_API_KEY_TTL_SEC = Math.max(30, parseInt(process.env.WEB4_BOOTSTRAP_API_KEY_TTL_SEC || "900", 10) || 900);
+
+const chainBindingRuntime = {
+  checked_at_ms: 0,
+  verified: false,
+  status: WEB4_REQUIRE_CHAIN_BINDING ? "unchecked" : "disabled",
+  error: WEB4_REQUIRE_CHAIN_BINDING ? "chain_binding_not_checked" : "",
+  observed: {},
+  in_flight: null,
+};
+
+function expectedNumericChainId() {
+  const match = /^ynx_([0-9]+)-[A-Za-z0-9._-]+$/.exec(WEB4_CHAIN_ID);
+  return match ? Number(match[1]) : null;
+}
+
+function chainBindingSnapshot() {
+  return {
+    required: WEB4_REQUIRE_CHAIN_BINDING,
+    verified: chainBindingRuntime.verified,
+    status: chainBindingRuntime.status,
+    checked_at: chainBindingRuntime.checked_at_ms ? new Date(chainBindingRuntime.checked_at_ms).toISOString() : "",
+    expected_chain_id: WEB4_CHAIN_ID,
+    expected_numeric_chain_id: expectedNumericChainId(),
+    observed: chainBindingRuntime.observed,
+    error: chainBindingRuntime.error,
+  };
+}
+
+async function verifyChainBinding(force = false) {
+  if (!WEB4_REQUIRE_CHAIN_BINDING) return chainBindingSnapshot();
+  const now = Date.now();
+  if (!force && chainBindingRuntime.checked_at_ms && now - chainBindingRuntime.checked_at_ms <= WEB4_CHAIN_STATUS_CACHE_MS) {
+    return chainBindingSnapshot();
+  }
+  if (chainBindingRuntime.in_flight) return chainBindingRuntime.in_flight;
+  chainBindingRuntime.in_flight = (async () => {
+    const expectedChainId = expectedNumericChainId();
+    try {
+      if (!WEB4_CHAIN_STATUS_URL) throw new Error("chain_status_url_required");
+      if (!Number.isSafeInteger(expectedChainId) || expectedChainId < 1) throw new Error("expected_chain_id_invalid");
+      const response = await requestRaw(WEB4_CHAIN_STATUS_URL, {
+        timeout_ms: WEB4_CHAIN_STATUS_TIMEOUT_MS,
+        max_response_bytes: 65536,
+      });
+      if (response.status !== 200 || response.truncated) throw new Error("chain_status_unavailable");
+      let payload;
+      try {
+        payload = JSON.parse(response.body);
+      } catch {
+        throw new Error("chain_status_invalid_json");
+      }
+      const observed = {
+        chain_id: Number(payload.chainId),
+        native_symbol: String(payload.nativeCurrencySymbol || payload.nativeSymbol || ""),
+        height: Number(payload.height),
+        public_network: payload.publicNetwork === true,
+        build_commit: String(payload.build?.commit || ""),
+        build_release: String(payload.build?.release || ""),
+      };
+      const verified = observed.chain_id === expectedChainId &&
+        observed.native_symbol === "YNXT" &&
+        Number.isSafeInteger(observed.height) && observed.height > 0 &&
+        observed.public_network === true &&
+        /^[0-9a-f]{12}$/.test(observed.build_commit) &&
+        observed.build_release === `ynx-chain-${observed.build_commit}`;
+      chainBindingRuntime.observed = observed;
+      chainBindingRuntime.verified = verified;
+      chainBindingRuntime.status = verified ? "verified" : "mismatch";
+      chainBindingRuntime.error = verified ? "" : "chain_identity_mismatch";
+    } catch (error) {
+      chainBindingRuntime.observed = {};
+      chainBindingRuntime.verified = false;
+      chainBindingRuntime.status = "unavailable";
+      chainBindingRuntime.error = error && error.message ? error.message : "chain_binding_failed";
+    } finally {
+      chainBindingRuntime.checked_at_ms = Date.now();
+      chainBindingRuntime.in_flight = null;
+    }
+    return chainBindingSnapshot();
+  })();
+  return chainBindingRuntime.in_flight;
+}
 
 if (!fs.existsSync(WEB4_DATA_DIR)) fs.mkdirSync(WEB4_DATA_DIR, { recursive: true });
 
@@ -1009,10 +1095,14 @@ const server = http.createServer(async (req, res) => {
   const segments = url.pathname.split("/").filter(Boolean);
 
   if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/health") {
-    return json(res, 200, {
-      ok: true,
+    const chainBinding = await verifyChainBinding();
+    const healthy = !WEB4_REQUIRE_CHAIN_BINDING || chainBinding.verified;
+    return json(res, healthy ? 200 : 503, {
+      ok: healthy,
       service: "ynx-web4-hub",
       chain_id: WEB4_CHAIN_ID,
+      truthful_status: healthy ? "current-chain-rpc-bound" : "chain-binding-failed",
+      chain_binding: chainBinding,
       track: WEB4_TRACK,
       enforce_policy: WEB4_ENFORCE_POLICY,
       internal_authorizer_enabled: Boolean(WEB4_INTERNAL_TOKEN),
@@ -1029,15 +1119,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/ready") {
+    const chainBinding = await verifyChainBinding();
     const checks = {
       persistence: fs.existsSync(WEB4_DATA_DIR),
       policy_enforcement: WEB4_ENFORCE_POLICY,
       internal_authorizer: Boolean(WEB4_INTERNAL_TOKEN),
+      chain_binding: !WEB4_REQUIRE_CHAIN_BINDING || chainBinding.verified,
     };
-    return json(res, checks.persistence && checks.policy_enforcement && checks.internal_authorizer ? 200 : 503, {
-      ok: checks.persistence && checks.policy_enforcement && checks.internal_authorizer,
+    const ready = Object.values(checks).every(Boolean);
+    return json(res, ready ? 200 : 503, {
+      ok: ready,
       checks,
       chain_id: WEB4_CHAIN_ID,
+      chain_binding: chainBinding,
       track: WEB4_TRACK,
       data_file: WEB4_DATA_FILE,
       persistence: {
@@ -1047,6 +1141,18 @@ const server = http.createServer(async (req, res) => {
         last_error: persistRuntime.last_error,
       },
     });
+  }
+
+  if (WEB4_REQUIRE_CHAIN_BINDING && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    const chainBinding = await verifyChainBinding();
+    if (!chainBinding.verified) {
+      return json(res, 503, {
+        ok: false,
+        error: "chain_binding_unavailable",
+        chain_id: WEB4_CHAIN_ID,
+        chain_binding: chainBinding,
+      }, { "retry-after": "3" });
+    }
   }
 
   if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/web4/overview") {

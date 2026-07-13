@@ -40,6 +40,73 @@ function startToolServer(port) {
   });
 }
 
+function startChainStatusServer(port, getPayload) {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(getPayload()));
+  });
+  return new Promise((resolve, reject) => {
+    server.listen(port, "127.0.0.1", () => resolve(server));
+    server.on("error", reject);
+  });
+}
+
+test("binds health and mutations to the verified current chain", async (t) => {
+  const web4Port = await getFreePort();
+  const chainPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-web4-chain-binding-");
+  let chainStatus = {
+    chainId: 6423,
+    nativeCurrencySymbol: "YNXT",
+    height: 123,
+    publicNetwork: true,
+    build: { commit: "abcdef123456", release: "ynx-chain-abcdef123456" },
+  };
+  const chainServer = await startChainStatusServer(chainPort, () => chainStatus);
+  t.after(() => new Promise((resolve) => chainServer.close(resolve)));
+
+  const server = await startNodeServer(
+    serverPath,
+    {
+      WEB4_PORT: String(web4Port),
+      WEB4_DATA_DIR: dataDir,
+      WEB4_ENFORCE_POLICY: "1",
+      WEB4_INTERNAL_TOKEN: "internal-token",
+      WEB4_CHAIN_ID: "ynx_6423-1",
+      WEB4_REQUIRE_CHAIN_BINDING: "1",
+      WEB4_CHAIN_STATUS_URL: `http://127.0.0.1:${chainPort}/status`,
+      WEB4_CHAIN_STATUS_CACHE_MS: "0",
+    },
+    `http://127.0.0.1:${web4Port}/ready`
+  );
+  t.after(async () => server.stop());
+
+  const healthy = assertJson(await requestJson(`http://127.0.0.1:${web4Port}/health`), 200);
+  assert.equal(healthy.chain_id, "ynx_6423-1");
+  assert.equal(healthy.truthful_status, "current-chain-rpc-bound");
+  assert.equal(healthy.chain_binding.required, true);
+  assert.equal(healthy.chain_binding.verified, true);
+  assert.equal(healthy.chain_binding.observed.chain_id, 6423);
+  assert.equal(healthy.chain_binding.observed.native_symbol, "YNXT");
+  assert.equal(healthy.chain_binding.observed.build_release, "ynx-chain-abcdef123456");
+
+  chainStatus = { ...chainStatus, chainId: 9102 };
+  await delay(5);
+  const unhealthy = await requestJson(`http://127.0.0.1:${web4Port}/health`);
+  assert.equal(unhealthy.status, 503);
+  assert.equal(unhealthy.body.ok, false);
+  assert.equal(unhealthy.body.chain_binding.status, "mismatch");
+  assert.equal(unhealthy.body.chain_binding.error, "chain_identity_mismatch");
+
+  const blocked = await requestJson(`http://127.0.0.1:${web4Port}/web4/identities`, {
+    method: "POST",
+    body: { address: "0x1111111111111111111111111111111111111111" },
+  });
+  assert.equal(blocked.status, 503);
+  assert.equal(blocked.body.error, "chain_binding_unavailable");
+  assert.equal(blocked.headers.get("retry-after"), "3");
+});
+
 test("reports ready when policy enforcement and internal authorization are configured", async (t) => {
   const port = await getFreePort();
   const dataDir = await makeTempDir("ynx-web4-ready-");

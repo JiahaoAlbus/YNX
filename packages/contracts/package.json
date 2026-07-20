@@ -30,7 +30,7 @@
     "@nomicfoundation/hardhat-network-helpers": "^3.0.3",
     "@types/node": "^26.0.0",
     "@typescript-eslint/eslint-plugin": "^8.33.0",
-    "@typescript-eslint/parser": "^8.33.0",
+    "@typescript-eslint/parser": "^8.62.1",
     "chai": "^6.2.2",
     "eslint": "^10.0.0",
     "globals": "^17.4.0",

@@ -17,6 +17,8 @@
     "format:packages": "npm --workspaces run format",
     "verify:docs": "./scripts/verify_docs_readiness.sh",
     "security:verify": "node scripts/security-platform.mjs verify",
-    "security:test": "node --test scripts/security-platform.test.mjs"
+    "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs",
+    "security:artifact": "node scripts/security-artifact.mjs build",
+    "security:backup": "node scripts/security-backup.mjs"
   }
 }

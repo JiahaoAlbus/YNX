@@ -149,6 +149,72 @@ export function verifyProductRelease(release, registry) {
   return errors;
 }
 
+export function verifyCompletionAudit(audit) {
+  const errors = [];
+  const allowed = new Set(["proven", "partial", "contradicted", "missing", "not-applicable"]);
+  const items = audit.requirements ?? [];
+  const ids = new Set();
+  if (items.length !== 22) fail(errors, `completion audit must contain 22 constitutional requirements, found ${items.length}`);
+  for (const item of items) {
+    if (!Number.isInteger(item.id) || item.id < 1 || item.id > 22 || ids.has(item.id)) fail(errors, `completion audit has invalid or duplicate id ${item.id}`);
+    ids.add(item.id);
+    if (!allowed.has(item.status)) fail(errors, `completion audit ${item.id}: invalid status`);
+    if (typeof item.requirement !== "string" || item.requirement.trim() === "") fail(errors, `completion audit ${item.id}: missing requirement`);
+    if (["proven", "partial", "contradicted"].includes(item.status) && (!Array.isArray(item.evidence) || item.evidence.length === 0)) {
+      fail(errors, `completion audit ${item.id}: ${item.status} requires evidence`);
+    }
+    if (["partial", "contradicted", "missing"].includes(item.status) && (!Array.isArray(item.missingEvidence) || item.missingEvidence.length === 0)) {
+      fail(errors, `completion audit ${item.id}: ${item.status} requires missingEvidence`);
+    }
+    if (item.status === "proven" && Array.isArray(item.missingEvidence) && item.missingEvidence.length > 0) fail(errors, `completion audit ${item.id}: proven cannot retain missingEvidence`);
+  }
+  for (let id = 1; id <= 22; id += 1) if (!ids.has(id)) fail(errors, `completion audit missing id ${id}`);
+  return errors;
+}
+
+export function verifyExerciseMatrix(matrix) {
+  const errors = [];
+  const required = [
+    "secret-rotation", "compromised-service", "artifact-tamper", "ddos", "region-failure", "database-loss",
+    "object-loss", "ci-supply-chain-failure", "backup-restore", "rollback", "search-noindex-incident",
+    "quant-worker-escape-attempt", "public-security-evidence",
+  ];
+  const allowed = new Set(["passed-local", "passed-remote", "partial", "failed", "not-run"]);
+  const exercises = new Map((matrix.exercises ?? []).map((item) => [item.id, item]));
+  for (const id of required) {
+    const item = exercises.get(id);
+    if (!item) { fail(errors, `exercise matrix missing ${id}`); continue; }
+    if (!allowed.has(item.status)) fail(errors, `exercise ${id}: invalid status`);
+    if (["passed-local", "passed-remote", "partial", "failed"].includes(item.status) && (!Array.isArray(item.evidence) || item.evidence.length === 0)) {
+      fail(errors, `exercise ${id}: ${item.status} requires evidence`);
+    }
+    if (item.status === "not-run" && (typeof item.nextAction !== "string" || item.nextAction.trim() === "")) fail(errors, `exercise ${id}: not-run requires nextAction`);
+  }
+  for (const id of exercises.keys()) if (!required.includes(id)) fail(errors, `exercise matrix has unknown exercise ${id}`);
+  return errors;
+}
+
+export function verifyKpiFramework(framework) {
+  const errors = [];
+  const required = [
+    "activation", "retention-7d", "retention-30d", "task-completion", "crash-free-session", "support-load",
+    "abuse-rate", "provider-cost", "gross-margin-candidate", "public-testnet-usage", "conversion", "kill-scale-decision",
+  ];
+  const metrics = new Map((framework.metrics ?? []).map((item) => [item.id, item]));
+  for (const id of required) {
+    const metric = metrics.get(id);
+    if (!metric) { fail(errors, `KPI framework missing ${id}`); continue; }
+    for (const field of ["definition", "formula", "window", "source", "owner"]) {
+      if (typeof metric[field] !== "string" || metric[field].trim() === "") fail(errors, `KPI ${id}: missing ${field}`);
+    }
+    if (!new Set(["unmeasured", "measured"]).has(metric.status)) fail(errors, `KPI ${id}: invalid status`);
+    if (metric.status === "unmeasured" && metric.currentValue !== null) fail(errors, `KPI ${id}: unmeasured value must be null`);
+    if (metric.status === "measured" && (metric.currentValue === null || !metric.evidence)) fail(errors, `KPI ${id}: measured requires value and evidence`);
+  }
+  for (const id of metrics.keys()) if (!required.includes(id)) fail(errors, `KPI framework has unknown metric ${id}`);
+  return errors;
+}
+
 export function scanTrackedFiles(policy, files = trackedFiles()) {
   const errors = [];
   const pathPatterns = policy.prohibitedTrackedFilePatterns.map((value) => new RegExp(value));
@@ -181,6 +247,9 @@ export function verify() {
     ...verifyTruthRecord(policy, load("release/platform-status.json")),
     ...verifyArtifactRegistry(policy, registry),
     ...verifyProductRelease(load("release/product-release.json"), registry),
+    ...verifyCompletionAudit(load("release/completion-audit.json")),
+    ...verifyExerciseMatrix(load("security-platform/exercises.json")),
+    ...verifyKpiFramework(load("security-platform/kpis.json")),
     ...verifySecretInventory(policy, load("security-platform/secret-inventory.json")),
     ...scanTrackedFiles(policy),
   ];

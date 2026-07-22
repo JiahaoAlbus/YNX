@@ -13,6 +13,7 @@
 - Migration contract: `MIGRATION_COMPATIBILITY.md`
 - Capacity and SLO contract: `SLO_CAPACITY_PLAN.md`
 - Cost model: `UNIT_ECONOMICS.md`
+- Founder KPI contract: `FOUNDER_KPI_FRAMEWORK.md` and `security-platform/kpis.json`
 - Current feature truth: `FEATURE_COMPLETION_EVIDENCE.md`
 - Public testnet audit: `evidence/security-platform/PUBLIC_GATE_2026-07-22.md`
 - Local verification: `evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md`

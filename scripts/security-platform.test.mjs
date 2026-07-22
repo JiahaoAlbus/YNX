@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { verifyArtifactRegistry, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
+import { verifyArtifactRegistry, verifyCompletionAudit, verifyExerciseMatrix, verifyKpiFramework, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
 
 const policy = {
   requiredTruthStates: ["implementedLocal", "deployedPublic"],
@@ -74,4 +74,25 @@ test("production release claims require production signatures and release time",
   }, { artifacts: [{ id: "candidate", sourceCommit: "a".repeat(40), signingClass: "test-signed", publicReleaseEligible: false }] });
   assert.ok(errors.includes("productionSigned=true requires only production-signed artifacts"));
   assert.ok(errors.includes("deployedPublic=true requires releasedAt"));
+});
+
+test("completion audit cannot mark partial work without evidence and gaps", () => {
+  const requirements = Array.from({ length: 22 }, (_, index) => ({ id: index + 1, requirement: `requirement ${index + 1}`, status: "missing", missingEvidence: ["proof"] }));
+  requirements[0] = { id: 1, requirement: "recovery", status: "partial", evidence: [] };
+  const errors = verifyCompletionAudit({ requirements });
+  assert.ok(errors.includes("completion audit 1: partial requires evidence"));
+  assert.ok(errors.includes("completion audit 1: partial requires missingEvidence"));
+});
+
+test("exercise matrix requires every named final drill", () => {
+  const errors = verifyExerciseMatrix({ exercises: [{ id: "artifact-tamper", status: "passed-local", evidence: ["test"] }] });
+  assert.ok(errors.includes("exercise matrix missing secret-rotation"));
+  assert.ok(errors.includes("exercise matrix missing public-security-evidence"));
+});
+
+test("unmeasured KPIs cannot contain invented current values", () => {
+  const metric = { id: "activation", definition: "d", formula: "f", window: "w", source: "s", owner: "o", status: "unmeasured", currentValue: 99 };
+  const errors = verifyKpiFramework({ metrics: [metric] });
+  assert.ok(errors.includes("KPI activation: unmeasured value must be null"));
+  assert.ok(errors.includes("KPI framework missing retention-7d"));
 });

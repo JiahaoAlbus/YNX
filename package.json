@@ -20,6 +20,7 @@
     "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs",
     "security:artifact": "node scripts/security-artifact.mjs build",
     "security:backup": "node scripts/security-backup.mjs",
-    "security:build-scripts": "node scripts/security-build-script-audit.mjs"
+    "security:build-scripts": "node scripts/security-build-script-audit.mjs",
+    "security:benchmark": "node scripts/security-benchmark.mjs"
   }
 }

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-07-22T15:20:00Z",
+  "exercises": [
+    { "id": "secret-rotation", "status": "not-run", "nextAction": "populate manager-backed metadata and rotate a non-production short-lived credential" },
+    { "id": "compromised-service", "status": "not-run", "nextAction": "run an isolated service identity revoke and redeploy exercise" },
+    { "id": "artifact-tamper", "status": "passed-local", "evidence": ["scripts/security-artifact.test.mjs rejects changed signed manifests", "scripts/security-platform.mjs verifies registry artifact, SBOM, provenance, and signature"] },
+    { "id": "ddos", "status": "not-run", "nextAction": "deploy a bounded staging target and exercise rate, quota, and cost ceilings" },
+    { "id": "region-failure", "status": "not-run", "nextAction": "provision an approved secondary region and execute controlled failover" },
+    { "id": "database-loss", "status": "partial", "evidence": ["AES-256-GCM component restore drill"], "nextAction": "restore a consistent service database snapshot and run application invariants" },
+    { "id": "object-loss", "status": "partial", "evidence": ["backup format verifies each restored object hash"], "nextAction": "restore a production-shaped object inventory from immutable storage" },
+    { "id": "ci-supply-chain-failure", "status": "passed-remote", "evidence": ["GitHub Security run 29930788053 rejected vulnerable ws dependency chain"] },
+    { "id": "backup-restore", "status": "passed-local", "evidence": ["evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md"] },
+    { "id": "rollback", "status": "partial", "evidence": ["artifact registry revokes superseded e2c2924 and selects 850b2e3"], "nextAction": "execute blue-green service rollback using immutable deployed digests" },
+    { "id": "search-noindex-incident", "status": "not-run", "nextAction": "run production-shaped crawler regression and noindex rollback exercise" },
+    { "id": "quant-worker-escape-attempt", "status": "not-run", "nextAction": "run sandbox egress and privilege-denial exercise against a staging worker" },
+    { "id": "public-security-evidence", "status": "failed", "evidence": ["evidence/security-platform/PUBLIC_GATE_2026-07-22.md"], "nextAction": "restore public endpoints and rerun the read-only gate" }
+  ]
+}

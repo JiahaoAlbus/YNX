@@ -14,6 +14,9 @@
 - Test public-key fingerprint: `sha256:983e1156f1789cbbd9afeaffa8f102340be05c4473e07f40f41a57f7d24fe5b2`
 - Signing class: `test-signed`
 - Public release eligible: false
+- Archive path traversal scan: PASS
+- Archive private-key header scan: PASS
+- Archive secret-file extension scan: PASS
 
 The ephemeral private key was created in a system temporary directory with owner-only permissions and was never copied into the repository. This drill does not support `productionSigned=true` or `downloadHosted=true`.
 

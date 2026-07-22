@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "product": "YNX Security Platform",
-  "sourceCommit": "9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
-  "asOf": "2026-07-22T14:28:00Z",
+  "sourceCommit": "5526f4de482c199455896e91063f25f17147ed33",
+  "asOf": "2026-07-22T14:50:00Z",
   "source": "repository evidence",
   "version": "0.1.0",
   "confidence": "direct-evidence-only",
@@ -19,10 +19,12 @@
   },
   "evidence": {
     "implementedLocal": [
-      "commit:9db61f2f3b3d1c9fb54c236912851fcfc85c26dd"
+      "commit:9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
+      "commit:e2c29248e8a10321cc42507c22e57a34d9746218"
     ],
     "testedLocal": [
-      "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md"
+      "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md",
+      "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md"
     ]
   }
 }

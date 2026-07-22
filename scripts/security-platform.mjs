@@ -231,6 +231,25 @@ export function verifyCapacityEvidence(evidence) {
   return errors;
 }
 
+export function verifyProviderInventory(inventory) {
+  const errors = [];
+  const ids = new Set();
+  const reviewStates = new Set(["reviewed", "not-reviewed", "not-applicable"]);
+  for (const provider of inventory.providers ?? []) {
+    if (!provider.id || ids.has(provider.id)) fail(errors, `provider id is missing or duplicated: ${provider.id ?? ""}`);
+    ids.add(provider.id);
+    for (const field of ["name", "authority", "authentication", "rateLimit", "dataRetention", "dataRights", "version", "health", "fallback", "outageBehavior"]) {
+      if (typeof provider[field] !== "string" || provider[field].trim() === "") fail(errors, `provider ${provider.id}: missing ${field}`);
+    }
+    for (const field of ["licenseReview", "termsReview", "jurisdictionReview"]) {
+      if (!reviewStates.has(provider[field])) fail(errors, `provider ${provider.id}: invalid ${field}`);
+    }
+    if (provider.credential || provider.secret || provider.token) fail(errors, `provider ${provider.id}: inventory must not contain credential values`);
+  }
+  if (ids.size === 0) fail(errors, "provider inventory must not be empty");
+  return errors;
+}
+
 export function scanTrackedFiles(policy, files = trackedFiles()) {
   const errors = [];
   const pathPatterns = policy.prohibitedTrackedFilePatterns.map((value) => new RegExp(value));
@@ -267,6 +286,7 @@ export function verify() {
     ...verifyExerciseMatrix(load("security-platform/exercises.json")),
     ...verifyKpiFramework(load("security-platform/kpis.json")),
     ...verifyCapacityEvidence(load("evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json")),
+    ...verifyProviderInventory(load("security-platform/providers.json")),
     ...verifySecretInventory(policy, load("security-platform/secret-inventory.json")),
     ...scanTrackedFiles(policy),
   ];

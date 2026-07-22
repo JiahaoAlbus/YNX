@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { verifyArtifactRegistry, verifyCapacityEvidence, verifyCompletionAudit, verifyExerciseMatrix, verifyKpiFramework, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
+import { verifyArtifactRegistry, verifyCapacityEvidence, verifyCompletionAudit, verifyExerciseMatrix, verifyKpiFramework, verifyProductRelease, verifyProviderInventory, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
 
 const policy = {
   requiredTruthStates: ["implementedLocal", "deployedPublic"],
@@ -103,4 +103,10 @@ test("capacity evidence enforces percentile ordering and local limitation", () =
   }]));
   const errors = verifyCapacityEvidence({ sourceCommit: "a".repeat(40), coverage: "not public capacity evidence", measurements });
   assert.ok(errors.includes("capacity policyGate: percentile ordering invalid"));
+});
+
+test("provider inventory rejects credentials and missing governance fields", () => {
+  const errors = verifyProviderInventory({ providers: [{ id: "registry", name: "Registry", credential: "must-not-exist" }] });
+  assert.ok(errors.includes("provider registry: missing authority"));
+  assert.ok(errors.includes("provider registry: inventory must not contain credential values"));
 });

@@ -3,7 +3,7 @@
   "product": "YNX Security Platform",
   "version": "0.1.0",
   "channel": "development",
-  "sourceCommit": "b6da2efaa54877ee9c6d394a8207560ddd845e61",
+  "sourceCommit": "9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
   "releasedAt": null,
   "artifacts": [],
   "statusRecord": "release/platform-status.json",

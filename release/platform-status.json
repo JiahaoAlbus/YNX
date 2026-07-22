@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "product": "YNX Security Platform",
-  "sourceCommit": "b6da2efaa54877ee9c6d394a8207560ddd845e61",
-  "asOf": "2026-07-22T00:00:00Z",
+  "sourceCommit": "9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
+  "asOf": "2026-07-22T14:28:00Z",
   "source": "repository evidence",
   "version": "0.1.0",
   "confidence": "direct-evidence-only",
   "states": {
-    "implementedLocal": false,
-    "testedLocal": false,
+    "implementedLocal": true,
+    "testedLocal": true,
     "installedLocal": false,
     "integratedCentral": false,
     "deployedStaging": false,
@@ -17,5 +17,12 @@
     "productionSigned": false,
     "storeReleased": false
   },
-  "evidence": {}
+  "evidence": {
+    "implementedLocal": [
+      "commit:9db61f2f3b3d1c9fb54c236912851fcfc85c26dd"
+    ],
+    "testedLocal": [
+      "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md"
+    ]
+  }
 }

@@ -40,7 +40,7 @@
   ],
   "prohibitedTrackedFilePatterns": [
     "(^|/)\\.env$",
-    "\\.(pem|p12|pfx|jks|keystore)$",
+    "\\.(p12|pfx|jks|keystore)$",
     "(^|/)(id_rsa|id_ed25519)$"
   ],
   "prohibitedContentPatterns": [

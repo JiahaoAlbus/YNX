@@ -5,7 +5,9 @@
   "channel": "development",
   "sourceCommit": "9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
   "releasedAt": null,
-  "artifacts": [],
+  "artifacts": [
+    "security-platform-source-e2c2924"
+  ],
   "statusRecord": "release/platform-status.json",
   "productionSigned": false,
   "deployedPublic": false

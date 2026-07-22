@@ -1,6 +1,27 @@
 {
   "schemaVersion": 1,
   "source": "YNX release process",
-  "asOf": "2026-07-22T00:00:00Z",
-  "artifacts": []
+  "asOf": "2026-07-22T14:35:00Z",
+  "artifacts": [
+    {
+      "id": "security-platform-source-e2c2924",
+      "kind": "source-archive",
+      "sourceCommit": "e2c29248e8a10321cc42507c22e57a34d9746218",
+      "path": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar",
+      "sha256": "95156e936631602389b5b3e6de898d65b7e05a91c402bad1af2452fb19839a93",
+      "bytes": 61440,
+      "buildRun": "local reproducibility drill 2026-07-22T14:34:00Z",
+      "sbom": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.cdx.json",
+      "provenance": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.intoto.json",
+      "manifest": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.json",
+      "signature": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.sig.json",
+      "publicKey": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/test-signing-public.pem",
+      "signingClass": "test-signed",
+      "minimumOs": "Any operating system with POSIX tar support",
+      "installEvidence": "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
+      "revocation": "OPERATIONS.md#artifact-build-and-verification",
+      "expiry": "2026-08-21T00:00:00Z",
+      "publicReleaseEligible": false
+    }
+  ]
 }

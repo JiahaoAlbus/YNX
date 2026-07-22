@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const bundlePaths = [
   ".github/CODEOWNERS",
+  ".github/dependabot.yml",
   ".github/workflows/ci.yml",
+  ".github/workflows/security.yml",
   "EVIDENCE_INDEX.md",
   "FEATURE_COMPLETION_EVIDENCE.md",
   "MIGRATION_COMPATIBILITY.md",
@@ -17,11 +19,17 @@ const bundlePaths = [
   "SLO_CAPACITY_PLAN.md",
   "THREAT_MODEL.md",
   "UNIT_ECONOMICS.md",
+  "package-lock.json",
+  "package.json",
   "release",
   "security-platform",
   "scripts/security-artifact.mjs",
+  "scripts/security-artifact.test.mjs",
   "scripts/security-backup.mjs",
+  "scripts/security-backup.test.mjs",
+  "scripts/security-build-script-audit.mjs",
   "scripts/security-platform.mjs",
+  "scripts/security-platform.test.mjs",
 ];
 
 function sha256(data) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { verifyArtifactRegistry, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
+import { verifyArtifactRegistry, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
 
 const policy = {
   requiredTruthStates: ["implementedLocal", "deployedPublic"],
@@ -59,4 +59,19 @@ test("secret inventory rejects value-bearing fields", () => {
     }],
   });
   assert.ok(errors.some((error) => error.includes("forbidden value-bearing field")));
+});
+
+test("release records cannot select revoked artifacts", () => {
+  const errors = verifyProductRelease({
+    sourceCommit: "a".repeat(40), artifacts: ["old"], productionSigned: false, deployedPublic: false,
+  }, { artifacts: [{ id: "old", sourceCommit: "a".repeat(40), revokedAt: "2026-07-22T00:00:00Z", publicReleaseEligible: false }] });
+  assert.deepEqual(errors, ["release references revoked artifact old"]);
+});
+
+test("production release claims require production signatures and release time", () => {
+  const errors = verifyProductRelease({
+    sourceCommit: "a".repeat(40), artifacts: ["candidate"], productionSigned: true, deployedPublic: true, releasedAt: null,
+  }, { artifacts: [{ id: "candidate", sourceCommit: "a".repeat(40), signingClass: "test-signed", publicReleaseEligible: false }] });
+  assert.ok(errors.includes("productionSigned=true requires only production-signed artifacts"));
+  assert.ok(errors.includes("deployedPublic=true requires releasedAt"));
 });

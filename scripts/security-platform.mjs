@@ -124,6 +124,31 @@ export function verifySecretInventory(policy, inventory) {
   return errors;
 }
 
+export function verifyProductRelease(release, registry) {
+  const errors = [];
+  const artifacts = new Map((registry.artifacts ?? []).map((artifact) => [artifact.id, artifact]));
+  const selected = [];
+  for (const id of release.artifacts ?? []) {
+    const artifact = artifacts.get(id);
+    if (!artifact) {
+      fail(errors, `release references unknown artifact ${id}`);
+      continue;
+    }
+    selected.push(artifact);
+    if (artifact.revokedAt) fail(errors, `release references revoked artifact ${id}`);
+    if (artifact.sourceCommit !== release.sourceCommit) fail(errors, `release artifact ${id} source commit mismatch`);
+    if (typeof artifact.publicReleaseEligible !== "boolean") fail(errors, `release artifact ${id} has ambiguous public eligibility`);
+  }
+  if (release.productionSigned === true && (selected.length === 0 || selected.some((artifact) => artifact.signingClass !== "production-signed"))) {
+    fail(errors, "productionSigned=true requires only production-signed artifacts");
+  }
+  if (release.deployedPublic === true && (typeof release.releasedAt !== "string" || release.releasedAt.trim() === "")) {
+    fail(errors, "deployedPublic=true requires releasedAt");
+  }
+  if (!/^[0-9a-f]{40}$/.test(release.sourceCommit ?? "")) fail(errors, "release sourceCommit must be a full Git SHA");
+  return errors;
+}
+
 export function scanTrackedFiles(policy, files = trackedFiles()) {
   const errors = [];
   const pathPatterns = policy.prohibitedTrackedFilePatterns.map((value) => new RegExp(value));
@@ -151,9 +176,11 @@ export function scanTrackedFiles(policy, files = trackedFiles()) {
 
 export function verify() {
   const policy = load("security-platform/platform-policy.json");
+  const registry = load("release/artifact-registry.json");
   const errors = [
     ...verifyTruthRecord(policy, load("release/platform-status.json")),
-    ...verifyArtifactRegistry(policy, load("release/artifact-registry.json")),
+    ...verifyArtifactRegistry(policy, registry),
+    ...verifyProductRelease(load("release/product-release.json"), registry),
     ...verifySecretInventory(policy, load("security-platform/secret-inventory.json")),
     ...scanTrackedFiles(policy),
   ];

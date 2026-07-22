@@ -215,6 +215,22 @@ export function verifyKpiFramework(framework) {
   return errors;
 }
 
+export function verifyCapacityEvidence(evidence) {
+  const errors = [];
+  const required = ["policyGate", "signatureVerify", "encryptedBackupCreate", "encryptedBackupRestore"];
+  if (!/^[0-9a-f]{40}$/.test(evidence.sourceCommit ?? "")) fail(errors, "capacity evidence sourceCommit must be a full Git SHA");
+  if (typeof evidence.coverage !== "string" || !evidence.coverage.includes("not public capacity evidence")) fail(errors, "capacity evidence must retain its local-only limitation");
+  for (const id of required) {
+    const metric = evidence.measurements?.[id];
+    if (!metric) { fail(errors, `capacity evidence missing ${id}`); continue; }
+    if (!Number.isInteger(metric.samples) || metric.samples < 1) fail(errors, `capacity ${id}: invalid sample count`);
+    if (![metric.p50, metric.p95, metric.p99, metric.mean, metric.throughputPerSecond].every((value) => Number.isFinite(value) && value >= 0)) fail(errors, `capacity ${id}: invalid numeric measurement`);
+    if (!(metric.p50 <= metric.p95 && metric.p95 <= metric.p99)) fail(errors, `capacity ${id}: percentile ordering invalid`);
+    if (metric.errors !== 0) fail(errors, `capacity ${id}: benchmark contains errors`);
+  }
+  return errors;
+}
+
 export function scanTrackedFiles(policy, files = trackedFiles()) {
   const errors = [];
   const pathPatterns = policy.prohibitedTrackedFilePatterns.map((value) => new RegExp(value));
@@ -250,6 +266,7 @@ export function verify() {
     ...verifyCompletionAudit(load("release/completion-audit.json")),
     ...verifyExerciseMatrix(load("security-platform/exercises.json")),
     ...verifyKpiFramework(load("security-platform/kpis.json")),
+    ...verifyCapacityEvidence(load("evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json")),
     ...verifySecretInventory(policy, load("security-platform/secret-inventory.json")),
     ...scanTrackedFiles(policy),
   ];

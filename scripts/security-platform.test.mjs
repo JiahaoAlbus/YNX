@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { verifyArtifactRegistry, verifyCompletionAudit, verifyExerciseMatrix, verifyKpiFramework, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
+import { verifyArtifactRegistry, verifyCapacityEvidence, verifyCompletionAudit, verifyExerciseMatrix, verifyKpiFramework, verifyProductRelease, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
 
 const policy = {
   requiredTruthStates: ["implementedLocal", "deployedPublic"],
@@ -95,4 +95,12 @@ test("unmeasured KPIs cannot contain invented current values", () => {
   const errors = verifyKpiFramework({ metrics: [metric] });
   assert.ok(errors.includes("KPI activation: unmeasured value must be null"));
   assert.ok(errors.includes("KPI framework missing retention-7d"));
+});
+
+test("capacity evidence enforces percentile ordering and local limitation", () => {
+  const measurements = Object.fromEntries(["policyGate", "signatureVerify", "encryptedBackupCreate", "encryptedBackupRestore"].map((id) => [id, {
+    samples: 1, p50: 3, p95: 2, p99: 1, mean: 2, throughputPerSecond: 1, errors: 0,
+  }]));
+  const errors = verifyCapacityEvidence({ sourceCommit: "a".repeat(40), coverage: "not public capacity evidence", measurements });
+  assert.ok(errors.includes("capacity policyGate: percentile ordering invalid"));
 });

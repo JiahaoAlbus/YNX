@@ -31,12 +31,15 @@ function sha256(data) {
 export function cycloneDxFromLock(lock, sourceCommit) {
   const components = [];
   for (const [path, value] of Object.entries(lock.packages ?? {})) {
-    if (!path || !value?.name || !value?.version) continue;
+    if (!path || !value?.version) continue;
+    const inferredName = path.match(/(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)$/)?.[1] ?? "";
+    const name = value.name || inferredName;
+    if (!name) continue;
     components.push({
       type: "library",
-      name: value.name,
+      name,
       version: value.version,
-      purl: `pkg:npm/${encodeURIComponent(value.name)}@${value.version}`,
+      purl: `pkg:npm/${encodeURIComponent(name)}@${value.version}`,
       properties: [{ name: "ynx:lockPath", value: path }],
     });
   }

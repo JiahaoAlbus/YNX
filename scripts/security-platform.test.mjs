@@ -34,6 +34,17 @@ test("artifact records require release and verification fields", () => {
   assert.ok(errors.some((error) => error.includes("invalid signingClass")));
 });
 
+test("signed artifact records require detached signature inputs", () => {
+  const errors = verifyArtifactRegistry(policy, { artifacts: [{
+    id: "signed-gateway", kind: "container", sourceCommit: "a".repeat(40), sha256: "b".repeat(64), bytes: 1,
+    signingClass: "test-signed", buildRun: "run", sbom: "sbom", minimumOs: "linux", installEvidence: "evidence",
+    revocation: "runbook", expiry: "2026-08-01T00:00:00Z",
+  }] });
+  assert.ok(errors.some((error) => error.includes("signed artifact missing manifest")));
+  assert.ok(errors.some((error) => error.includes("signed artifact missing signature")));
+  assert.ok(errors.some((error) => error.includes("signed artifact missing publicKey")));
+});
+
 test("secret inventory rejects value-bearing fields", () => {
   const errors = verifySecretInventory(policy, {
     secrets: [{

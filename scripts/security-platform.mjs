@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyManifestSignature } from "./security-artifact.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
@@ -70,6 +71,35 @@ export function verifyArtifactRegistry(policy, registry, filesystemRoot = root) 
         if (sha256 !== artifact.sha256) fail(errors, `artifact ${artifact.id}: digest mismatch`);
       } catch {
         fail(errors, `artifact ${artifact.id}: local path cannot be verified`);
+      }
+    }
+    if (artifact.signingClass !== "unsigned-local") {
+      for (const field of ["manifest", "signature", "publicKey"]) {
+        if (typeof artifact[field] !== "string" || artifact[field].trim() === "") fail(errors, `artifact ${artifact.id}: signed artifact missing ${field}`);
+      }
+      if (artifact.manifest && artifact.signature && artifact.publicKey) {
+        try {
+          const result = verifyManifestSignature({
+            manifestPath: resolve(filesystemRoot, artifact.manifest),
+            signaturePath: resolve(filesystemRoot, artifact.signature),
+            publicKeyPath: resolve(filesystemRoot, artifact.publicKey),
+          });
+          if (result.signingClass !== artifact.signingClass) fail(errors, `artifact ${artifact.id}: signing class mismatch`);
+          const manifest = JSON.parse(readFileSync(resolve(filesystemRoot, artifact.manifest), "utf8"));
+          if (manifest.sha256 !== artifact.sha256 || manifest.bytes !== artifact.bytes || manifest.sourceCommit !== artifact.sourceCommit) {
+            fail(errors, `artifact ${artifact.id}: signed manifest does not match registry`);
+          }
+          const sbomBytes = readFileSync(resolve(filesystemRoot, artifact.sbom));
+          const provenanceBytes = readFileSync(resolve(filesystemRoot, artifact.provenance));
+          if (createHash("sha256").update(sbomBytes).digest("hex") !== manifest.sbom?.sha256) fail(errors, `artifact ${artifact.id}: SBOM digest mismatch`);
+          if (createHash("sha256").update(provenanceBytes).digest("hex") !== manifest.provenance?.sha256) fail(errors, `artifact ${artifact.id}: provenance digest mismatch`);
+          const sbom = JSON.parse(sbomBytes.toString("utf8"));
+          const provenance = JSON.parse(provenanceBytes.toString("utf8"));
+          if (sbom.bomFormat !== "CycloneDX" || sbom.metadata?.properties?.[0]?.value !== artifact.sourceCommit) fail(errors, `artifact ${artifact.id}: SBOM source identity mismatch`);
+          if (provenance.subject?.[0]?.digest?.sha256 !== artifact.sha256) fail(errors, `artifact ${artifact.id}: provenance subject mismatch`);
+        } catch (error) {
+          fail(errors, `artifact ${artifact.id}: signature verification failed: ${error.message}`);
+        }
       }
     }
   }

@@ -10,7 +10,7 @@ test("CycloneDX output is deterministic and sorted", () => {
   const commit = "a".repeat(40);
   const sbom = cycloneDxFromLock({ packages: {
     "node_modules/z": { name: "z", version: "1.0.0" },
-    "node_modules/a": { name: "a", version: "2.0.0" },
+    "node_modules/a": { version: "2.0.0" },
   } }, commit);
   assert.equal(sbom.bomFormat, "CycloneDX");
   assert.deepEqual(sbom.components.map((item) => item.name), ["a", "z"]);

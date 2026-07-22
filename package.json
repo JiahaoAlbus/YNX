@@ -19,6 +19,7 @@
     "security:verify": "node scripts/security-platform.mjs verify",
     "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs",
     "security:artifact": "node scripts/security-artifact.mjs build",
-    "security:backup": "node scripts/security-backup.mjs"
+    "security:backup": "node scripts/security-backup.mjs",
+    "security:build-scripts": "node scripts/security-build-script-audit.mjs"
   }
 }

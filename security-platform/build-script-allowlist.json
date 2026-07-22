@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "allowed": {
+    "": {
+      "postinstall": "npm --workspaces --if-present run build"
+    },
+    "node_modules/esbuild": {
+      "postinstall": "node install.js"
+    },
+    "node_modules/fsevents": {
+      "lockFlagOnlyReviewed": true
+    }
+  }
+}

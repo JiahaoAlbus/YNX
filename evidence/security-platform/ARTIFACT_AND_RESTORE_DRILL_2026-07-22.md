@@ -2,16 +2,16 @@
 
 ## Reproducible artifact
 
-- Source commit: `e2c29248e8a10321cc42507c22e57a34d9746218`
-- Artifact: `ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar`
-- Bytes: 61,440
-- SHA-256, build one: `95156e936631602389b5b3e6de898d65b7e05a91c402bad1af2452fb19839a93`
-- SHA-256, independent build two: `95156e936631602389b5b3e6de898d65b7e05a91c402bad1af2452fb19839a93`
-- CycloneDX SBOM components: 377
-- CycloneDX SBOM SHA-256, both builds: `85c94ee703c98efa2178060754f230bab6cdde2eb4dd8f8cf6f2af944d34a4b1`
-- Provenance SHA-256, both builds: `9903281beb762080988f805dcc2b111ea42a1d2cc2f1e8756f73d0e12c1a1248`
+- Source commit: `850b2e31e3ba7507c73c271bf4737922d3f609eb`
+- Artifact: `ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar`
+- Bytes: 440,320
+- SHA-256, build one: `37ec8070947ec977af99588366c7f372c9ffa6ae62ffcf0b8ecf7e220350f15b`
+- SHA-256, independent build two: `37ec8070947ec977af99588366c7f372c9ffa6ae62ffcf0b8ecf7e220350f15b`
+- CycloneDX SBOM components: 345
+- CycloneDX SBOM SHA-256, both builds: `c890868b4163e380ed130ef7dddc693477303cc820f44bd02c33e8a3479b1069`
+- Provenance SHA-256, both builds: `3cbafd761cfbcde3cd6e177496fa1519c8860488813cb532dc3d4b2fa5f2edaf`
 - Signature: Ed25519 detached test signature, verified
-- Test public-key fingerprint: `sha256:983e1156f1789cbbd9afeaffa8f102340be05c4473e07f40f41a57f7d24fe5b2`
+- Test public-key fingerprint: `sha256:026e2dad21177a5463028601ac1650ab31839351de1ccc776f0da76cead3d5b8`
 - Signing class: `test-signed`
 - Public release eligible: false
 - Archive path traversal scan: PASS
@@ -19,6 +19,8 @@
 - Archive secret-file extension scan: PASS
 
 The ephemeral private key was created in a system temporary directory with owner-only permissions and was never copied into the repository. This drill does not support `productionSigned=true` or `downloadHosted=true`.
+
+The earlier `e2c2924` candidate remains in the registry as revoked evidence. It was superseded after dependency advisory remediation and after the archive was made self-contained; it is not an active release candidate.
 
 ## Encrypted restore
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "source": "YNX release process",
-  "asOf": "2026-07-22T14:35:00Z",
+  "asOf": "2026-07-22T15:08:00Z",
   "artifacts": [
     {
       "id": "security-platform-source-e2c2924",
@@ -16,6 +16,28 @@
       "manifest": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.json",
       "signature": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.sig.json",
       "publicKey": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/test-signing-public.pem",
+      "signingClass": "test-signed",
+      "minimumOs": "Any operating system with POSIX tar support",
+      "installEvidence": "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
+      "revocation": "OPERATIONS.md#artifact-build-and-verification",
+      "expiry": "2026-08-21T00:00:00Z",
+      "publicReleaseEligible": false,
+      "revokedAt": "2026-07-22T15:08:00Z",
+      "revocationReason": "Superseded after dependency advisory remediation and self-contained archive correction"
+    },
+    {
+      "id": "security-platform-source-850b2e3",
+      "kind": "source-archive",
+      "sourceCommit": "850b2e31e3ba7507c73c271bf4737922d3f609eb",
+      "path": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar",
+      "sha256": "37ec8070947ec977af99588366c7f372c9ffa6ae62ffcf0b8ecf7e220350f15b",
+      "bytes": 440320,
+      "buildRun": "local reproducibility drill 2026-07-22T15:07:00Z",
+      "sbom": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.cdx.json",
+      "provenance": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.intoto.json",
+      "manifest": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.manifest.json",
+      "signature": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.manifest.sig.json",
+      "publicKey": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/test-signing-public.pem",
       "signingClass": "test-signed",
       "minimumOs": "Any operating system with POSIX tar support",
       "installEvidence": "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",

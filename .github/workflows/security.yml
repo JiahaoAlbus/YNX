@@ -79,3 +79,5 @@ jobs:
       - name: Go static analysis
         working-directory: chain
         run: go vet ./...
+      - name: Third-party notice drift gate
+        run: node scripts/security-notices.mjs verify

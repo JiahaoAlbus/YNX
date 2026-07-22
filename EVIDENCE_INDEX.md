@@ -16,6 +16,7 @@
 - Founder KPI contract: `FOUNDER_KPI_FRAMEWORK.md` and `security-platform/kpis.json`
 - Local capacity baseline: `evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json`
 - Provider governance: `PROVIDER_INVENTORY.md` and `security-platform/providers.json`
+- Third-party dependency notices: `THIRD_PARTY_NOTICES.md`
 - Current feature truth: `FEATURE_COMPLETION_EVIDENCE.md`
 - Public testnet audit: `evidence/security-platform/PUBLIC_GATE_2026-07-22.md`
 - Local verification: `evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md`

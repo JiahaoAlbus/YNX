@@ -21,6 +21,7 @@
     "security:artifact": "node scripts/security-artifact.mjs build",
     "security:backup": "node scripts/security-backup.mjs",
     "security:build-scripts": "node scripts/security-build-script-audit.mjs",
-    "security:benchmark": "node scripts/security-benchmark.mjs"
+    "security:benchmark": "node scripts/security-benchmark.mjs",
+    "security:notices": "node scripts/security-notices.mjs verify"
   }
 }

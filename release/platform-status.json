@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "product": "YNX Security Platform",
+  "sourceCommit": "b6da2efaa54877ee9c6d394a8207560ddd845e61",
+  "asOf": "2026-07-22T00:00:00Z",
+  "source": "repository evidence",
+  "version": "0.1.0",
+  "confidence": "direct-evidence-only",
+  "states": {
+    "implementedLocal": false,
+    "testedLocal": false,
+    "installedLocal": false,
+    "integratedCentral": false,
+    "deployedStaging": false,
+    "deployedPublic": false,
+    "downloadHosted": false,
+    "productionSigned": false,
+    "storeReleased": false
+  },
+  "evidence": {}
+}

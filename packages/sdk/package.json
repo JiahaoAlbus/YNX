@@ -11,8 +11,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "lint": "eslint .",
+    "test": "node ../../node_modules/vitest/vitest.mjs run",
+    "lint": "node ../../node_modules/eslint/bin/eslint.js .",
     "format": "prettier -w ."
   },
   "dependencies": {

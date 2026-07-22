@@ -31,6 +31,9 @@ jobs:
       - name: Docs readiness
         run: npm run verify:docs
 
+      - name: Unified security platform gate
+        run: npm run security:verify && npm run security:test
+
       - name: Test
         run: npm test
 

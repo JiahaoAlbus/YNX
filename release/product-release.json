@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "product": "YNX Security Platform",
+  "version": "0.1.0",
+  "channel": "development",
+  "sourceCommit": "b6da2efaa54877ee9c6d394a8207560ddd845e61",
+  "releasedAt": null,
+  "artifacts": [],
+  "statusRecord": "release/platform-status.json",
+  "productionSigned": false,
+  "deployedPublic": false
+}

@@ -4320,8 +4320,11 @@ async function gracefulShutdown(signal) {
     persistRuntime.timer = null;
   }
   try {
-    if (persistRuntime.pending || persistRuntime.writing) await flushPersist();
-    else persistSync();
+    if (persistRuntime.pending) await flushPersist();
+    while (persistRuntime.writing) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    persistSync();
   } catch (error) {
     console.error("[ai-gateway] graceful flush failed:", error);
   }

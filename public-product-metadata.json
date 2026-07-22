@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "YNX Security Platform",
+  "aliases": ["YNX Security and Reliability Platform"],
+  "canonicalRoute": "/security-platform",
+  "title": "YNX Security Platform | Release Integrity and Reliability",
+  "metaDescription": "Security, release integrity, observability, and recovery controls for YNX testnet products.",
+  "h1": "YNX Security Platform",
+  "status": "development",
+  "features": ["release policy", "artifact integrity", "secret governance", "incident and recovery controls"],
+  "risks": ["not production deployed", "production signing not established", "restore drill evidence pending"],
+  "downloads": [],
+  "supportUrl": null,
+  "privacyUrl": null,
+  "securityUrl": null,
+  "statusUrl": null,
+  "structuredDataType": "SoftwareApplication"
+}

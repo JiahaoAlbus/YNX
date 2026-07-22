@@ -19,7 +19,7 @@
     "ynxdev:governance-e2e": "hardhat run scripts/ynxdev/governance_e2e.ts --network ynxdev",
     "ynxdev:domain-inbox-demo": "hardhat run scripts/ynxdev/domain_inbox_demo.ts --network ynxdev",
     "deploy:sim": "hardhat run scripts/deploy.ts --network default",
-    "test": "hardhat test",
+    "test": "node ../../node_modules/hardhat/dist/src/cli.js test",
     "lint": "node ../../node_modules/eslint/bin/eslint.js .",
     "format": "prettier -w ."
   },

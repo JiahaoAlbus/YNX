@@ -1,0 +1,51 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { verifyArtifactRegistry, verifySecretInventory, verifyTruthRecord } from "./security-platform.mjs";
+
+const policy = {
+  requiredTruthStates: ["implementedLocal", "deployedPublic"],
+  artifactKinds: ["container"],
+  signingClasses: ["test-signed"],
+  secretClasses: ["deploy"],
+};
+
+test("a true release state fails closed without evidence", () => {
+  const errors = verifyTruthRecord(policy, {
+    sourceCommit: "a".repeat(40),
+    states: { implementedLocal: true, deployedPublic: false },
+    evidence: {},
+  });
+  assert.deepEqual(errors, ["truth state implementedLocal=true requires evidence"]);
+});
+
+test("false release states remain honest without evidence", () => {
+  const errors = verifyTruthRecord(policy, {
+    sourceCommit: "a".repeat(40),
+    states: { implementedLocal: false, deployedPublic: false },
+    evidence: {},
+  });
+  assert.deepEqual(errors, []);
+});
+
+test("artifact records require release and verification fields", () => {
+  const errors = verifyArtifactRegistry(policy, { artifacts: [{ id: "gateway", kind: "container" }] });
+  assert.ok(errors.some((error) => error.includes("invalid sourceCommit")));
+  assert.ok(errors.some((error) => error.includes("missing sbom")));
+  assert.ok(errors.some((error) => error.includes("invalid signingClass")));
+});
+
+test("secret inventory rejects value-bearing fields", () => {
+  const errors = verifySecretInventory(policy, {
+    secrets: [{
+      id: "deploy-key",
+      class: "deploy",
+      owner: "release engineering",
+      managerReference: "secret-manager://deploy/key",
+      expiresAt: "2026-08-01T00:00:00Z",
+      rotationRunbook: "OPERATIONS.md#rotation",
+      lastRotationEvidence: "evidence/rotation.json",
+      secretValue: "must-not-appear",
+    }],
+  });
+  assert.ok(errors.some((error) => error.includes("forbidden value-bearing field")));
+});

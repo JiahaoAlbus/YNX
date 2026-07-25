@@ -3,10 +3,12 @@
 - Policy: `security-platform/platform-policy.json`
 - Release truth: `release/platform-status.json`
 - Artifact registry: `release/artifact-registry.json`
-- Secret inventory metadata: `security-platform/secret-inventory.json`
+- Secret inventory metadata and schema: `security-platform/secret-inventory.json`; `security-platform/secret-inventory.schema.json`
+- Service identity policy: `security-platform/service-identity-policy.json`
+- Service identity and mTLS enforcement: `scripts/security-service-identity.mjs`; `scripts/security-service-identity.test.mjs`
 - Policy engine: `scripts/security-platform.mjs`
 - Policy regression tests: `scripts/security-platform.test.mjs`
-- CI enforcement: `.github/workflows/ci.yml`
+- CI enforcement: `.github/workflows/ci.yml`; `.github/workflows/security-platform-deploy.yml`
 - Security boundaries: `THREAT_MODEL.md`
 - Operations and drills: `OPERATIONS.md`
 - Monitoring contract: `OBSERVABILITY.md`
@@ -21,6 +23,10 @@
 - Public testnet audit: `evidence/security-platform/PUBLIC_GATE_2026-07-22.md`
 - Local verification: `evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md`
 - Artifact and restore drill: `evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md`
+- Encrypted local restore drill: `evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json`
+- Local Service Identity and mTLS drill: `evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json`
+- Deployment-candidate review: `evidence/security-platform/PLATFORM_INFRASTRUCTURE_2026-07-23.md`
 - Dependency remediation: `evidence/security-platform/DEPENDENCY_REMEDIATION_2026-07-22.md`
+- Integration contract and vectors: `release/integration/security-platform-contract.json`; `docs/integration/CROSS_PRODUCT_TEST_VECTORS.json`
 
-Generated test logs must be stored under `evidence/security-platform/<source-commit>/` with UTC time, command, environment, exit status, and tool versions. Public evidence must not expose local paths, internal hosts, credentials, or private operational details.
+Generated evidence must include a full source commit, UTC timestamps, environment, result, and explicit limitations. Commit-named files or source-commit directories are both accepted. Public evidence must not expose local paths, internal hosts, authentication material, or private operational details.

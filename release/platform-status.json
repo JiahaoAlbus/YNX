@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "product": "YNX Security Platform",
-  "sourceCommit": "6ef00f8e7d9d36adee813530698e4188cf384f85",
-  "asOf": "2026-07-22T15:55:00Z",
-  "source": "repository evidence",
-  "version": "0.1.0",
+  "sourceCommit": "0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c",
+  "asOf": "2026-07-25T06:55:24Z",
+  "source": "repository and direct local evidence",
+  "version": "0.1.0-candidate",
   "confidence": "direct-evidence-only",
   "states": {
     "implementedLocal": true,
@@ -21,12 +21,25 @@
     "implementedLocal": [
       "commit:9db61f2f3b3d1c9fb54c236912851fcfc85c26dd",
       "commit:e2c29248e8a10321cc42507c22e57a34d9746218",
-      "commit:6ef00f8e7d9d36adee813530698e4188cf384f85"
+      "commit:6ef00f8e7d9d36adee813530698e4188cf384f85",
+      "commit:58fe6796593a7cedaee01d88e1b534f0e70c4d6a",
+      "commit:0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c"
     ],
     "testedLocal": [
       "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md",
       "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
-      "evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json"
+      "evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json",
+      "evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json",
+      "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json"
     ]
+  },
+  "blockedStates": {
+    "installedLocal": "no cluster installation evidence",
+    "integratedCentral": "central owners have not accepted the candidate contract",
+    "deployedStaging": "no staging deployment run or URL evidence",
+    "deployedPublic": "no public deployment or health evidence",
+    "downloadHosted": "no immutable hosted artifact URL evidence",
+    "productionSigned": "no approved production signer or signature evidence",
+    "storeReleased": "no store release evidence"
   }
 }

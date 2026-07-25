@@ -1,0 +1,97 @@
+name: Security Platform Gates
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/security-platform-deploy.yml"
+      - "infra/k8s/**"
+      - "scripts/security-*.mjs"
+      - "security-platform/**"
+      - "release/**"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches:
+      - codex/final-security-platform
+    paths:
+      - ".github/workflows/security-platform-deploy.yml"
+      - "infra/k8s/**"
+      - "scripts/security-*.mjs"
+      - "security-platform/**"
+      - "release/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-platform-gates-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Policy, tests, supply chain, and manifests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.4.1"
+          cache: npm
+
+      - name: Reproducible install
+        run: npm ci --ignore-scripts
+
+      - name: Audit install scripts before execution
+        run: npm run security:build-scripts
+
+      - name: Run required package build hooks
+        run: npm rebuild
+
+      - name: Verify machine-readable policy and repository truth
+        run: npm run security:verify
+
+      - name: Run security regression tests
+        run: npm run security:test
+
+      - name: Render and enforce Kubernetes candidates
+        run: npm run security:integration
+
+      - name: Verify third-party notices
+        run: npm run security:notices
+
+      - name: Dependency vulnerability gate
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Syntax-check operator tools
+        run: |
+          node --check scripts/security-disaster-recovery.mjs
+          node --check scripts/security-integration.mjs
+          node --check scripts/security-rotation.mjs
+          node --check scripts/security-seo-monitor.mjs
+
+      - name: Lint workspaces
+        run: npm run lint
+
+  deployment-boundary:
+    name: Deployment remains operator-controlled
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Reject deployment credentials and mutation commands
+        run: node scripts/security-ci-policy.mjs

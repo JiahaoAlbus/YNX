@@ -109,12 +109,30 @@ export function verifyArtifactRegistry(policy, registry, filesystemRoot = root) 
 export function verifySecretInventory(policy, inventory) {
   const errors = [];
   const ids = new Set();
+  const requiredTypes = new Set([
+    "validator-key", "faucet-key", "deploy-key", "treasury-key", "provider-credential", "database-credential",
+    "api-credential", "artifact-signing-key", "mobile-signing-key", "tls-key", "backup-encryption-key", "recovery-key",
+  ]);
+  const configuredTypes = new Set(inventory.requiredSecretTypes ?? []);
+  if (inventory.valueMaterialStored !== false) fail(errors, "secret inventory must assert valueMaterialStored=false");
+  for (const type of requiredTypes) if (!configuredTypes.has(type)) fail(errors, `secret inventory is missing required type ${type}`);
+  for (const type of configuredTypes) if (!requiredTypes.has(type)) fail(errors, `secret inventory has unknown required type ${type}`);
+  if ((inventory.secrets ?? []).length === 0 && inventory.status !== "not-configured") {
+    fail(errors, "empty secret inventory must remain status=not-configured");
+  }
   for (const secret of inventory.secrets ?? []) {
     if (!secret.id || ids.has(secret.id)) fail(errors, `secret id is missing or duplicated: ${secret.id ?? ""}`);
     ids.add(secret.id);
     if (!policy.secretClasses.includes(secret.class)) fail(errors, `secret ${secret.id}: invalid class`);
-    for (const field of ["owner", "managerReference", "expiresAt", "rotationRunbook", "lastRotationEvidence"]) {
+    for (const field of [
+      "secretType", "owner", "product", "environment", "purpose", "provider", "managerReference", "storageLocation",
+      "accessPolicy", "createdAt", "expiresAt", "lastRotatedAt", "nextRotationAt", "revocationStatus", "breakGlassPolicy",
+      "auditStatus", "backupStatus", "recoveryBoundary", "rotationRunbook", "lastRotationEvidence",
+    ]) {
       if (typeof secret[field] !== "string" || secret[field].trim() === "") fail(errors, `secret ${secret.id}: missing ${field}`);
+    }
+    if (!Number.isInteger(secret.rotationPeriodDays) || secret.rotationPeriodDays < 1 || secret.rotationPeriodDays > 730) {
+      fail(errors, `secret ${secret.id}: invalid rotationPeriodDays`);
     }
     const serialized = JSON.stringify(secret);
     if (/privateKey|seedPhrase|mnemonic|secretValue|credentialValue/i.test(serialized)) {

@@ -36,7 +36,13 @@
     "deploy",
     "treasury",
     "provider",
-    "artifact-signing"
+    "database",
+    "api",
+    "artifact-signing",
+    "mobile-signing",
+    "tls",
+    "backup-encryption",
+    "recovery"
   ],
   "prohibitedTrackedFilePatterns": [
     "(^|/)\\.env$",

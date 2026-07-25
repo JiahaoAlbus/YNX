@@ -3,17 +3,38 @@
   "product": "YNX Security Platform",
   "version": "0.2.0-candidate",
   "channel": "development",
-  "sourceCommit": "31c9ea3e15d82cb1356fc555fbee9ae263ac5328",
+  "environment": "local",
+  "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
   "branch": "codex/final-security-platform",
+  "buildRun": "local-reproducibility-drill:53b037eb6fff51e3cb149231fad5bb5f2599527f",
   "releasedAt": null,
-  "artifacts": [],
+  "artifacts": [
+    "security-platform-source-53b037e"
+  ],
   "statusRecord": "release/platform-status.json",
   "productionSigned": false,
   "deployedPublic": false,
-  "releaseStatus": "blocked-pending-current-commit-artifact",
+  "releaseStatus": "local-test-signed-candidate",
+  "securityFindings": {
+    "releaseBlocking": 0,
+    "acceptedRisks": [
+      "local source archive only",
+      "ephemeral test signature only",
+      "no production certificate chain or transparency record",
+      "no hosted immutable download URL",
+      "no installation or cold-start evidence"
+    ]
+  },
+  "approval": {
+    "localEngineeringVerification": true,
+    "productionReleaseApproval": false
+  },
+  "publicEvidence": [],
   "blockedBy": [
-    "release record remains pinned to the last evidenced integration commit until a post-commit artifact drill completes",
-    "reproducible artifact and test-signature evidence for the artifact-tooling commit do not exist yet",
-    "production signer, hosted download, installation, cold-start and public deployment evidence do not exist"
+    "production secure signer and signing approval",
+    "immutable hosted download and independent verification",
+    "installation and cold-start evidence",
+    "staging deployment and rollback evidence",
+    "public deployment and health/version/security/status URLs"
   ]
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "source": "YNX release process",
-  "asOf": "2026-07-25T07:15:00Z",
+  "asOf": "2026-07-25T07:28:07Z",
   "artifacts": [
     {
       "id": "security-platform-source-e2c2924",
@@ -48,6 +48,44 @@
       "revocationReason": "Clean-checkout verification dependency was not tracked; superseded by the embedded-public-JWK verification format",
       "verificationStatus": "blocked-unverifiable-legacy",
       "verificationBlocker": "Historical public verification material is not tracked, so a clean checkout cannot independently verify this test signature"
+    },
+    {
+      "id": "security-platform-source-53b037e",
+      "kind": "source-archive",
+      "product": "YNX Security Platform",
+      "version": "0.2.0-candidate",
+      "release": "development-candidate",
+      "environment": "local",
+      "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
+      "path": "release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/ynx-security-platform-53b037eb6fff51e3cb149231fad5bb5f2599527f.tar",
+      "sha256": "a110ba963da7065aa12d6f76aa3f1f7a5a1c1d5fafe171ec4508655894fcdc79",
+      "bytes": 942080,
+      "mediaType": "application/x-tar",
+      "platform": "source",
+      "architecture": "any",
+      "buildRun": "local-reproducibility-drill:53b037eb6fff51e3cb149231fad5bb5f2599527f",
+      "sbom": "release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/ynx-security-platform-53b037eb6fff51e3cb149231fad5bb5f2599527f.tar.cdx.json",
+      "provenance": "release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/ynx-security-platform-53b037eb6fff51e3cb149231fad5bb5f2599527f.tar.intoto.json",
+      "manifest": "release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/ynx-security-platform-53b037eb6fff51e3cb149231fad5bb5f2599527f.tar.manifest.json",
+      "signature": "release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/ynx-security-platform-53b037eb6fff51e3cb149231fad5bb5f2599527f.tar.manifest.sig.json",
+      "signingClass": "test-signed",
+      "signingIdentity": "local-ephemeral-test-signer",
+      "publicKeyFingerprint": "sha256:d184fd92d6009fcb793471b6865096cb41ea5d79610b43045b627b0a8f768396",
+      "minimumOs": "Any operating system with POSIX tar support",
+      "installEvidence": "not-run-source-archive",
+      "coldStartEvidence": "not-applicable-source-archive",
+      "reproducibilityStatus": "verified-local",
+      "verificationStatus": "verified-local-test-signature",
+      "verificationEvidence": "evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json",
+      "revocation": "OPERATIONS.md#artifact-build-and-verification",
+      "revocationStatus": "active",
+      "expiry": "2026-08-24T07:28:07.187Z",
+      "publicReleaseEligible": false,
+      "revokedAt": null,
+      "supersededBy": null,
+      "hostedStatus": "not-hosted",
+      "downloadUrl": null,
+      "productionSigned": false
     }
   ]
 }

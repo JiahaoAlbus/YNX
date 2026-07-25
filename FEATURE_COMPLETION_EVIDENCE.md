@@ -2,10 +2,10 @@
 
 | Capability | Current state | Direct evidence | Missing proof |
 | --- | --- | --- | --- |
-| release truth model | implemented and tested locally | `release/platform-status.json`; commits `58fe6796593a7cedaee01d88e1b534f0e70c4d6a` and `0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c` | central merge and remote CI acceptance |
-| artifact registry contract | tested locally | `release/artifact-registry.json`; cryptographically verified test-signed source artifact | current-commit artifact build, independent CI verification, and approved production signer |
+| release truth model | implemented and tested locally | `release/platform-status.json`; commits `58fe6796593a7cedaee01d88e1b534f0e70c4d6a`, `0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c`, and `53b037eb6fff51e3cb149231fad5bb5f2599527f` | central merge and remote CI acceptance |
+| artifact registry contract | tested locally | `release/artifact-registry.json`; `evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json`; reproducible source artifact `a110ba963da7065aa12d6f76aa3f1f7a5a1c1d5fafe171ec4508655894fcdc79` | independent clean-checkout CI verification, immutable hosting, installation evidence, and approved production signer |
 | sensitive-material metadata contract | implemented locally; inventory not configured | `security-platform/secret-inventory.json`; `security-platform/secret-inventory.schema.json`; validator tests | production manager, named owners, environment bindings, rotation and recovery evidence |
-| Service Identity policy | tested locally | `security-platform/service-identity-policy.json`; `scripts/security-service-identity.test.mjs`; 33-test security suite | central workload identity provider and product-owner acceptance |
+| Service Identity policy | tested locally | `security-platform/service-identity-policy.json`; `scripts/security-service-identity.test.mjs`; 41-test security suite | central workload identity provider and product-owner acceptance |
 | local mTLS handshake and rejection | tested locally | `evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json`; source commit `0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c` | production CA, external revocation, real service deployment and certificate rotation |
 | tracked sensitive-material gate | tested locally | `scripts/security-platform.mjs`; `evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md` | remote CI run on the latest pushed commit |
 | CI validation gates | implemented locally | `.github/workflows/security-platform-deploy.yml`; `scripts/security-ci-policy.mjs` | successful remote workflow run and protected-branch enforcement evidence |

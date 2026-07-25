@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "product": "YNX Security Platform",
-  "sourceCommit": "0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c",
-  "asOf": "2026-07-25T06:55:24Z",
+  "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
+  "asOf": "2026-07-25T07:28:07Z",
   "source": "repository and direct local evidence",
-  "version": "0.1.0-candidate",
+  "version": "0.2.0-candidate",
   "confidence": "direct-evidence-only",
   "states": {
     "implementedLocal": true,
@@ -23,14 +23,16 @@
       "commit:e2c29248e8a10321cc42507c22e57a34d9746218",
       "commit:6ef00f8e7d9d36adee813530698e4188cf384f85",
       "commit:58fe6796593a7cedaee01d88e1b534f0e70c4d6a",
-      "commit:0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c"
+      "commit:0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c",
+      "commit:53b037eb6fff51e3cb149231fad5bb5f2599527f"
     ],
     "testedLocal": [
       "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md",
       "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
       "evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json",
       "evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json",
-      "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json"
+      "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json",
+      "evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json"
     ]
   },
   "blockedStates": {
@@ -38,8 +40,8 @@
     "integratedCentral": "central owners have not accepted the candidate contract",
     "deployedStaging": "no staging deployment run or URL evidence",
     "deployedPublic": "no public deployment or health evidence",
-    "downloadHosted": "no immutable hosted artifact URL evidence",
-    "productionSigned": "no approved production signer or signature evidence",
+    "downloadHosted": "artifact exists only in Git and has no immutable hosted download URL",
+    "productionSigned": "current artifact is test-signed with an ephemeral local signer; no approved production signer or signature evidence",
     "storeReleased": "no store release evidence"
   }
 }

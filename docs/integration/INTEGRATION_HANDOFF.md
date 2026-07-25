@@ -4,7 +4,7 @@
 
 Owner: `30-security-sre-release`
 
-Source commit: `0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c`
+Source commit: `53b037eb6fff51e3cb149231fad5bb5f2599527f`
 
 Contract: `release/integration/security-platform-contract.json`
 
@@ -15,6 +15,8 @@ This platform owns the security framework, enforcement tools, release evidence, 
 - Local implementation: accepted by Product 30 tests.
 - Local tests: accepted; security suite and repository suite pass.
 - Local encrypted restore drill: passed for the committed `security-platform/` metadata set.
+- Local reproducible artifact drill: passed for source commit `53b037eb6fff51e3cb149231fad5bb5f2599527f`, including SBOM, provenance, test signature, tamper rejection, and unknown-signer rejection.
+- Artifact distribution: not hosted; the active artifact remains local/test-signed and is not public-release eligible.
 - Central integration: not accepted.
 - Staging deployment: not evidenced.
 - Public deployment: not evidenced.

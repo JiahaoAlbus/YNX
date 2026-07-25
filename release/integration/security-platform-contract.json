@@ -3,7 +3,7 @@
   "contractId": "ynx.security-platform.integration.v1",
   "product": "30-security-platform",
   "owner": "30-security-sre-release",
-  "sourceCommit": "0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c",
+  "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
   "contractStatus": "candidate",
   "authority": {
     "owns": [
@@ -157,6 +157,7 @@
   "evidence": [
     "evidence/security-platform/PLATFORM_INFRASTRUCTURE_2026-07-23.md",
     "evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json",
-    "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json"
+    "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json",
+    "evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json"
   ]
 }

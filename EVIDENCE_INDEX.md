@@ -25,6 +25,8 @@
 - Artifact and restore drill: `evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md`
 - Encrypted local restore drill: `evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json`
 - Local Service Identity and mTLS drill: `evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json`
+- Local reproducible artifact, SBOM, provenance, test-signature, and tamper drill: `evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json`
+- Active local test-signed artifact set: `release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/`
 - Deployment-candidate review: `evidence/security-platform/PLATFORM_INFRASTRUCTURE_2026-07-23.md`
 - Dependency remediation: `evidence/security-platform/DEPENDENCY_REMEDIATION_2026-07-22.md`
 - Integration contract and vectors: `release/integration/security-platform-contract.json`; `docs/integration/CROSS_PRODUCT_TEST_VECTORS.json`

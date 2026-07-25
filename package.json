@@ -17,7 +17,7 @@
     "format:packages": "npm --workspaces run format",
     "verify:docs": "./scripts/verify_docs_readiness.sh",
     "security:verify": "node scripts/security-platform.mjs verify",
-    "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs scripts/security-operations.test.mjs scripts/security-integration.test.mjs scripts/security-seo-monitor.test.mjs",
+    "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs scripts/security-operations.test.mjs scripts/security-integration.test.mjs scripts/security-seo-monitor.test.mjs scripts/security-service-identity.test.mjs",
     "security:artifact": "node scripts/security-artifact.mjs build",
     "security:backup": "node scripts/security-backup.mjs",
     "security:build-scripts": "node scripts/security-build-script-audit.mjs",
@@ -26,6 +26,7 @@
     "security:rotation": "node scripts/security-rotation.mjs status",
     "security:disaster-recovery": "node scripts/security-disaster-recovery.mjs",
     "security:seo": "node scripts/security-seo-monitor.mjs regression",
+    "security:identity": "node --test scripts/security-service-identity.test.mjs",
     "security:integration": "node scripts/security-integration.mjs"
   }
 }

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "source": "YNX release process",
-  "asOf": "2026-07-22T15:08:00Z",
+  "asOf": "2026-07-25T07:15:00Z",
   "artifacts": [
     {
       "id": "security-platform-source-e2c2924",
@@ -15,7 +15,6 @@
       "provenance": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.intoto.json",
       "manifest": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.json",
       "signature": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/ynx-security-platform-e2c29248e8a10321cc42507c22e57a34d9746218.tar.manifest.sig.json",
-      "publicKey": "release/artifacts/e2c29248e8a10321cc42507c22e57a34d9746218/test-signing-public.pem",
       "signingClass": "test-signed",
       "minimumOs": "Any operating system with POSIX tar support",
       "installEvidence": "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
@@ -23,7 +22,9 @@
       "expiry": "2026-08-21T00:00:00Z",
       "publicReleaseEligible": false,
       "revokedAt": "2026-07-22T15:08:00Z",
-      "revocationReason": "Superseded after dependency advisory remediation and self-contained archive correction"
+      "revocationReason": "Superseded after dependency advisory remediation and archive correction",
+      "verificationStatus": "blocked-unverifiable-legacy",
+      "verificationBlocker": "Historical public verification material is not tracked, so a clean checkout cannot independently verify this test signature"
     },
     {
       "id": "security-platform-source-850b2e3",
@@ -37,13 +38,16 @@
       "provenance": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.intoto.json",
       "manifest": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.manifest.json",
       "signature": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/ynx-security-platform-850b2e31e3ba7507c73c271bf4737922d3f609eb.tar.manifest.sig.json",
-      "publicKey": "release/artifacts/850b2e31e3ba7507c73c271bf4737922d3f609eb/test-signing-public.pem",
       "signingClass": "test-signed",
       "minimumOs": "Any operating system with POSIX tar support",
       "installEvidence": "evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md",
       "revocation": "OPERATIONS.md#artifact-build-and-verification",
       "expiry": "2026-08-21T00:00:00Z",
-      "publicReleaseEligible": false
+      "publicReleaseEligible": false,
+      "revokedAt": "2026-07-25T07:15:00Z",
+      "revocationReason": "Clean-checkout verification dependency was not tracked; superseded by the embedded-public-JWK verification format",
+      "verificationStatus": "blocked-unverifiable-legacy",
+      "verificationBlocker": "Historical public verification material is not tracked, so a clean checkout cannot independently verify this test signature"
     }
   ]
 }

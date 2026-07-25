@@ -48,7 +48,7 @@ export function verifyTruthRecord(policy, record) {
   return errors;
 }
 
-export function verifyArtifactRegistry(policy, registry, filesystemRoot = root) {
+export function verifyArtifactRegistry(policy, registry, filesystemRoot = root, verificationTime = new Date()) {
   const errors = [];
   const ids = new Set();
   for (const artifact of registry.artifacts ?? []) {
@@ -59,35 +59,52 @@ export function verifyArtifactRegistry(policy, registry, filesystemRoot = root) 
     if (!/^[0-9a-f]{64}$/.test(artifact.sha256 ?? "")) fail(errors, `artifact ${artifact.id}: invalid sha256`);
     if (!Number.isSafeInteger(artifact.bytes) || artifact.bytes < 1) fail(errors, `artifact ${artifact.id}: invalid bytes`);
     if (!policy.signingClasses.includes(artifact.signingClass)) fail(errors, `artifact ${artifact.id}: invalid signingClass`);
-    for (const field of ["buildRun", "sbom", "minimumOs", "installEvidence", "revocation", "expiry"]) {
+    for (const field of ["buildRun", "sbom", "provenance", "minimumOs", "installEvidence", "revocation", "expiry"]) {
       if (typeof artifact[field] !== "string" || artifact[field].trim() === "") fail(errors, `artifact ${artifact.id}: missing ${field}`);
     }
     if (artifact.path) {
       const path = resolve(filesystemRoot, artifact.path);
       try {
         const bytes = statSync(path).size;
-        const sha256 = createHash("sha256").update(readFileSync(path)).digest("hex");
+        const digest = createHash("sha256").update(readFileSync(path)).digest("hex");
         if (bytes !== artifact.bytes) fail(errors, `artifact ${artifact.id}: byte count mismatch`);
-        if (sha256 !== artifact.sha256) fail(errors, `artifact ${artifact.id}: digest mismatch`);
+        if (digest !== artifact.sha256) fail(errors, `artifact ${artifact.id}: digest mismatch`);
       } catch {
         fail(errors, `artifact ${artifact.id}: local path cannot be verified`);
       }
     }
+
+    const legacyBlocked = Boolean(artifact.revokedAt) && artifact.verificationStatus === "blocked-unverifiable-legacy";
+    if (legacyBlocked) {
+      for (const field of ["revocationReason", "verificationBlocker"]) {
+        if (typeof artifact[field] !== "string" || artifact[field].trim() === "") fail(errors, `artifact ${artifact.id}: legacy block missing ${field}`);
+      }
+      if (artifact.publicReleaseEligible !== false) fail(errors, `artifact ${artifact.id}: unverifiable legacy artifact must not be public-release eligible`);
+      continue;
+    }
+
     if (artifact.signingClass !== "unsigned-local") {
-      for (const field of ["manifest", "signature", "publicKey"]) {
+      for (const field of ["manifest", "signature", "verificationStatus", "publicKeyFingerprint"]) {
         if (typeof artifact[field] !== "string" || artifact[field].trim() === "") fail(errors, `artifact ${artifact.id}: signed artifact missing ${field}`);
       }
-      if (artifact.manifest && artifact.signature && artifact.publicKey) {
+      if (artifact.manifest && artifact.signature) {
         try {
           const result = verifyManifestSignature({
             manifestPath: resolve(filesystemRoot, artifact.manifest),
             signaturePath: resolve(filesystemRoot, artifact.signature),
-            publicKeyPath: resolve(filesystemRoot, artifact.publicKey),
+            trustedFingerprints: artifact.publicKeyFingerprint ? [artifact.publicKeyFingerprint] : [],
+            now: verificationTime,
           });
           if (result.signingClass !== artifact.signingClass) fail(errors, `artifact ${artifact.id}: signing class mismatch`);
           const manifest = JSON.parse(readFileSync(resolve(filesystemRoot, artifact.manifest), "utf8"));
-          if (manifest.sha256 !== artifact.sha256 || manifest.bytes !== artifact.bytes || manifest.sourceCommit !== artifact.sourceCommit) {
+          const manifestDigest = manifest.artifact?.sha256 ?? manifest.sha256;
+          const manifestBytes = manifest.artifact?.bytes ?? manifest.bytes;
+          if (manifestDigest !== artifact.sha256 || manifestBytes !== artifact.bytes || manifest.sourceCommit !== artifact.sourceCommit) {
             fail(errors, `artifact ${artifact.id}: signed manifest does not match registry`);
+          }
+          if (manifest.signing?.class && manifest.signing.class !== artifact.signingClass) fail(errors, `artifact ${artifact.id}: manifest signing class mismatch`);
+          if (manifest.signing?.publicKeyFingerprint && manifest.signing.publicKeyFingerprint !== artifact.publicKeyFingerprint) {
+            fail(errors, `artifact ${artifact.id}: manifest signer fingerprint mismatch`);
           }
           const sbomBytes = readFileSync(resolve(filesystemRoot, artifact.sbom));
           const provenanceBytes = readFileSync(resolve(filesystemRoot, artifact.provenance));

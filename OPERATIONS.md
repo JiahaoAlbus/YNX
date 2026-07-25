@@ -27,14 +27,18 @@ The key file must contain 32 raw bytes or 64 hexadecimal characters, be created 
 
 ## Artifact build and verification
 
-`npm run security:artifact` creates a commit-bound deterministic tar archive, CycloneDX SBOM, SLSA candidate provenance, and manifest under `dist/security-platform/`. The result is deliberately `unsigned-local` and cannot be promoted publicly. Detached signatures use Ed25519:
+`npm run security:artifact` creates a commit-bound deterministic tar archive, CycloneDX SBOM, SLSA candidate provenance, and unsigned manifest under `dist/security-platform/`. The result cannot be promoted publicly.
+
+The local drill independently rebuilds the archive, compares both SHA-256 digests, creates an ephemeral in-memory Ed25519 test signer, persists only a public JWK and detached signature, verifies the artifact set, and proves rejection of manifest tampering, artifact tampering, unknown signer identity, and test-signed public promotion:
 
 ```sh
-node scripts/security-artifact.mjs sign MANIFEST PRIVATE_KEY_FILE SIGNATURE_FILE test-signed
-node scripts/security-artifact.mjs verify-signature MANIFEST SIGNATURE_FILE PUBLIC_KEY_FILE
+node scripts/security-artifact.mjs local-drill \
+  --source-commit SOURCE_SHA \
+  --output release/artifacts/SOURCE_SHA \
+  --evidence evidence/security-platform/LOCAL_ARTIFACT_DRILL_SOURCE_SHA.json
 ```
 
-Production signing additionally requires the operator-controlled `YNX_PRODUCTION_SIGNING_APPROVED=1` environment gate, an approved secure signer path, and evidence review. The environment gate is not itself authorization or proof of secure custody.
+Production signing is not implemented by the local tool. It requires an approved external secure signer, signing identity, certificate chain, timestamp, transparency record, revocation path, product/environment/release binding, and independent verification evidence.
 
 ## Incident sequence
 

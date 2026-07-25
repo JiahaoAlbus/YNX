@@ -1,14 +1,19 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "product": "YNX Security Platform",
-  "version": "0.1.0",
+  "version": "0.2.0-candidate",
   "channel": "development",
-  "sourceCommit": "850b2e31e3ba7507c73c271bf4737922d3f609eb",
+  "sourceCommit": "31c9ea3e15d82cb1356fc555fbee9ae263ac5328",
+  "branch": "codex/final-security-platform",
   "releasedAt": null,
-  "artifacts": [
-    "security-platform-source-850b2e3"
-  ],
+  "artifacts": [],
   "statusRecord": "release/platform-status.json",
   "productionSigned": false,
-  "deployedPublic": false
+  "deployedPublic": false,
+  "releaseStatus": "blocked-pending-current-commit-artifact",
+  "blockedBy": [
+    "release record remains pinned to the last evidenced integration commit until a post-commit artifact drill completes",
+    "reproducible artifact and test-signature evidence for the artifact-tooling commit do not exist yet",
+    "production signer, hosted download, installation, cold-start and public deployment evidence do not exist"
+  ]
 }

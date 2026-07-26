@@ -96,6 +96,7 @@ export function validateRollbackTarget({
   evidenceBytes,
   expectedEvidenceSha256,
   runtimeSourceCommit,
+  requireDistinctRuntime = true,
 }) {
   const input = validateStagingReleaseInputs(rawInput);
   fullCommit(runtimeSourceCommit, "runtimeSourceCommit");
@@ -135,7 +136,7 @@ export function validateRollbackTarget({
   if (stagingReleaseInputSha256(input) !== evidence.releaseInputSha256) {
     throw new Error("rollback input does not match target evidence");
   }
-  if (runtimeSourceCommit === input.sourceCommit) {
+  if (requireDistinctRuntime && runtimeSourceCommit === input.sourceCommit) {
     throw new Error("rollback target must differ from the executing runtime commit");
   }
   return {

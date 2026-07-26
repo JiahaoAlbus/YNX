@@ -33,7 +33,11 @@ function run(execFile, command, args) {
   });
 }
 
-export function validateRenderedManifest({ environment, manifest }) {
+export function validateRenderedManifest({
+  environment,
+  manifest,
+  backupMode = "suspended",
+}) {
   const failures = [];
   const requiredPatterns = [
     ["default-deny network policy", /name:\s*default-deny-all\b/],
@@ -71,8 +75,14 @@ export function validateRenderedManifest({ environment, manifest }) {
   const cronJobs = manifest.split(/^---\s*$/m).filter((document) => /kind:\s*CronJob\b/.test(document));
   for (const document of cronJobs) {
     const name = document.match(/\n\s*name:\s*([^\s]+)/)?.[1] ?? "unknown";
-    if (!/\n\s*suspend:\s*true\b/.test(document)) failures.push(`${environment}: backup CronJob ${name} must remain suspended until operator inputs are accepted`);
+    if (backupMode === "suspended" && !/\n\s*suspend:\s*true\b/.test(document)) {
+      failures.push(`${environment}: backup CronJob ${name} must remain suspended until operator inputs are accepted`);
+    }
+    if (backupMode === "active" && /\n\s*suspend:\s*true\b/.test(document)) {
+      failures.push(`${environment}: staging-release CronJob ${name} must be active`);
+    }
   }
+  if (!new Set(["suspended", "active"]).has(backupMode)) failures.push(`${environment}: invalid backup mode`);
 
   return {
     environment,
@@ -80,6 +90,7 @@ export function validateRenderedManifest({ environment, manifest }) {
     failures,
     documents: manifest.split(/^---\s*$/m).filter((document) => document.trim()).length,
     bytes: Buffer.byteLength(manifest),
+    backupMode,
   };
 }
 

@@ -53,7 +53,7 @@ export function validateRenderedManifest({
   for (const document of workloads) {
     const kind = document.match(/^kind:\s*([^\s]+)/m)?.[1] ?? "Workload";
     const name = document.match(/\nmetadata:\n(?:[\s\S]*?\n)?\s*name:\s*([^\s]+)/)?.[1] ?? "unknown";
-    const images = document.match(/\n\s*image:\s*[^\s]+/g) ?? [];
+    const images = document.match(/\n\s*(?:-\s*)?image:\s*[^\s]+/g) ?? [];
     const escalationDenials = document.match(/\n\s*allowPrivilegeEscalation:\s*false\b/g) ?? [];
     const readOnlyRoots = document.match(/\n\s*readOnlyRootFilesystem:\s*true\b/g) ?? [];
     const capabilityDrops = document.match(/\n\s*drop:\s*\n\s*- ALL\b/g) ?? [];

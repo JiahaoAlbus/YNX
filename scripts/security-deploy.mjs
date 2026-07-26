@@ -100,7 +100,7 @@ export function validateStagingReleaseManifest(manifest, { sourceCommit } = {}) 
   });
   const failures = [...base.failures];
   const documents = manifestDocuments(manifest);
-  const images = [...manifest.matchAll(/\n\s*image:\s*([^\s]+)/g)].map((match) => match[1]);
+  const images = [...manifest.matchAll(/\n\s*(?:-\s*)?image:\s*([^\s]+)/g)].map((match) => match[1]);
   if (images.length === 0) failures.push("staging: release manifest contains no workload images");
   for (const image of images) {
     if (!/@sha256:[0-9a-f]{64}$/.test(image)) failures.push(`staging: image is not digest-pinned: ${image}`);

@@ -17,7 +17,7 @@
     "format:packages": "npm --workspaces run format",
     "verify:docs": "./scripts/verify_docs_readiness.sh",
     "security:verify": "node scripts/security-platform.mjs verify",
-    "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs scripts/security-operations.test.mjs scripts/security-integration.test.mjs scripts/security-seo-monitor.test.mjs scripts/security-service-identity.test.mjs scripts/security-integration-contract.test.mjs scripts/security-clean-checkout.test.mjs scripts/security-secret-manager.test.mjs scripts/security-rotation.test.mjs scripts/security-break-glass.test.mjs scripts/security-deploy.test.mjs",
+    "security:test": "node --test scripts/security-platform.test.mjs scripts/security-backup.test.mjs scripts/security-artifact.test.mjs scripts/security-operations.test.mjs scripts/security-integration.test.mjs scripts/security-seo-monitor.test.mjs scripts/security-service-identity.test.mjs scripts/security-integration-contract.test.mjs scripts/security-clean-checkout.test.mjs scripts/security-secret-manager.test.mjs scripts/security-rotation.test.mjs scripts/security-break-glass.test.mjs scripts/security-deploy.test.mjs scripts/security-stage-release.test.mjs",
     "security:artifact": "node scripts/security-artifact.mjs build",
     "security:backup": "node scripts/security-backup.mjs",
     "security:build-scripts": "node scripts/security-build-script-audit.mjs",
@@ -28,6 +28,7 @@
     "security:rotation": "node scripts/security-rotation.mjs status",
     "security:disaster-recovery": "node scripts/security-disaster-recovery.mjs",
     "security:deploy": "node scripts/security-deploy.mjs",
+    "security:stage-release": "node scripts/security-stage-release.mjs",
     "security:seo": "node scripts/security-seo-monitor.mjs regression",
     "security:identity": "node --test scripts/security-service-identity.test.mjs",
     "security:integration": "node scripts/security-integration.mjs"

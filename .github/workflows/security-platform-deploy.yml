@@ -75,6 +75,7 @@ jobs:
       - name: Syntax-check operator tools
         run: |
           node --check scripts/security-disaster-recovery.mjs
+          node --check scripts/security-break-glass.mjs
           node --check scripts/security-integration.mjs
           node --check scripts/security-secret-manager.mjs
           node --check scripts/security-service-identity.mjs

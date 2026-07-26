@@ -76,6 +76,7 @@ jobs:
         run: |
           node --check scripts/security-disaster-recovery.mjs
           node --check scripts/security-integration.mjs
+          node --check scripts/security-secret-manager.mjs
           node --check scripts/security-service-identity.mjs
           node --check scripts/security-rotation.mjs
           node --check scripts/security-seo-monitor.mjs

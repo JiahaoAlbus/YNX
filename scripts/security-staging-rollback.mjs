@@ -113,7 +113,7 @@ export function validateRollbackTarget({
   if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
     throw new Error("target evidence must be an object");
   }
-  if (!new Set(["staging-deployment", "staging-rollback"]).has(evidence.action)) {
+  if (!new Set(["staging-deployment", "staging-rollback", "staging-canary-promotion"]).has(evidence.action)) {
     throw new Error("target evidence is not a staging deployment receipt");
   }
   if (

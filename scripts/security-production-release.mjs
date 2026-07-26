@@ -58,6 +58,7 @@ const attestationFields = new Set([
   "releaseInputSha256",
   "stagingCanaryEvidenceSha256",
   "productionManifestSha256",
+  "publicProbePolicySha256",
   "signerPolicySha256",
   "images",
   "approval",
@@ -81,6 +82,22 @@ const signerFields = new Set([
   "status",
   "validFrom",
   "validUntil",
+]);
+const probePolicyFields = new Set([
+  "schemaVersion",
+  "environment",
+  "tlsHosts",
+  "services",
+  "connectTimeoutSeconds",
+  "totalTimeoutSeconds",
+  "maxResponseBytes",
+]);
+const probeServiceFields = new Set(["name", "host", "healthPath", "versionPath"]);
+const expectedProbeServices = new Map([
+  ["ai-gateway", "ai.ynxweb4.com"],
+  ["faucet", "faucet.ynxweb4.com"],
+  ["indexer", "indexer.ynxweb4.com"],
+  ["web4-hub", "web4.ynxweb4.com"],
 ]);
 
 function parseArgs(values) {
@@ -345,6 +362,60 @@ function validateSignerPolicy({
     policyId: policy.policyId,
     signerIdentity: signer.identity,
     signerPolicySha256,
+  };
+}
+
+export function validatePublicProbePolicy({
+  publicProbePolicyPath,
+  publicProbePolicySha256,
+}) {
+  digest(publicProbePolicySha256, "publicProbePolicySha256");
+  const policy = readEvidenceFile(
+    publicProbePolicyPath,
+    publicProbePolicySha256,
+    "public probe policy",
+  );
+  exactObject(policy, probePolicyFields, "public probe policy");
+  if (
+    policy.schemaVersion !== 1
+    || policy.environment !== "production"
+    || !Array.isArray(policy.tlsHosts)
+    || policy.tlsHosts.length !== expectedPublicHosts.size
+    || new Set(policy.tlsHosts).size !== policy.tlsHosts.length
+    || policy.tlsHosts.some((host) => !expectedPublicHosts.has(host))
+    || !Array.isArray(policy.services)
+    || policy.services.length !== expectedProbeServices.size
+    || !Number.isInteger(policy.connectTimeoutSeconds)
+    || policy.connectTimeoutSeconds < 1
+    || policy.connectTimeoutSeconds > 10
+    || !Number.isInteger(policy.totalTimeoutSeconds)
+    || policy.totalTimeoutSeconds < policy.connectTimeoutSeconds
+    || policy.totalTimeoutSeconds > 30
+    || !Number.isInteger(policy.maxResponseBytes)
+    || policy.maxResponseBytes < 1024
+    || policy.maxResponseBytes > 1024 * 1024
+  ) {
+    throw new Error("public probe policy boundary is invalid");
+  }
+  const serviceNames = new Set();
+  for (const service of policy.services) {
+    exactObject(service, probeServiceFields, "public probe service");
+    if (
+      serviceNames.has(service.name)
+      || expectedProbeServices.get(service.name) !== service.host
+      || !/^\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$/.test(service.healthPath)
+      || !/^\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$/.test(service.versionPath)
+      || service.healthPath.includes("..")
+      || service.versionPath.includes("..")
+      || service.healthPath === service.versionPath
+    ) {
+      throw new Error("public probe service mapping is invalid");
+    }
+    serviceNames.add(service.name);
+  }
+  return {
+    policy,
+    publicProbePolicySha256,
   };
 }
 
@@ -761,6 +832,8 @@ function prepareContext({
   trustedSignerFingerprint,
   signerPolicyPath,
   signerPolicySha256,
+  publicProbePolicyPath,
+  publicProbePolicySha256,
   execFile,
   materializeTree,
   now,
@@ -782,6 +855,10 @@ function prepareContext({
     signerPolicySha256,
     trustedSignerFingerprint: signerFingerprint,
     now,
+  });
+  const publicProbePolicy = validatePublicProbePolicy({
+    publicProbePolicyPath,
+    publicProbePolicySha256,
   });
   gitPreflight(execFile, runtimeSourceCommit);
   const staging = loadStagingCanaryEvidence({
@@ -831,6 +908,7 @@ function prepareContext({
     stagingCanaryEvidenceSha256: staging.evidenceSha256,
     productionManifestSha256: validation.sha256,
     signerPolicySha256: signerPolicy.signerPolicySha256,
+    publicProbePolicySha256: publicProbePolicy.publicProbePolicySha256,
     images,
     approval: acceptedApproval,
     publicReleaseEligible: true,
@@ -847,6 +925,7 @@ function prepareContext({
     attestation,
     attestationBytes,
     staging,
+    publicProbePolicy: publicProbePolicy.policy,
   };
 }
 
@@ -876,6 +955,7 @@ export function prepareProductionRelease({
       stagingCanaryEvidenceSha256: prepared.staging.evidenceSha256,
       productionManifestSha256: prepared.validation.sha256,
       signerPolicySha256: prepared.attestation.signerPolicySha256,
+      publicProbePolicySha256: prepared.attestation.publicProbePolicySha256,
       productionManifestBytes: prepared.validation.bytes,
       productionManifestDocuments: prepared.validation.documents,
       imageDigests: prepared.validation.images.map((image) => image.match(/@sha256:([0-9a-f]{64})$/)?.[1]),
@@ -902,7 +982,7 @@ function validateAttestationShape(attestation) {
   }
 }
 
-export function verifyProductionRelease({
+export function verifyProductionReleaseBundle({
   attestationPath,
   attestationSha256,
   signaturePath,
@@ -971,7 +1051,7 @@ export function verifyProductionRelease({
   ) {
     throw new Error("production transparency record is invalid");
   }
-  return {
+  const receipt = {
     schemaVersion: 1,
     action: "production-release-preflight",
     source: "clean Git commit, staging canary evidence, production signature, and transparency record",
@@ -982,6 +1062,7 @@ export function verifyProductionRelease({
     confidence: "cryptographically-verified-local-preflight",
     stagingCanaryEvidenceSha256: prepared.staging.evidenceSha256,
     signerPolicySha256: prepared.attestation.signerPolicySha256,
+    publicProbePolicySha256: prepared.attestation.publicProbePolicySha256,
     productionManifestSha256: prepared.validation.sha256,
     productionManifestBytes: prepared.validation.bytes,
     productionManifestDocuments: prepared.validation.documents,
@@ -993,6 +1074,16 @@ export function verifyProductionRelease({
     deployedPublic: false,
     mutationPerformed: false,
   };
+  return {
+    receipt,
+    manifest: prepared.manifest,
+    attestation,
+    publicProbePolicy: prepared.publicProbePolicy,
+  };
+}
+
+export function verifyProductionRelease(options) {
+  return verifyProductionReleaseBundle(options).receipt;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -1011,6 +1102,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       trustedSignerFingerprint: args["trusted-signer-fingerprint"],
       signerPolicyPath: args["signer-policy"],
       signerPolicySha256: args["signer-policy-sha256"],
+      publicProbePolicyPath: args["public-probe-policy"],
+      publicProbePolicySha256: args["public-probe-policy-sha256"],
     };
     let result;
     if (command === "prepare") {
@@ -1028,7 +1121,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         signatureSha256: args["signature-sha256"],
       });
     } else {
-      throw new Error("usage: security-production-release.mjs prepare|verify --staging-input PATH --production-input PATH --staging-evidence PATH --staging-evidence-sha256 SHA256 --runtime-source-commit SHA --version X.Y.Z --image-evidence PATH --approval PATH --trusted-signer-fingerprint SHA256 --signer-policy PATH --signer-policy-sha256 SHA256 --attestation-output PATH [signature flags]");
+      throw new Error("usage: security-production-release.mjs prepare|verify --staging-input PATH --production-input PATH --staging-evidence PATH --staging-evidence-sha256 SHA256 --runtime-source-commit SHA --version X.Y.Z --image-evidence PATH --approval PATH --trusted-signer-fingerprint SHA256 --signer-policy PATH --signer-policy-sha256 SHA256 --public-probe-policy PATH --public-probe-policy-sha256 SHA256 --attestation-output PATH [signature flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

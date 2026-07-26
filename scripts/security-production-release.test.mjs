@@ -156,6 +156,40 @@ function signerPolicy(trustedSignerFingerprint) {
   };
 }
 
+function publicProbePolicy() {
+  const directory = mkdtempSync(resolve(tmpdir(), "ynx-production-probe-policy-"));
+  const path = resolve(directory, "policy.json");
+  const bytes = Buffer.from(`${JSON.stringify({
+    schemaVersion: 1,
+    environment: "production",
+    tlsHosts: [
+      "rpc.ynxweb4.com",
+      "evm.ynxweb4.com",
+      "rest.ynxweb4.com",
+      "faucet.ynxweb4.com",
+      "indexer.ynxweb4.com",
+      "explorer.ynxweb4.com",
+      "ai.ynxweb4.com",
+      "web4.ynxweb4.com",
+    ],
+    services: [
+      { name: "faucet", host: "faucet.ynxweb4.com", healthPath: "/health", versionPath: "/version" },
+      { name: "indexer", host: "indexer.ynxweb4.com", healthPath: "/health", versionPath: "/version" },
+      { name: "ai-gateway", host: "ai.ynxweb4.com", healthPath: "/health", versionPath: "/version" },
+      { name: "web4-hub", host: "web4.ynxweb4.com", healthPath: "/health", versionPath: "/version" },
+    ],
+    connectTimeoutSeconds: 5,
+    totalTimeoutSeconds: 15,
+    maxResponseBytes: 65536,
+  }, null, 2)}\n`);
+  writeFileSync(path, bytes);
+  return {
+    path,
+    digest: sha256(bytes),
+    cleanup: () => rmSync(directory, { recursive: true, force: true }),
+  };
+}
+
 function approval() {
   return {
     approvalId: "change-20260726-production",
@@ -227,6 +261,7 @@ function options({
   const execution = fixture(renderedManifest);
   const supplyChain = imageEvidence();
   const policy = signerPolicy(trustedSignerFingerprint);
+  const probes = publicProbePolicy();
   return {
     values: {
       stagingInput: stagingInput(),
@@ -240,6 +275,8 @@ function options({
       trustedSignerFingerprint,
       signerPolicyPath: policy.path,
       signerPolicySha256: policy.digest,
+      publicProbePolicyPath: probes.path,
+      publicProbePolicySha256: probes.digest,
       execFile: execution.execFile,
       materializeTree: currentTree,
       now,
@@ -248,6 +285,7 @@ function options({
     cleanup: () => {
       supplyChain.cleanup();
       policy.cleanup();
+      probes.cleanup();
     },
   };
 }

@@ -193,7 +193,9 @@ export function preflightStagingDeployment({
   context,
   expectedClusterUid,
   sourceCommit,
-  overlay = "infra/k8s/overlays/staging",
+  overlay,
+  manifest,
+  releaseInputSha256,
   execFile = execFileSync,
   now = new Date(),
 }) {
@@ -201,14 +203,25 @@ export function preflightStagingDeployment({
   safeIdentifier(expectedClusterUid, "expectedClusterUid");
   validateSourceCommit(sourceCommit);
   if (!Number.isFinite(now.getTime())) throw new Error("preflight time is invalid");
-  const selectedOverlay = resolveOverlay(overlay);
+  if (manifest !== undefined && overlay !== undefined) {
+    throw new Error("manifest and overlay cannot both be selected");
+  }
+  if (manifest !== undefined && (typeof manifest !== "string" || manifest.trim() === "")) {
+    throw new Error("generated staging manifest must not be empty");
+  }
+  if (manifest !== undefined && !/^[0-9a-f]{64}$/.test(releaseInputSha256 ?? "")) {
+    throw new Error("generated staging manifest requires a release input digest");
+  }
+  const selectedOverlay = manifest === undefined
+    ? resolveOverlay(overlay ?? "infra/k8s/overlays/staging")
+    : { relative: "generated-from-operator-input" };
   gitPreflight(execFile, sourceCommit);
   const cluster = clusterPreflight(execFile, context, expectedClusterUid);
-  const manifest = runText(execFile, "kubectl", [
+  const renderedManifest = manifest ?? runText(execFile, "kubectl", [
     "kustomize",
     selectedOverlay.relative,
   ], "Kustomize render");
-  const validation = validateStagingReleaseManifest(manifest, { sourceCommit });
+  const validation = validateStagingReleaseManifest(renderedManifest, { sourceCommit });
   if (!validation.pass) throw new Error(`staging manifest is not deployable: ${validation.failures.join("; ")}`);
   const dryRunOutput = runText(execFile, "kubectl", [
     "--context",
@@ -219,11 +232,11 @@ export function preflightStagingDeployment({
     `--field-manager=${fieldManager}`,
     "-f",
     "-",
-  ], "Kubernetes server-side dry-run", manifest);
+  ], "Kubernetes server-side dry-run", renderedManifest);
   if (dryRunOutput === "") throw new Error("Kubernetes server-side dry-run returned no receipt");
 
   return {
-    manifest,
+    manifest: renderedManifest,
     receipt: {
       schemaVersion: 1,
       action: "staging-deployment-preflight",
@@ -234,6 +247,7 @@ export function preflightStagingDeployment({
       confidence: "direct-local-and-cluster-preflight",
       environment: "staging",
       overlay: selectedOverlay.relative,
+      ...(releaseInputSha256 === undefined ? {} : { releaseInputSha256 }),
       namespace: stagingNamespace,
       contextSha256: cluster.contextSha256,
       clusterUidSha256: cluster.clusterUidSha256,
@@ -334,6 +348,8 @@ export function deployStaging({
   expectedClusterUid,
   sourceCommit,
   overlay,
+  manifest,
+  releaseInputSha256,
   operatorId,
   changeId,
   acknowledge,
@@ -355,6 +371,8 @@ export function deployStaging({
     expectedClusterUid,
     sourceCommit,
     overlay,
+    manifest,
+    releaseInputSha256,
     execFile,
     now: startedAt,
   });

@@ -8,15 +8,24 @@
  */
 
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  deployStaging,
+  preflightStagingDeployment,
+} from "./security-deploy.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const outputDirectory = resolve(root, "infra/k8s/overlays/staging-release");
@@ -436,15 +445,125 @@ export function writeStagingReleaseOverlay(input, output = outputDirectory) {
   };
 }
 
+export function renderStagingReleaseManifest(rawInput, { execFile = execFileSync } = {}) {
+  const input = validateStagingReleaseInputs(rawInput);
+  const workspace = mkdtempSync(resolve(tmpdir(), "ynx-staging-release-runtime-"));
+  const copiedKubernetesRoot = resolve(workspace, "infra/k8s");
+  const generatedOverlay = resolve(copiedKubernetesRoot, "overlays/staging-release");
+  try {
+    cpSync(resolve(root, "infra/k8s"), copiedKubernetesRoot, { recursive: true });
+    if (existsSync(generatedOverlay)) {
+      throw new Error("temporary staging release overlay unexpectedly exists");
+    }
+    mkdirSync(generatedOverlay, { recursive: true });
+    for (const [name, content] of buildStagingReleaseFiles(input)) {
+      writeFileSync(resolve(generatedOverlay, name), content.endsWith("\n") ? content : `${content}\n`, { mode: 0o600 });
+    }
+    try {
+      const manifest = execFile("kubectl", ["kustomize", generatedOverlay], {
+        cwd: root,
+        encoding: "utf8",
+        maxBuffer: 16 * 1024 * 1024,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      if (typeof manifest !== "string" || manifest.trim() === "") {
+        throw new Error("Kustomize render returned no manifest");
+      }
+      return manifest;
+    } catch {
+      throw new Error("ephemeral staging release render failed");
+    }
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+function acceptedInput(rawInput) {
+  const input = validateStagingReleaseInputs(rawInput);
+  return {
+    input,
+    releaseInputSha256: sha256(Buffer.from(canonicalJson(input))),
+  };
+}
+
+export function preflightStagingReleaseInput({
+  input: rawInput,
+  context,
+  expectedClusterUid,
+  execFile = execFileSync,
+  now = new Date(),
+}) {
+  const { input, releaseInputSha256 } = acceptedInput(rawInput);
+  const manifest = renderStagingReleaseManifest(input, { execFile });
+  return preflightStagingDeployment({
+    context,
+    expectedClusterUid,
+    sourceCommit: input.sourceCommit,
+    manifest,
+    releaseInputSha256,
+    execFile,
+    now,
+  });
+}
+
+export function deployStagingReleaseInput({
+  input: rawInput,
+  context,
+  expectedClusterUid,
+  operatorId,
+  changeId,
+  acknowledge,
+  evidencePath,
+  rolloutTimeoutSeconds = 300,
+  execFile = execFileSync,
+  now = () => new Date(),
+}) {
+  const { input, releaseInputSha256 } = acceptedInput(rawInput);
+  const manifest = renderStagingReleaseManifest(input, { execFile });
+  return deployStaging({
+    context,
+    expectedClusterUid,
+    sourceCommit: input.sourceCommit,
+    manifest,
+    releaseInputSha256,
+    operatorId,
+    changeId,
+    acknowledge,
+    evidencePath,
+    rolloutTimeoutSeconds,
+    execFile,
+    now,
+  });
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const command = process.argv[2];
     const args = parseArgs(process.argv.slice(3));
-    if (command !== "promote") {
-      throw new Error("usage: security-stage-release.mjs promote --input PATH");
-    }
     const input = JSON.parse(readFileSync(resolve(args.input), "utf8"));
-    const result = writeStagingReleaseOverlay(input);
+    let result;
+    if (command === "promote") {
+      result = writeStagingReleaseOverlay(input);
+    } else if (command === "preflight") {
+      ({ receipt: result } = preflightStagingReleaseInput({
+        input,
+        context: args.context,
+        expectedClusterUid: args["cluster-uid"],
+      }));
+    } else if (command === "deploy") {
+      result = deployStagingReleaseInput({
+        input,
+        context: args.context,
+        expectedClusterUid: args["cluster-uid"],
+        operatorId: args["operator-id"],
+        changeId: args["change-id"],
+        acknowledge: args.acknowledge,
+        evidencePath: args.evidence,
+        rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 300),
+      });
+    } else {
+      throw new Error("usage: security-stage-release.mjs promote|preflight|deploy --input PATH [deployment flags]");
+    }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {
     process.stderr.write(`FAIL ${error.message}\n`);

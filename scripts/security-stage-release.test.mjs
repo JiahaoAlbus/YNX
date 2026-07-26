@@ -2,14 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildStagingReleaseFiles,
+  deployStagingReleaseInput,
+  preflightStagingReleaseInput,
   validateStagingReleaseInputs,
   writeStagingReleaseOverlay,
 } from "./security-stage-release.mjs";
@@ -17,6 +23,9 @@ import { validateStagingReleaseManifest } from "./security-deploy.mjs";
 
 const sourceCommit = "a".repeat(40);
 const imageDigest = `sha256:${"b".repeat(64)}`;
+const context = "ynx-staging";
+const clusterUid = "11111111-2222-3333-4444-555555555555";
+const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 function input() {
   return {
@@ -183,6 +192,53 @@ images:
   });
 }
 
+function deploymentFixture(rendered) {
+  const calls = [];
+  const execFile = (command, args, options = {}) => {
+    calls.push({ command, args, input: options.input });
+    if (command === "git" && args[0] === "rev-parse") return `${sourceCommit}\n`;
+    if (command === "git" && args[0] === "status") return "";
+    if (command !== "kubectl") throw new Error("unexpected command");
+    if (args[0] === "kustomize") return rendered;
+    if (args[0] === "config") return `${context}\n`;
+    if (args.includes("kube-system")) return JSON.stringify({ metadata: { uid: clusterUid } });
+    if (args.includes("version")) return JSON.stringify({ serverVersion: { gitVersion: "v1.33.1" } });
+    if (args.includes("--dry-run=server")) return "server dry-run passed";
+    if (args.includes("apply")) return "resources applied";
+    if (args.includes("diff")) return "";
+    if (args.includes("rollout")) return "rollout complete";
+    if (args.includes("namespace") && args.includes("ynx-services-staging")) {
+      return JSON.stringify({ metadata: { labels: { environment: "staging" } } });
+    }
+    if (args.includes("deployment")) {
+      return JSON.stringify({
+        items: [{
+          metadata: { generation: 2 },
+          spec: { replicas: 1 },
+          status: { observedGeneration: 2, availableReplicas: 1 },
+        }],
+      });
+    }
+    if (args.includes("pods")) {
+      return JSON.stringify({
+        items: [{ status: { conditions: [{ type: "Ready", status: "True" }] } }],
+      });
+    }
+    if (args.includes("networkpolicy")) {
+      return JSON.stringify({ items: [{ metadata: { name: "default-deny-all" } }] });
+    }
+    if (args.includes("peerauthentication")) {
+      return JSON.stringify({ items: [{ spec: { mtls: { mode: "STRICT" } } }] });
+    }
+    if (args.includes("cronjob")) return JSON.stringify({ items: [{ spec: { suspend: false } }] });
+    if (args.includes("secretproviderclass")) {
+      return JSON.stringify({ items: [{ metadata: { name: "ynx-staging-secrets" } }] });
+    }
+    throw new Error(`unexpected kubectl args: ${args.join(" ")}`);
+  };
+  return { calls, execFile };
+}
+
 test("validated inputs generate a deployable staging release overlay", () => {
   const rendered = renderGeneratedOverlay();
   const result = validateStagingReleaseManifest(rendered, { sourceCommit });
@@ -196,6 +252,61 @@ test("validated inputs generate a deployable staging release overlay", () => {
   assert.match(rendered, /name: allow-backup-private-endpoints/);
   assert.doesNotMatch(rendered, /deployment-candidate/);
   assert.doesNotMatch(rendered, /^kind: Secret$/m);
+});
+
+test("operator input renders ephemerally and binds cluster preflight to its digest", () => {
+  const rendered = renderGeneratedOverlay();
+  const fixture = deploymentFixture(rendered);
+  const { receipt } = preflightStagingReleaseInput({
+    input: input(),
+    context,
+    expectedClusterUid: clusterUid,
+    execFile: fixture.execFile,
+    now: new Date("2026-07-26T14:00:00.000Z"),
+  });
+  assert.equal(receipt.overlay, "generated-from-operator-input");
+  assert.match(receipt.releaseInputSha256, /^[0-9a-f]{64}$/);
+  assert.equal(receipt.serverDryRunPassed, true);
+  assert.equal(receipt.mutationPerformed, false);
+  const renderCall = fixture.calls.find((call) => call.args[0] === "kustomize");
+  assert.ok(renderCall);
+  assert.equal(existsSync(resolve(renderCall.args[1], "../../..")), false);
+  assert.equal(fixture.calls.filter((call) => call.args[0] === "kustomize").length, 1);
+});
+
+test("accepted operator input reaches apply and verified readiness without a tracked overlay", () => {
+  const rendered = renderGeneratedOverlay();
+  const fixture = deploymentFixture(rendered);
+  const evidencePath = `evidence/security-platform/.security-stage-release-${process.pid}.json`;
+  try {
+    const result = deployStagingReleaseInput({
+      input: input(),
+      context,
+      expectedClusterUid: clusterUid,
+      operatorId: "staging-operator",
+      changeId: "change-20260726-stage-release",
+      acknowledge: "apply-staging",
+      evidencePath,
+      execFile: fixture.execFile,
+      now: (() => {
+        const values = [
+          new Date("2026-07-26T14:00:00.000Z"),
+          new Date("2026-07-26T14:01:00.000Z"),
+        ];
+        return () => values.shift();
+      })(),
+    });
+    assert.equal(result.state, "deployed-staging-verified");
+    assert.equal(result.deployedStaging, true);
+    assert.match(result.releaseInputSha256, /^[0-9a-f]{64}$/);
+    assert.equal(JSON.parse(readFileSync(resolve(root, evidencePath), "utf8")).releaseInputSha256, result.releaseInputSha256);
+    const applyCalls = fixture.calls.filter((call) => call.args.includes("apply"));
+    assert.equal(applyCalls.length, 2);
+    assert.equal(applyCalls[0].args.includes("--dry-run=server"), true);
+    assert.equal(applyCalls[1].args.includes("--dry-run=server"), false);
+  } finally {
+    rmSync(resolve(root, evidencePath), { force: true });
+  }
 });
 
 test("generated overlay contains references and controls but no value material", () => {

@@ -199,6 +199,32 @@ test("preflight binds clean Git, context, cluster UID, manifest, and server dry-
 });
 
 test("preflight rejects wrong cluster identity and unpromoted candidates before apply", () => {
+  const unboundManifest = kubectlFixture();
+  assert.throws(
+    () => preflightStagingDeployment({
+      context,
+      expectedClusterUid: clusterUid,
+      sourceCommit,
+      manifest: manifest(),
+      execFile: unboundManifest.execFile,
+    }),
+    /requires a release input digest/,
+  );
+  assert.equal(unboundManifest.calls.length, 0);
+  const ambiguousSource = kubectlFixture();
+  assert.throws(
+    () => preflightStagingDeployment({
+      context,
+      expectedClusterUid: clusterUid,
+      sourceCommit,
+      overlay: "infra/k8s/overlays/staging",
+      manifest: manifest(),
+      releaseInputSha256: "c".repeat(64),
+      execFile: ambiguousSource.execFile,
+    }),
+    /cannot both be selected/,
+  );
+  assert.equal(ambiguousSource.calls.length, 0);
   const wrongCluster = kubectlFixture();
   assert.throws(
     () => preflightStagingDeployment({

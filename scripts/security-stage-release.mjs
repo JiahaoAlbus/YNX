@@ -445,13 +445,20 @@ export function writeStagingReleaseOverlay(input, output = outputDirectory) {
   };
 }
 
-export function renderStagingReleaseManifest(rawInput, { execFile = execFileSync } = {}) {
+export function renderStagingReleaseManifest(rawInput, {
+  execFile = execFileSync,
+  kubernetesSourceRoot = resolve(root, "infra/k8s"),
+} = {}) {
   const input = validateStagingReleaseInputs(rawInput);
+  const sourceRoot = resolve(kubernetesSourceRoot);
+  if (!existsSync(resolve(sourceRoot, "overlays/staging/kustomization.yaml"))) {
+    throw new Error("Kubernetes source root does not contain the staging overlay");
+  }
   const workspace = mkdtempSync(resolve(tmpdir(), "ynx-staging-release-runtime-"));
   const copiedKubernetesRoot = resolve(workspace, "infra/k8s");
   const generatedOverlay = resolve(copiedKubernetesRoot, "overlays/staging-release");
   try {
-    cpSync(resolve(root, "infra/k8s"), copiedKubernetesRoot, { recursive: true });
+    cpSync(sourceRoot, copiedKubernetesRoot, { recursive: true });
     if (existsSync(generatedOverlay)) {
       throw new Error("temporary staging release overlay unexpectedly exists");
     }
@@ -478,11 +485,16 @@ export function renderStagingReleaseManifest(rawInput, { execFile = execFileSync
   }
 }
 
+export function stagingReleaseInputSha256(rawInput) {
+  const input = validateStagingReleaseInputs(rawInput);
+  return sha256(Buffer.from(canonicalJson(input)));
+}
+
 function acceptedInput(rawInput) {
   const input = validateStagingReleaseInputs(rawInput);
   return {
     input,
-    releaseInputSha256: sha256(Buffer.from(canonicalJson(input))),
+    releaseInputSha256: stagingReleaseInputSha256(input),
   };
 }
 

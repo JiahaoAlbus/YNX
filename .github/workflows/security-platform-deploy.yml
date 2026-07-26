@@ -80,6 +80,7 @@ jobs:
           node --check scripts/security-integration.mjs
           node --check scripts/security-secret-manager.mjs
           node --check scripts/security-stage-release.mjs
+          node --check scripts/security-staging-rollback.mjs
           node --check scripts/security-service-identity.mjs
           node --check scripts/security-rotation.mjs
           node --check scripts/security-seo-monitor.mjs

@@ -193,6 +193,9 @@ export function preflightStagingDeployment({
   context,
   expectedClusterUid,
   sourceCommit,
+  runtimeSourceCommit,
+  operation = "deploy",
+  rollbackTargetEvidenceSha256,
   overlay,
   manifest,
   releaseInputSha256,
@@ -202,6 +205,24 @@ export function preflightStagingDeployment({
   safeIdentifier(context, "context");
   safeIdentifier(expectedClusterUid, "expectedClusterUid");
   validateSourceCommit(sourceCommit);
+  if (!new Set(["deploy", "rollback"]).has(operation)) throw new Error("deployment operation is invalid");
+  const executingCommit = runtimeSourceCommit ?? sourceCommit;
+  validateSourceCommit(executingCommit);
+  if (operation === "deploy" && executingCommit !== sourceCommit) {
+    throw new Error("deployment runtime and release source commits must match");
+  }
+  if (operation === "deploy" && rollbackTargetEvidenceSha256 !== undefined) {
+    throw new Error("deployment cannot include rollback evidence");
+  }
+  if (
+    operation === "rollback"
+    && (
+      executingCommit === sourceCommit
+      || !/^[0-9a-f]{64}$/.test(rollbackTargetEvidenceSha256 ?? "")
+    )
+  ) {
+    throw new Error("rollback requires a distinct runtime commit and target evidence digest");
+  }
   if (!Number.isFinite(now.getTime())) throw new Error("preflight time is invalid");
   if (manifest !== undefined && overlay !== undefined) {
     throw new Error("manifest and overlay cannot both be selected");
@@ -215,7 +236,7 @@ export function preflightStagingDeployment({
   const selectedOverlay = manifest === undefined
     ? resolveOverlay(overlay ?? "infra/k8s/overlays/staging")
     : { relative: "generated-from-operator-input" };
-  gitPreflight(execFile, sourceCommit);
+  gitPreflight(execFile, executingCommit);
   const cluster = clusterPreflight(execFile, context, expectedClusterUid);
   const renderedManifest = manifest ?? runText(execFile, "kubectl", [
     "kustomize",
@@ -239,15 +260,17 @@ export function preflightStagingDeployment({
     manifest: renderedManifest,
     receipt: {
       schemaVersion: 1,
-      action: "staging-deployment-preflight",
+      action: operation === "rollback" ? "staging-rollback-preflight" : "staging-deployment-preflight",
       source: "Git, kubectl kustomize, and Kubernetes API server",
       sourceCommit,
+      runtimeSourceCommit: executingCommit,
       version: "1",
       asOf: now.toISOString(),
       confidence: "direct-local-and-cluster-preflight",
       environment: "staging",
       overlay: selectedOverlay.relative,
       ...(releaseInputSha256 === undefined ? {} : { releaseInputSha256 }),
+      ...(rollbackTargetEvidenceSha256 === undefined ? {} : { rollbackTargetEvidenceSha256 }),
       namespace: stagingNamespace,
       contextSha256: cluster.contextSha256,
       clusterUidSha256: cluster.clusterUidSha256,
@@ -347,6 +370,9 @@ export function deployStaging({
   context,
   expectedClusterUid,
   sourceCommit,
+  runtimeSourceCommit,
+  operation = "deploy",
+  rollbackTargetEvidenceSha256,
   overlay,
   manifest,
   releaseInputSha256,
@@ -358,7 +384,10 @@ export function deployStaging({
   execFile = execFileSync,
   now = () => new Date(),
 }) {
-  if (acknowledge !== "apply-staging") throw new Error("deployment requires acknowledge=apply-staging");
+  const requiredAcknowledgement = operation === "rollback" ? "rollback-staging" : "apply-staging";
+  if (acknowledge !== requiredAcknowledgement) {
+    throw new Error(`deployment requires acknowledge=${requiredAcknowledgement}`);
+  }
   safeIdentifier(operatorId, "operatorId");
   safeIdentifier(changeId, "changeId");
   if (!evidencePath) throw new Error("deployment requires an evidence path");
@@ -370,6 +399,9 @@ export function deployStaging({
     context,
     expectedClusterUid,
     sourceCommit,
+    runtimeSourceCommit,
+    operation,
+    rollbackTargetEvidenceSha256,
     overlay,
     manifest,
     releaseInputSha256,
@@ -378,7 +410,7 @@ export function deployStaging({
   });
   const intent = {
     ...preflight.receipt,
-    action: "staging-deployment",
+    action: operation === "rollback" ? "staging-rollback" : "staging-deployment",
     operatorId,
     changeId,
     startedAt: startedAt.toISOString(),

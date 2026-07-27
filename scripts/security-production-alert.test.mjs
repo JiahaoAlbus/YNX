@@ -5,6 +5,7 @@ import {
   bindProductionAlertCredential,
   buildProductionChangeAlert,
   deliverProductionChangeAlert,
+  preflightProductionAlertInputs,
   productionAlertSecretInventoryDigest,
 } from "./security-production-alert.mjs";
 
@@ -232,8 +233,41 @@ test("credential binding joins inventory, direct provider metadata, and mounted 
   assert.equal(result.privateMountVerified, true);
   assert.equal(result.secretValueRecorded, false);
   assert.match(result.bindingSha256, /^[0-9a-f]{64}$/);
+  assert.match(result.credentialIdentitySha256, /^[0-9a-f]{64}$/);
   assert.equal("managerReference" in result, false);
   assert.equal("mountPath" in result, false);
+});
+
+test("input preflight verifies provider and mount without alert delivery", () => {
+  const secret = credentialSecret();
+  const inventory = credentialInventory(secret);
+  let providerInspections = 0;
+  const result = preflightProductionAlertInputs({
+    endpoint: "https://alerts.security.ynxweb4.com/v1/events",
+    expectedHost: "alerts.security.ynxweb4.com",
+    credentialHeaderFile: headerPath,
+    credentialVersionFile: versionPath,
+    credentialSecretInventory: inventory,
+    trustedCredentialSecretInventorySha256: productionAlertSecretInventoryDigest(inventory),
+    sourceCommit,
+    execFile: () => {
+      throw new Error("only injected metadata inspection may execute");
+    },
+    readFile: mountedFile,
+    statFile: privateStat,
+    inspectSecret: () => {
+      providerInspections += 1;
+      return managerInspection(secret);
+    },
+    checkedAt: now,
+  });
+  assert.equal(result.ready, true);
+  assert.equal(result.providerMetadataInspected, true);
+  assert.equal(result.alertDeliveryPerformed, false);
+  assert.equal(result.productionMutationPerformed, false);
+  assert.equal(result.secretValueRequested, false);
+  assert.equal(providerInspections, 1);
+  assert.match(result.receiptSha256, /^[0-9a-f]{64}$/);
 });
 
 test("credential binding invokes the metadata-only AWS adapter", () => {
@@ -339,6 +373,7 @@ test("delivery uses pinned HTTPS and a Secret Manager header file", () => {
   assert.equal(JSON.parse(calls[0].options.input).event.secretValueIncluded, false);
   assert.equal(result.credentialBinding.bound, true);
   assert.equal(result.credentialBinding.currentVersionSha256, sha256(versionId));
+  assert.match(result.inputPreflightSha256, /^[0-9a-f]{64}$/);
 });
 
 test("endpoint drift and unsafe credential sources fail before network access", () => {

@@ -114,6 +114,7 @@ function deploymentEvidence(role) {
     changeApproval: { bound: true },
     approvalConsumption: { consumed: true },
     alertDelivery: { delivered: true },
+    alertInputPreflight: { ready: true },
     releasedAt: role === "current"
       ? "2026-07-27T02:00:00.000Z"
       : "2026-07-27T01:00:00.000Z",
@@ -227,9 +228,31 @@ function approvalConsumer({ approval }) {
   return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
 }
 
+const alertCredentialIdentity = "4".repeat(64);
+
+function alertInputPreflight({ sourceCommit }) {
+  assert.equal(sourceCommit, runtimeCommit);
+  return {
+    sourceCommit,
+    alertDeliveryPerformed: false,
+    productionMutationPerformed: false,
+    credentialBinding: {
+      bound: true,
+      credentialIdentitySha256: alertCredentialIdentity,
+    },
+    ready: true,
+  };
+}
+
 function alertDispatcher({ approval, sourceCommit }) {
   assert.equal(sourceCommit, runtimeCommit);
-  return { authorizationId: approval.authorizationId, delivered: true };
+  return {
+    authorizationId: approval.authorizationId,
+    credentialBinding: {
+      credentialIdentitySha256: alertCredentialIdentity,
+    },
+    delivered: true,
+  };
 }
 
 function common(currentEvidence, targetEvidence) {
@@ -247,6 +270,7 @@ function common(currentEvidence, targetEvidence) {
     approvalBinder,
     approvalConsumer,
     alertDispatcher,
+    alertInputPreflight,
     leaseFactory,
   };
 }

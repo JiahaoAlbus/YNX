@@ -26,7 +26,10 @@ import {
   bindProductionReleaseApproval,
   consumeProductionApproval,
 } from "./security-production-approval.mjs";
-import { deliverProductionChangeAlert } from "./security-production-alert.mjs";
+import {
+  deliverProductionChangeAlert,
+  preflightProductionAlertInputs,
+} from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -169,6 +172,7 @@ export function validateProductionDeploymentEvidence(
     || evidence.changeApproval?.bound !== true
     || evidence.approvalConsumption?.consumed !== true
     || evidence.alertDelivery?.delivered !== true
+    || evidence.alertInputPreflight?.ready !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
     || evidence.sourceCommit !== release.receipt.sourceCommit
@@ -563,6 +567,7 @@ export function promoteProductionBlueGreen({
   approvalBinder = bindProductionReleaseApproval,
   approvalConsumer = consumeProductionApproval,
   alertDispatcher = deliverProductionChangeAlert,
+  alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
@@ -586,6 +591,7 @@ export function promoteProductionBlueGreen({
     || typeof approvalBinder !== "function"
     || typeof approvalConsumer !== "function"
     || typeof alertDispatcher !== "function"
+    || typeof alertInputPreflight !== "function"
     || typeof wait !== "function"
     || typeof now !== "function"
   ) {
@@ -615,6 +621,24 @@ export function promoteProductionBlueGreen({
     now: startedAt,
   });
   if (changeApproval?.bound !== true) throw new Error("production change approval did not bind");
+  const alertPreflight = alertInputPreflight({
+    ...alertOptions,
+    execFile,
+    sourceCommit: preflight.candidate.receipt.runtimeSourceCommit,
+    checkedAt: startedAt,
+  });
+  if (
+    alertPreflight?.ready !== true
+    || alertPreflight.alertDeliveryPerformed !== false
+    || alertPreflight.productionMutationPerformed !== false
+    || alertPreflight.sourceCommit !== preflight.candidate.receipt.runtimeSourceCommit
+    || alertPreflight.credentialBinding?.bound !== true
+    || !/^[0-9a-f]{64}$/.test(
+      alertPreflight.credentialBinding.credentialIdentitySha256 ?? "",
+    )
+  ) {
+    throw new Error("production alert external input preflight failed");
+  }
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -644,6 +668,7 @@ export function promoteProductionBlueGreen({
     approvalConsumptionAttempted: false,
     alertDelivery: null,
     alertDeliveryAttempted: false,
+    alertInputPreflight: alertPreflight,
   };
   writeEvidence(evidencePath, intent);
 
@@ -668,6 +693,12 @@ export function promoteProductionBlueGreen({
     });
     if (alertDelivery?.delivered !== true) {
       throw new Error("production change alert was not delivered");
+    }
+    if (
+      alertDelivery.credentialBinding?.credentialIdentitySha256
+      !== alertPreflight.credentialBinding.credentialIdentitySha256
+    ) {
+      throw new Error("production alert credential changed after external input preflight");
     }
     approvalConsumptionAttempted = true;
     approvalConsumption = approvalConsumer({
@@ -763,6 +794,7 @@ export function promoteProductionBlueGreen({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       ...candidateResult,
       activeSourceCommit: preflight.candidate.receipt.sourceCommit,
       stableRestored: false,
@@ -852,6 +884,7 @@ export function promoteProductionBlueGreen({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       stableRestored,
       activeSourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : null,
       sourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : preflight.candidate.receipt.sourceCommit,

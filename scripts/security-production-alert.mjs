@@ -69,6 +69,19 @@ function canonicalJson(value) {
   )).join(",")}}`;
 }
 
+function parseArgs(values) {
+  const args = {};
+  for (let index = 0; index < values.length; index += 2) {
+    const key = values[index];
+    const value = values[index + 1];
+    if (!key?.startsWith("--") || value === undefined) {
+      throw new Error("arguments must be --name value pairs");
+    }
+    args[key.slice(2)] = value;
+  }
+  return args;
+}
+
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -364,9 +377,68 @@ export function bindProductionAlertCredential({
     secretValueRecorded: false,
     bound: true,
   };
+  const identity = {
+    secretId: binding.secretId,
+    secretInventorySha256: binding.secretInventorySha256,
+    managerReferenceSha256: binding.managerReferenceSha256,
+    kmsKeySha256: binding.kmsKeySha256,
+    currentVersionSha256: binding.currentVersionSha256,
+    mountPathSha256: binding.mountPathSha256,
+    providerHostSha256: binding.providerHostSha256,
+  };
   return {
     ...binding,
+    credentialIdentitySha256: sha256(canonicalJson(identity)),
     bindingSha256: sha256(canonicalJson(binding)),
+  };
+}
+
+export function preflightProductionAlertInputs({
+  endpoint,
+  expectedHost,
+  credentialHeaderFile,
+  credentialVersionFile,
+  credentialSecretInventory,
+  trustedCredentialSecretInventorySha256,
+  sourceCommit,
+  execFile = execFileSync,
+  readFile = readFileSync,
+  statFile = statSync,
+  inspectSecret = inspectAwsManagedSecret,
+  checkedAt = new Date(),
+}) {
+  const current = validDate(checkedAt, "production alert input preflight time");
+  const target = validateEndpoint(endpoint, expectedHost);
+  const credentialBinding = bindProductionAlertCredential({
+    secretInventory: credentialSecretInventory,
+    trustedSecretInventorySha256: trustedCredentialSecretInventorySha256,
+    sourceCommit,
+    expectedHost,
+    credentialHeaderFile,
+    credentialVersionFile,
+    checkedAt: current,
+    inspectSecret,
+    execFile,
+    readFile,
+    statFile,
+  });
+  const receipt = {
+    schemaVersion: 1,
+    action: "production-change-alert-input-preflight",
+    sourceCommit,
+    asOf: current.toISOString(),
+    endpointSha256: sha256(target),
+    providerHostSha256: sha256(expectedHost),
+    credentialBinding,
+    providerMetadataInspected: true,
+    secretValueRequested: false,
+    alertDeliveryPerformed: false,
+    productionMutationPerformed: false,
+    ready: true,
+  };
+  return {
+    ...receipt,
+    receiptSha256: sha256(canonicalJson(receipt)),
   };
 }
 
@@ -466,19 +538,21 @@ export function deliverProductionChangeAlert({
   }
   const target = validateEndpoint(endpoint, expectedHost);
   const startedAt = validDate(now(), "production alert dispatch start");
-  const credentialBinding = bindProductionAlertCredential({
-    secretInventory: credentialSecretInventory,
-    trustedSecretInventorySha256: trustedCredentialSecretInventorySha256,
-    sourceCommit,
+  const inputPreflight = preflightProductionAlertInputs({
+    endpoint: target,
     expectedHost,
     credentialHeaderFile,
     credentialVersionFile,
+    credentialSecretInventory,
+    trustedCredentialSecretInventorySha256,
+    sourceCommit,
     checkedAt: startedAt,
     inspectSecret,
     execFile,
     readFile,
     statFile,
   });
+  const { credentialBinding } = inputPreflight;
   const alert = buildProductionChangeAlert({
     approval,
     operatorId,
@@ -562,9 +636,36 @@ export function deliverProductionChangeAlert({
     providerEventIdSha256: sha256(receipt.providerEventId),
     acceptedAt: new Date(acceptedAt).toISOString(),
     idempotencyEnforced: true,
+    inputPreflightSha256: inputPreflight.receiptSha256,
     credentialBinding,
     credentialSource: "direct provider metadata and private version-bound mount",
     secretValueIncluded: false,
     delivered: true,
   };
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  try {
+    const command = process.argv[2];
+    const args = parseArgs(process.argv.slice(3));
+    if (command !== "preflight") {
+      throw new Error("usage: security-production-alert.mjs preflight --endpoint URL --expected-host HOST --credential-header-file /run/secrets/ynx/NAME --credential-version-file /run/secrets/ynx/NAME.version-id --secret-inventory PATH --secret-inventory-sha256 SHA256 --source-commit SHA");
+    }
+    const result = preflightProductionAlertInputs({
+      endpoint: args.endpoint,
+      expectedHost: args["expected-host"],
+      credentialHeaderFile: args["credential-header-file"],
+      credentialVersionFile: args["credential-version-file"],
+      credentialSecretInventory: JSON.parse(readFileSync(
+        resolve(args["secret-inventory"]),
+        "utf8",
+      )),
+      trustedCredentialSecretInventorySha256: args["secret-inventory-sha256"],
+      sourceCommit: args["source-commit"],
+    });
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } catch (error) {
+    process.stderr.write(`FAIL ${error.message}\n`);
+    process.exitCode = 1;
+  }
 }

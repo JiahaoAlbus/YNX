@@ -294,10 +294,29 @@ function approvalConsumer({ approval }) {
   };
 }
 
+const alertCredentialIdentity = "4".repeat(64);
+
+function alertInputPreflight({ sourceCommit: executingCommit }) {
+  assert.equal(executingCommit, sourceCommit);
+  return {
+    sourceCommit: executingCommit,
+    alertDeliveryPerformed: false,
+    productionMutationPerformed: false,
+    credentialBinding: {
+      bound: true,
+      credentialIdentitySha256: alertCredentialIdentity,
+    },
+    ready: true,
+  };
+}
+
 function alertDispatcher({ approval, sourceCommit: executingCommit }) {
   assert.equal(executingCommit, sourceCommit);
   return {
     authorizationId: approval.authorizationId,
+    credentialBinding: {
+      credentialIdentitySha256: alertCredentialIdentity,
+    },
     delivered: true,
   };
 }
@@ -340,6 +359,7 @@ test("initial deployment runtime rejects an existing production release before d
       approvalBinder,
       approvalConsumer,
       alertDispatcher,
+      alertInputPreflight,
       leaseFactory,
       now: new Date("2026-07-26T17:00:00.000Z"),
     }),
@@ -366,6 +386,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       approvalBinder,
       approvalConsumer,
       alertDispatcher,
+      alertInputPreflight,
       leaseFactory,
       now: (() => {
         const values = [
@@ -385,6 +406,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(result.changeApproval.bound, true);
     assert.equal(result.approvalConsumption.consumed, true);
     assert.equal(result.alertDelivery.delivered, true);
+    assert.equal(result.alertInputPreflight.ready, true);
     assert.equal(result.readiness.pass, true);
     assert.equal(result.publicProbes.tls.length, 8);
     assert.equal(result.publicProbes.services.length, 4);
@@ -419,6 +441,7 @@ test("public identity failure records applied but not publicly verified truth", 
         approvalBinder,
         approvalConsumer,
         alertDispatcher,
+        alertInputPreflight,
         leaseFactory,
         now: (() => {
           const values = [
@@ -457,6 +480,7 @@ test("approval consumption failure prevents production Apply", () => {
         verifyRelease: () => releaseBundle(),
         authorize,
         approvalBinder,
+        alertInputPreflight,
         alertDispatcher,
         approvalConsumer: () => {
           throw new Error("production approval consumption failed");
@@ -503,6 +527,7 @@ test("alert delivery failure prevents approval consumption and production Apply"
         verifyRelease: () => releaseBundle(),
         authorize,
         approvalBinder,
+        alertInputPreflight,
         alertDispatcher: () => {
           throw new Error("production change alert delivery failed");
         },
@@ -523,6 +548,97 @@ test("alert delivery failure prevents approval consumption and production Apply"
     const result = JSON.parse(readFileSync(resolve(root, path), "utf8"));
     assert.equal(result.alertDeliveryAttempted, true);
     assert.equal(result.alertDelivery, null);
+    assert.equal(result.approvalConsumptionAttempted, false);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.mutationPerformed, true);
+    assert.equal(result.deployedPublic, false);
+    assert.equal(consumptionAttempted, false);
+    assert.equal(cluster.calls.some((call) => (
+      call.args.includes("apply") && !call.args.includes("--dry-run=server")
+    )), false);
+  } finally {
+    rmSync(resolve(root, path), { force: true });
+  }
+});
+
+test("external alert input failure prevents Lease, delivery, and production mutation", () => {
+  const cluster = fixture();
+  const path = evidencePath("alert-input-preflight-failed");
+  let leaseAttempted = false;
+  let deliveryAttempted = false;
+  assert.throws(
+    () => deployProduction({
+      context,
+      expectedClusterUid: clusterUid,
+      operatorId: "production-operator",
+      changeId: "change-20260726-alert-input-failed",
+      acknowledge: "apply-production-release",
+      evidencePath: path,
+      execFile: cluster.execFile,
+      verifyRelease: () => releaseBundle(),
+      authorize,
+      approvalBinder,
+      alertInputPreflight: () => {
+        throw new Error("production alert secret inventory is not trusted and current");
+      },
+      alertDispatcher: () => {
+        deliveryAttempted = true;
+      },
+      leaseFactory: () => {
+        leaseAttempted = true;
+      },
+      now: () => new Date("2026-07-26T17:00:00.000Z"),
+    }),
+    /secret inventory is not trusted/,
+  );
+  assert.equal(leaseAttempted, false);
+  assert.equal(deliveryAttempted, false);
+  assert.equal(cluster.calls.some((call) => (
+    call.args.includes("apply") && !call.args.includes("--dry-run=server")
+  )), false);
+  assert.throws(() => readFileSync(resolve(root, path), "utf8"));
+});
+
+test("credential drift after preflight prevents approval consumption and production Apply", () => {
+  const cluster = fixture();
+  const path = evidencePath("alert-credential-drift");
+  let consumptionAttempted = false;
+  try {
+    assert.throws(
+      () => deployProduction({
+        context,
+        expectedClusterUid: clusterUid,
+        operatorId: "production-operator",
+        changeId: "change-20260726-alert-credential-drift",
+        acknowledge: "apply-production-release",
+        evidencePath: path,
+        execFile: cluster.execFile,
+        verifyRelease: () => releaseBundle(),
+        authorize,
+        approvalBinder,
+        alertInputPreflight,
+        alertDispatcher: () => ({
+          credentialBinding: {
+            credentialIdentitySha256: "5".repeat(64),
+          },
+          delivered: true,
+        }),
+        approvalConsumer: () => {
+          consumptionAttempted = true;
+        },
+        leaseFactory,
+        now: (() => {
+          const values = [
+            new Date("2026-07-26T17:00:00.000Z"),
+            new Date("2026-07-26T17:00:30.000Z"),
+          ];
+          return () => values.shift();
+        })(),
+      }),
+      /credential changed after external input preflight/,
+    );
+    const result = JSON.parse(readFileSync(resolve(root, path), "utf8"));
+    assert.equal(result.alertDelivery.delivered, true);
     assert.equal(result.approvalConsumptionAttempted, false);
     assert.equal(result.productionLeaseReleased, true);
     assert.equal(result.mutationPerformed, true);
@@ -582,6 +698,7 @@ test("production Lease acquisition failure prevents production mutation", () => 
       authorize,
       approvalBinder,
       approvalConsumer,
+      alertInputPreflight,
       leaseFactory: () => {
         throw new Error("production release mutation is locked by another active operator");
       },

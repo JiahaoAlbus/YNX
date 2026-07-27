@@ -36,7 +36,10 @@ import {
   consumeProductionApproval,
   productionRollbackResourceReferenceSha256,
 } from "./security-production-approval.mjs";
-import { deliverProductionChangeAlert } from "./security-production-alert.mjs";
+import {
+  deliverProductionChangeAlert,
+  preflightProductionAlertInputs,
+} from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -282,6 +285,7 @@ export function rollbackProduction({
   approvalBinder = bindProductionRollbackAuthorization,
   approvalConsumer = consumeProductionApproval,
   alertDispatcher = deliverProductionChangeAlert,
+  alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
@@ -304,6 +308,7 @@ export function rollbackProduction({
     || typeof approvalBinder !== "function"
     || typeof approvalConsumer !== "function"
     || typeof alertDispatcher !== "function"
+    || typeof alertInputPreflight !== "function"
     || typeof now !== "function"
   ) {
     throw new Error("production rollback runtime dependencies are invalid");
@@ -333,6 +338,24 @@ export function rollbackProduction({
     now: startedAt,
   });
   if (changeApproval?.bound !== true) throw new Error("production rollback approval did not bind");
+  const alertPreflight = alertInputPreflight({
+    ...alertOptions,
+    execFile,
+    sourceCommit: preflight.current.receipt.runtimeSourceCommit,
+    checkedAt: startedAt,
+  });
+  if (
+    alertPreflight?.ready !== true
+    || alertPreflight.alertDeliveryPerformed !== false
+    || alertPreflight.productionMutationPerformed !== false
+    || alertPreflight.sourceCommit !== preflight.current.receipt.runtimeSourceCommit
+    || alertPreflight.credentialBinding?.bound !== true
+    || !/^[0-9a-f]{64}$/.test(
+      alertPreflight.credentialBinding.credentialIdentitySha256 ?? "",
+    )
+  ) {
+    throw new Error("production alert external input preflight failed");
+  }
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -362,6 +385,7 @@ export function rollbackProduction({
     approvalConsumptionAttempted: false,
     alertDelivery: null,
     alertDeliveryAttempted: false,
+    alertInputPreflight: alertPreflight,
   };
   writeEvidence(evidencePath, intent);
 
@@ -383,6 +407,12 @@ export function rollbackProduction({
     });
     if (alertDelivery?.delivered !== true) {
       throw new Error("production change alert was not delivered");
+    }
+    if (
+      alertDelivery.credentialBinding?.credentialIdentitySha256
+      !== alertPreflight.credentialBinding.credentialIdentitySha256
+    ) {
+      throw new Error("production alert credential changed after external input preflight");
     }
     approvalConsumptionAttempted = true;
     approvalConsumption = approvalConsumer({
@@ -434,6 +464,7 @@ export function rollbackProduction({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       activeSourceCommit: preflight.target.receipt.sourceCommit,
       currentRestored: false,
       productionSigned: true,
@@ -497,6 +528,7 @@ export function rollbackProduction({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       currentRestored,
       activeSourceCommit: currentRestored ? preflight.current.receipt.sourceCommit : null,
       sourceCommit: currentRestored

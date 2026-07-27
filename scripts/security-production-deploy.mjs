@@ -22,7 +22,10 @@ import {
   bindProductionReleaseApproval,
   consumeProductionApproval,
 } from "./security-production-approval.mjs";
-import { deliverProductionChangeAlert } from "./security-production-alert.mjs";
+import {
+  deliverProductionChangeAlert,
+  preflightProductionAlertInputs,
+} from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -469,6 +472,7 @@ export function deployProduction({
   approvalBinder = bindProductionReleaseApproval,
   approvalConsumer = consumeProductionApproval,
   alertDispatcher = deliverProductionChangeAlert,
+  alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
@@ -490,6 +494,7 @@ export function deployProduction({
     || typeof approvalBinder !== "function"
     || typeof approvalConsumer !== "function"
     || typeof alertDispatcher !== "function"
+    || typeof alertInputPreflight !== "function"
   ) {
     throw new Error("production deployment clock, approval, and Lease dependencies are required");
   }
@@ -512,6 +517,24 @@ export function deployProduction({
     now: startedAt,
   });
   if (changeApproval?.bound !== true) throw new Error("production change approval did not bind");
+  const alertPreflight = alertInputPreflight({
+    ...alertOptions,
+    execFile,
+    sourceCommit: preflight.receipt.runtimeSourceCommit,
+    checkedAt: startedAt,
+  });
+  if (
+    alertPreflight?.ready !== true
+    || alertPreflight.alertDeliveryPerformed !== false
+    || alertPreflight.productionMutationPerformed !== false
+    || alertPreflight.sourceCommit !== preflight.receipt.runtimeSourceCommit
+    || alertPreflight.credentialBinding?.bound !== true
+    || !/^[0-9a-f]{64}$/.test(
+      alertPreflight.credentialBinding.credentialIdentitySha256 ?? "",
+    )
+  ) {
+    throw new Error("production alert external input preflight failed");
+  }
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -541,6 +564,7 @@ export function deployProduction({
     approvalConsumptionAttempted: false,
     alertDelivery: null,
     alertDeliveryAttempted: false,
+    alertInputPreflight: alertPreflight,
   };
   writeEvidence(evidencePath, intent);
 
@@ -562,6 +586,12 @@ export function deployProduction({
     });
     if (alertDelivery?.delivered !== true) {
       throw new Error("production change alert was not delivered");
+    }
+    if (
+      alertDelivery.credentialBinding?.credentialIdentitySha256
+      !== alertPreflight.credentialBinding.credentialIdentitySha256
+    ) {
+      throw new Error("production alert credential changed after external input preflight");
     }
     approvalConsumptionAttempted = true;
     approvalConsumption = approvalConsumer({
@@ -633,6 +663,7 @@ export function deployProduction({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       productionSigned: true,
       mutationPerformed: true,
       deployedPublic: true,
@@ -664,6 +695,7 @@ export function deployProduction({
       approvalConsumptionAttempted,
       alertDelivery,
       alertDeliveryAttempted,
+      alertInputPreflight: alertPreflight,
       productionSigned: true,
       mutationPerformed: alertDeliveryAttempted || approvalConsumptionAttempted || applyOutput !== undefined,
       deployedPublic: false,

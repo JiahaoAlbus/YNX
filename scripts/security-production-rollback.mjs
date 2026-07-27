@@ -30,6 +30,7 @@ import {
   verifyProductionPublicEndpoints,
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
+import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -249,6 +250,8 @@ export function rollbackProduction({
   verifyRelease = verifyProductionReleaseBundle,
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
+  leaseFactory = acquireProductionLease,
+  leaseDurationSeconds = 600,
   now = () => new Date(),
 }) {
   if (acknowledge !== "rollback-production-release") {
@@ -264,6 +267,7 @@ export function rollbackProduction({
     typeof verifyRelease !== "function"
     || typeof verifyReadiness !== "function"
     || typeof verifyPublicEndpoints !== "function"
+    || typeof leaseFactory !== "function"
     || typeof now !== "function"
   ) {
     throw new Error("production rollback runtime dependencies are invalid");
@@ -282,6 +286,19 @@ export function rollbackProduction({
     verifyRelease,
     now: startedAt,
   });
+  const productionLease = leaseFactory({
+    context,
+    operatorId,
+    changeId,
+    action: "production-manual-rollback",
+    durationSeconds: leaseDurationSeconds,
+    execFile,
+    now,
+  });
+  if (productionLease?.receipt == null || typeof productionLease.renew !== "function" || typeof productionLease.release !== "function") {
+    throw new Error("production Lease factory returned an invalid handle");
+  }
+  const leaseRenewals = [];
   const intent = {
     ...preflight.receipt,
     action: "production-manual-rollback",
@@ -289,11 +306,16 @@ export function rollbackProduction({
     changeId,
     startedAt: startedAt.toISOString(),
     state: "rollback-apply-not-confirmed",
+    productionLease: productionLease.receipt,
+    productionLeaseRenewals: leaseRenewals,
+    productionLeaseRelease: null,
+    productionLeaseReleased: false,
   };
   writeEvidence(evidencePath, intent);
 
   let targetApplyAttempted = false;
   try {
+    leaseRenewals.push(productionLease.renew());
     targetApplyAttempted = true;
     const targetResult = reconcileProductionRelease({
       execFile,
@@ -306,6 +328,13 @@ export function rollbackProduction({
       action: "production rollback target",
     });
     const completedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const result = {
       ...intent,
       sourceCommit: preflight.target.receipt.sourceCommit,
@@ -313,10 +342,16 @@ export function rollbackProduction({
       productionManifestSha256: preflight.target.receipt.productionManifestSha256,
       completedAt: completedAt.toISOString(),
       releasedAt: completedAt.toISOString(),
-      state: "deployed-public-verified",
+      state: productionLeaseRelease === null
+        ? "deployed-public-verified-lease-release-pending"
+        : "deployed-public-verified",
       ...targetResult,
       rollbackFromSourceCommit: preflight.current.receipt.sourceCommit,
       rollbackTargetEvidenceSha256: targetEvidenceSha256,
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       activeSourceCommit: preflight.target.receipt.sourceCommit,
       currentRestored: false,
       productionSigned: true,
@@ -326,24 +361,39 @@ export function rollbackProduction({
     writeEvidence(evidencePath, result);
     return result;
   } catch (error) {
+    let leaseOwnershipFailure = null;
+    try {
+      leaseRenewals.push(productionLease.renew());
+    } catch (leaseError) {
+      leaseOwnershipFailure = leaseError.message;
+    }
     let currentRecovery = null;
     let currentRecoveryFailure = null;
-    try {
-      currentRecovery = reconcileProductionRelease({
-        execFile,
-        context,
-        release: preflight.current,
-        rolloutTimeoutSeconds,
-        verifyReadiness,
-        verifyPublicEndpoints,
-        now,
-        action: "production rollback recovery",
-      });
-    } catch (recoveryError) {
-      currentRecoveryFailure = recoveryError.message;
+    if (leaseOwnershipFailure === null) {
+      try {
+        currentRecovery = reconcileProductionRelease({
+          execFile,
+          context,
+          release: preflight.current,
+          rolloutTimeoutSeconds,
+          verifyReadiness,
+          verifyPublicEndpoints,
+          now,
+          action: "production rollback recovery",
+        });
+      } catch (recoveryError) {
+        currentRecoveryFailure = recoveryError.message;
+      }
     }
     const currentRestored = currentRecovery !== null && currentRecoveryFailure === null;
     const failedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const failed = {
       ...intent,
       failedAt: failedAt.toISOString(),
@@ -355,6 +405,11 @@ export function rollbackProduction({
       currentRecoveryAttempted: true,
       currentRecovery,
       currentRecoveryFailure,
+      leaseOwnershipFailure,
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       currentRestored,
       activeSourceCommit: currentRestored ? preflight.current.receipt.sourceCommit : null,
       sourceCommit: currentRestored
@@ -402,6 +457,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
+        leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
       throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [rollback flags]");

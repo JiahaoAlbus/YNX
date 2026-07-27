@@ -107,6 +107,7 @@ function deploymentEvidence(role) {
     productionSigned: true,
     mutationPerformed: true,
     deployedPublic: true,
+    productionLeaseReleased: true,
     releasedAt: role === "current"
       ? "2026-07-27T02:00:00.000Z"
       : "2026-07-27T01:00:00.000Z",
@@ -192,6 +193,14 @@ function verifier(options) {
   return release(options.role);
 }
 
+function leaseFactory() {
+  return {
+    receipt: { lock: "default/ynx-production-release-lock" },
+    renew: () => ({ renewedAt: "2026-07-27T03:00:00.000Z" }),
+    release: () => ({ releasedAt: "2026-07-27T03:02:00.000Z", expired: true }),
+  };
+}
+
 function common(currentEvidence, targetEvidence) {
   return {
     currentReleaseOptions: { role: "current" },
@@ -203,6 +212,7 @@ function common(currentEvidence, targetEvidence) {
     context,
     expectedClusterUid: clusterUid,
     verifyRelease: verifier,
+    leaseFactory,
   };
 }
 
@@ -259,6 +269,8 @@ test("manual rollback applies and publicly verifies the signed target release", 
     assert.equal(result.activeSourceCommit, targetCommit);
     assert.equal(result.rollbackFromSourceCommit, currentCommit);
     assert.equal(result.currentRestored, false);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.productionLeaseRenewals.length, 1);
     assert.equal(result.deployedPublic, true);
     assert.equal(cluster.active(), "target");
     assert.deepEqual(JSON.parse(readFileSync(resolve(root, path), "utf8")), result);
@@ -300,6 +312,60 @@ test("target public failure restores and verifies the signed current release", (
     assert.equal(result.activeSourceCommit, currentCommit);
     assert.equal(result.deployedPublic, true);
     assert.equal(cluster.active(), "current");
+  } finally {
+    currentEvidence.cleanup();
+    targetEvidence.cleanup();
+    rmSync(resolve(root, path), { force: true });
+  }
+});
+
+test("lost Lease ownership prevents recovery mutation by the former holder", () => {
+  const currentEvidence = deploymentEvidence("current");
+  const targetEvidence = deploymentEvidence("target");
+  const cluster = fixture();
+  const path = evidencePath("lease-lost");
+  let renewals = 0;
+  const lostLeaseFactory = () => ({
+    receipt: { lock: "default/ynx-production-release-lock" },
+    renew: () => {
+      renewals += 1;
+      if (renewals > 1) throw new Error("production Lease renewal lost production Lease ownership");
+      return { renewedAt: "2026-07-27T03:00:00.000Z" };
+    },
+    release: () => {
+      throw new Error("production Lease release lost production Lease ownership");
+    },
+  });
+  try {
+    assert.throws(
+      () => rollbackProduction({
+        ...common(currentEvidence, targetEvidence),
+        execFile: cluster.execFile,
+        operatorId: "production-operator",
+        changeId: "change-20260727-lease-lost",
+        acknowledge: "rollback-production-release",
+        evidencePath: path,
+        leaseFactory: lostLeaseFactory,
+        verifyReadiness: cluster.verifyReadiness,
+        verifyPublicEndpoints: () => {
+          throw new Error("rollback target public identity failed");
+        },
+        now: clock(),
+      }),
+      /rollback target public identity failed/,
+    );
+    const result = JSON.parse(readFileSync(resolve(root, path), "utf8"));
+    assert.equal(result.state, "rollback-failed-active-release-unverified");
+    assert.match(result.leaseOwnershipFailure, /lost production Lease ownership/);
+    assert.equal(result.currentRecovery, null);
+    assert.equal(result.currentRestored, false);
+    assert.equal(result.productionLeaseReleased, false);
+    assert.equal(result.deployedPublic, false);
+    assert.equal(cluster.active(), "target");
+    const nonDryApplyCalls = cluster.calls.filter((call) => (
+      call.args.includes("apply") && !call.args.includes("--dry-run=server")
+    ));
+    assert.equal(nonDryApplyCalls.length, 1);
   } finally {
     currentEvidence.cleanup();
     targetEvidence.cleanup();

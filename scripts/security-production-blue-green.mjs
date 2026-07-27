@@ -22,6 +22,7 @@ import {
   verifyProductionPublicEndpoints,
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
+import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -157,6 +158,7 @@ export function validateProductionDeploymentEvidence(
     || evidence.productionSigned !== true
     || evidence.deployedPublic !== true
     || evidence.mutationPerformed !== true
+    || evidence.productionLeaseReleased !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
     || evidence.sourceCommit !== release.receipt.sourceCommit
@@ -535,6 +537,8 @@ export function promoteProductionBlueGreen({
   verifyRelease = verifyProductionReleaseBundle,
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
+  leaseFactory = acquireProductionLease,
+  leaseDurationSeconds = 600,
   wait = defaultWait,
   now = () => new Date(),
 }) {
@@ -551,6 +555,7 @@ export function promoteProductionBlueGreen({
     typeof verifyRelease !== "function"
     || typeof verifyReadiness !== "function"
     || typeof verifyPublicEndpoints !== "function"
+    || typeof leaseFactory !== "function"
     || typeof wait !== "function"
     || typeof now !== "function"
   ) {
@@ -570,6 +575,19 @@ export function promoteProductionBlueGreen({
     verifyRelease,
     now: startedAt,
   });
+  const productionLease = leaseFactory({
+    context,
+    operatorId,
+    changeId,
+    action: "production-blue-green-update",
+    durationSeconds: leaseDurationSeconds,
+    execFile,
+    now,
+  });
+  if (productionLease?.receipt == null || typeof productionLease.renew !== "function" || typeof productionLease.release !== "function") {
+    throw new Error("production Lease factory returned an invalid handle");
+  }
+  const leaseRenewals = [];
   const intent = {
     ...preflight.receipt,
     action: "production-blue-green-update",
@@ -577,6 +595,10 @@ export function promoteProductionBlueGreen({
     changeId,
     startedAt: startedAt.toISOString(),
     state: "green-apply-not-confirmed",
+    productionLease: productionLease.receipt,
+    productionLeaseRenewals: leaseRenewals,
+    productionLeaseRelease: null,
+    productionLeaseReleased: false,
   };
   writeEvidence(evidencePath, intent);
 
@@ -585,6 +607,7 @@ export function promoteProductionBlueGreen({
   let greenCleanup = null;
   const samples = [];
   try {
+    leaseRenewals.push(productionLease.renew());
     greenApplyAttempted = true;
     const greenApply = runText(execFile, "kubectl", [
       "--context", context, "apply", "--server-side",
@@ -598,6 +621,7 @@ export function promoteProductionBlueGreen({
     if (greenRollout === "") throw new Error("production green rollout returned no receipt");
 
     for (let index = 0; index < preflight.receipt.requiredSamples; index += 1) {
+      leaseRenewals.push(productionLease.renew());
       const sampledAt = now();
       if (!(sampledAt instanceof Date) || !Number.isFinite(sampledAt.getTime())) {
         throw new Error("production green sample time is invalid");
@@ -622,6 +646,7 @@ export function promoteProductionBlueGreen({
       throw new Error("production green observation window was shorter than required");
     }
 
+    leaseRenewals.push(productionLease.renew());
     candidateApplyAttempted = true;
     const candidateResult = reconcileProductionRelease({
       execFile,
@@ -635,6 +660,13 @@ export function promoteProductionBlueGreen({
     });
     greenCleanup = cleanupGreen(execFile, context);
     const completedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const result = {
       ...intent,
       sourceCommit: preflight.candidate.receipt.sourceCommit,
@@ -642,7 +674,9 @@ export function promoteProductionBlueGreen({
       productionManifestSha256: preflight.candidate.receipt.productionManifestSha256,
       completedAt: completedAt.toISOString(),
       releasedAt: completedAt.toISOString(),
-      state: "deployed-public-verified",
+      state: productionLeaseRelease === null
+        ? "deployed-public-verified-lease-release-pending"
+        : "deployed-public-verified",
       greenApplyOutputSha256: sha256(greenApply),
       greenRolloutOutputSha256: sha256(greenRollout),
       greenSamples: samples,
@@ -650,6 +684,10 @@ export function promoteProductionBlueGreen({
       greenObservedMilliseconds: observedMilliseconds,
       greenRemoved: true,
       greenCleanup,
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       ...candidateResult,
       activeSourceCommit: preflight.candidate.receipt.sourceCommit,
       stableRestored: false,
@@ -660,8 +698,14 @@ export function promoteProductionBlueGreen({
     writeEvidence(evidencePath, result);
     return result;
   } catch (error) {
+    let leaseOwnershipFailure = null;
+    try {
+      leaseRenewals.push(productionLease.renew());
+    } catch (leaseError) {
+      leaseOwnershipFailure = leaseError.message;
+    }
     let cleanupFailure = null;
-    if (greenApplyAttempted && greenCleanup == null) {
+    if (leaseOwnershipFailure === null && greenApplyAttempted && greenCleanup == null) {
       try {
         greenCleanup = cleanupGreen(execFile, context);
       } catch (cleanupError) {
@@ -670,30 +714,39 @@ export function promoteProductionBlueGreen({
     }
     let stableVerification = null;
     let automaticRollbackFailure = null;
-    try {
-      stableVerification = candidateApplyAttempted
-        ? reconcileProductionRelease({
-          execFile,
-          context,
-          release: preflight.stable,
-          rolloutTimeoutSeconds,
-          verifyReadiness,
-          verifyPublicEndpoints,
-          now,
-          action: "automatic stable rollback",
-        })
-        : {
-          readiness: verifyReadiness(execFile, context, preflight.stable),
-          publicProbes: verifyPublicEndpoints(execFile, preflight.stable, now()),
-        };
-      if (stableVerification.readiness?.pass !== true || stableVerification.publicProbes?.pass !== true) {
-        throw new Error("stable production verification failed");
+    if (leaseOwnershipFailure === null) {
+      try {
+        stableVerification = candidateApplyAttempted
+          ? reconcileProductionRelease({
+            execFile,
+            context,
+            release: preflight.stable,
+            rolloutTimeoutSeconds,
+            verifyReadiness,
+            verifyPublicEndpoints,
+            now,
+            action: "automatic stable rollback",
+          })
+          : {
+            readiness: verifyReadiness(execFile, context, preflight.stable),
+            publicProbes: verifyPublicEndpoints(execFile, preflight.stable, now()),
+          };
+        if (stableVerification.readiness?.pass !== true || stableVerification.publicProbes?.pass !== true) {
+          throw new Error("stable production verification failed");
+        }
+      } catch (rollbackError) {
+        automaticRollbackFailure = rollbackError.message;
       }
-    } catch (rollbackError) {
-      automaticRollbackFailure = rollbackError.message;
     }
     const stableRestored = stableVerification !== null && automaticRollbackFailure === null;
     const failedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const failed = {
       ...intent,
       failedAt: failedAt.toISOString(),
@@ -714,6 +767,11 @@ export function promoteProductionBlueGreen({
       automaticRollbackAttempted: candidateApplyAttempted,
       automaticRollback: stableVerification,
       automaticRollbackFailure,
+      leaseOwnershipFailure,
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       stableRestored,
       activeSourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : null,
       sourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : preflight.candidate.receipt.sourceCommit,
@@ -811,6 +869,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
+        leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
       throw new Error("usage: security-production-blue-green.mjs preflight|promote --stable-release-request PATH --candidate-release-request PATH --stable-evidence PATH --stable-evidence-sha256 SHA256 --context NAME --cluster-uid UID [promotion flags]");

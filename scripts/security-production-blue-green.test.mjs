@@ -119,6 +119,7 @@ function stableEvidence() {
     productionSigned: true,
     deployedPublic: true,
     mutationPerformed: true,
+    productionLeaseReleased: true,
     readiness: { pass: true },
     publicProbes: { pass: true },
   };
@@ -238,6 +239,14 @@ function verifier(options) {
   return release(options.role);
 }
 
+function leaseFactory() {
+  return {
+    receipt: { lock: "default/ynx-production-release-lock" },
+    renew: () => ({ renewedAt: "2026-07-27T00:00:00.000Z" }),
+    release: () => ({ releasedAt: "2026-07-27T00:03:00.000Z", expired: true }),
+  };
+}
+
 function tickingClock() {
   let value = Date.parse("2026-07-27T00:00:00.000Z");
   return () => {
@@ -258,6 +267,7 @@ function common(stable) {
     observationSeconds: 60,
     sampleIntervalSeconds: 30,
     verifyRelease: verifier,
+    leaseFactory,
   };
 }
 
@@ -346,6 +356,8 @@ test("promotion observes green then verifies the complete signed candidate publi
     assert.equal(result.greenSamples.length, 3);
     assert.equal(result.greenObservationPassed, true);
     assert.equal(result.greenRemoved, true);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.productionLeaseRenewals.length, 5);
     assert.equal(result.deployedPublic, true);
     assert.equal(cluster.active(), "candidate");
     assert.deepEqual(JSON.parse(readFileSync(resolve(root, path), "utf8")), result);

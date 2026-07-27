@@ -247,6 +247,14 @@ function evidencePath(name) {
   return `evidence/security-platform/.production-deploy-${process.pid}-${name}.json`;
 }
 
+function leaseFactory() {
+  return {
+    receipt: { lock: "default/ynx-production-release-lock" },
+    renew: () => ({ renewedAt: "2026-07-26T17:00:00.000Z" }),
+    release: () => ({ releasedAt: "2026-07-26T17:06:00.000Z", expired: true }),
+  };
+}
+
 test("production preflight binds signed release, cluster identity, and server dry-run", () => {
   const cluster = fixture();
   const verified = [];
@@ -279,6 +287,7 @@ test("initial deployment runtime rejects an existing production release before d
       expectedClusterUid: clusterUid,
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      leaseFactory,
       now: new Date("2026-07-26T17:00:00.000Z"),
     }),
     /blue-green update runtime/,
@@ -300,6 +309,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       rolloutTimeoutSeconds: 600,
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      leaseFactory,
       now: (() => {
         const values = [
           new Date("2026-07-26T17:00:00.000Z"),
@@ -313,6 +323,8 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(result.productionSigned, true);
     assert.equal(result.deployedPublic, true);
     assert.equal(result.mutationPerformed, true);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.productionLeaseRenewals.length, 2);
     assert.equal(result.readiness.pass, true);
     assert.equal(result.publicProbes.tls.length, 8);
     assert.equal(result.publicProbes.services.length, 4);
@@ -342,6 +354,7 @@ test("public identity failure records applied but not publicly verified truth", 
         evidencePath: path,
         execFile: cluster.execFile,
         verifyRelease: () => releaseBundle(),
+        leaseFactory,
         now: (() => {
           const values = [
             new Date("2026-07-26T17:00:00.000Z"),
@@ -361,6 +374,32 @@ test("public identity failure records applied but not publicly verified truth", 
   } finally {
     rmSync(resolve(root, path), { force: true });
   }
+});
+
+test("production Lease acquisition failure prevents production mutation", () => {
+  const cluster = fixture();
+  const path = evidencePath("lease-rejected");
+  assert.throws(
+    () => deployProduction({
+      context,
+      expectedClusterUid: clusterUid,
+      operatorId: "production-operator",
+      changeId: "change-20260726-production-locked",
+      acknowledge: "apply-production-release",
+      evidencePath: path,
+      execFile: cluster.execFile,
+      verifyRelease: () => releaseBundle(),
+      leaseFactory: () => {
+        throw new Error("production release mutation is locked by another active operator");
+      },
+      now: () => new Date("2026-07-26T17:00:00.000Z"),
+    }),
+    /locked by another active operator/,
+  );
+  assert.equal(cluster.calls.some((call) => (
+    call.args.includes("apply") && !call.args.includes("--dry-run=server")
+  )), false);
+  rmSync(resolve(root, path), { force: true });
 });
 
 test("production mutation requires exact acknowledgement and a bounded evidence path", () => {

@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -434,6 +435,8 @@ export function deployProduction({
   rolloutTimeoutSeconds = 600,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
+  leaseFactory = acquireProductionLease,
+  leaseDurationSeconds = 600,
   now = () => new Date(),
   ...releaseOptions
 }) {
@@ -446,7 +449,9 @@ export function deployProduction({
   if (!Number.isInteger(rolloutTimeoutSeconds) || rolloutTimeoutSeconds < 60 || rolloutTimeoutSeconds > 1800) {
     throw new Error("rolloutTimeoutSeconds must be between 60 and 1800");
   }
-  if (typeof now !== "function") throw new Error("production deployment clock function is required");
+  if (typeof now !== "function" || typeof leaseFactory !== "function") {
+    throw new Error("production deployment clock and Lease factory are required");
+  }
   const startedAt = now();
   const preflight = preflightProductionDeployment({
     ...releaseOptions,
@@ -456,6 +461,19 @@ export function deployProduction({
     verifyRelease,
     now: startedAt,
   });
+  const productionLease = leaseFactory({
+    context,
+    operatorId,
+    changeId,
+    action: "production-deployment",
+    durationSeconds: leaseDurationSeconds,
+    execFile,
+    now,
+  });
+  if (productionLease?.receipt == null || typeof productionLease.renew !== "function" || typeof productionLease.release !== "function") {
+    throw new Error("production Lease factory returned an invalid handle");
+  }
+  const leaseRenewals = [];
   const intent = {
     ...preflight.receipt,
     action: "production-deployment",
@@ -463,11 +481,16 @@ export function deployProduction({
     changeId,
     startedAt: startedAt.toISOString(),
     state: "apply-not-confirmed",
+    productionLease: productionLease.receipt,
+    productionLeaseRenewals: leaseRenewals,
+    productionLeaseRelease: null,
+    productionLeaseReleased: false,
   };
   writeEvidence(evidencePath, intent);
 
   let applyOutput;
   try {
+    leaseRenewals.push(productionLease.renew());
     applyOutput = runText(execFile, "kubectl", [
       "--context", context,
       "apply",
@@ -495,14 +518,24 @@ export function deployProduction({
     if (!readiness.pass) {
       throw new Error(`production readiness failed: ${readiness.checks.filter((check) => !check.pass).map((check) => check.id).join(",")}`);
     }
+    leaseRenewals.push(productionLease.renew());
     const probedAt = now();
     const probes = verifyProductionPublicEndpoints(execFile, preflight, probedAt);
     const completedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const result = {
       ...intent,
       completedAt: completedAt.toISOString(),
       releasedAt: completedAt.toISOString(),
-      state: "deployed-public-verified",
+      state: productionLeaseRelease === null
+        ? "deployed-public-verified-lease-release-pending"
+        : "deployed-public-verified",
       applyOutputSha256: sha256(applyOutput),
       applyOutputBytes: Buffer.byteLength(applyOutput),
       liveManifestReconciled: true,
@@ -510,6 +543,10 @@ export function deployProduction({
       rolloutVerified: true,
       readiness,
       publicProbes: probes,
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       productionSigned: true,
       mutationPerformed: true,
       deployedPublic: true,
@@ -518,6 +555,13 @@ export function deployProduction({
     return result;
   } catch (error) {
     const failedAt = now();
+    let productionLeaseRelease = null;
+    let productionLeaseReleaseFailure = null;
+    try {
+      productionLeaseRelease = productionLease.release();
+    } catch (leaseError) {
+      productionLeaseReleaseFailure = leaseError.message;
+    }
     const result = {
       ...intent,
       failedAt: failedAt.toISOString(),
@@ -525,6 +569,10 @@ export function deployProduction({
       failure: error.message,
       applyOutputSha256: applyOutput === undefined ? null : sha256(applyOutput),
       applyOutputBytes: applyOutput === undefined ? null : Buffer.byteLength(applyOutput),
+      productionLeaseRenewals: leaseRenewals,
+      productionLeaseRelease,
+      productionLeaseReleaseFailure,
+      productionLeaseReleased: productionLeaseRelease !== null,
       productionSigned: true,
       mutationPerformed: applyOutput !== undefined,
       deployedPublic: false,
@@ -573,6 +621,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
+        leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
       throw new Error("usage: security-production-deploy.mjs preflight|deploy [signed release flags] --context NAME --cluster-uid UID [deployment flags]");

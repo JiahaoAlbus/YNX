@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   mkdirSync,
+  readFileSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -30,6 +31,11 @@ import {
   verifyProductionPublicEndpoints,
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
+import {
+  bindProductionRollbackAuthorization,
+  consumeProductionApproval,
+  productionRollbackResourceReferenceSha256,
+} from "./security-production-approval.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -228,6 +234,13 @@ export function preflightProductionRollback({
       targetManifestSha256: target.receipt.productionManifestSha256,
       targetEvidenceSha256: targetEvidence.sha256,
       targetReleasedAt: targetEvidence.value.releasedAt,
+      rollbackAuthorizationScope: "deployment:rollback",
+      rollbackAuthorizationResourceId: `production-release:${target.receipt.sourceCommit}`,
+      rollbackResourceReferenceSha256: productionRollbackResourceReferenceSha256({
+        currentRelease: current,
+        targetRelease: target,
+        expectedClusterUid,
+      }),
       publicProbePolicySha256: target.receipt.publicProbePolicySha256,
       resourceInventorySha256: sha256(currentInventory.join("\n")),
       resourceInventoryCount: currentInventory.length,
@@ -258,12 +271,15 @@ export function rollbackProduction({
   changeId,
   acknowledge,
   evidencePath,
+  rollbackAuthorizationOptions,
   rolloutTimeoutSeconds = 600,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
   authorize = verifyProductionOperatorRbac,
+  approvalBinder = bindProductionRollbackAuthorization,
+  approvalConsumer = consumeProductionApproval,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -282,6 +298,8 @@ export function rollbackProduction({
     || typeof verifyReadiness !== "function"
     || typeof verifyPublicEndpoints !== "function"
     || typeof leaseFactory !== "function"
+    || typeof approvalBinder !== "function"
+    || typeof approvalConsumer !== "function"
     || typeof now !== "function"
   ) {
     throw new Error("production rollback runtime dependencies are invalid");
@@ -301,6 +319,16 @@ export function rollbackProduction({
     authorize,
     now: startedAt,
   });
+  const changeApproval = approvalBinder({
+    currentRelease: preflight.current,
+    targetRelease: preflight.target,
+    operatorId,
+    changeId,
+    expectedClusterUid,
+    authorizationOptions: rollbackAuthorizationOptions,
+    now: startedAt,
+  });
+  if (changeApproval?.bound !== true) throw new Error("production rollback approval did not bind");
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -325,12 +353,26 @@ export function rollbackProduction({
     productionLeaseRenewals: leaseRenewals,
     productionLeaseRelease: null,
     productionLeaseReleased: false,
+    changeApproval,
+    approvalConsumption: null,
+    approvalConsumptionAttempted: false,
   };
   writeEvidence(evidencePath, intent);
 
   let targetApplyAttempted = false;
+  let approvalConsumption = null;
+  let approvalConsumptionAttempted = false;
   try {
     leaseRenewals.push(productionLease.renew());
+    approvalConsumptionAttempted = true;
+    approvalConsumption = approvalConsumer({
+      context,
+      approval: changeApproval,
+      execFile,
+    });
+    if (approvalConsumption?.consumed !== true) {
+      throw new Error("production rollback approval was not consumed");
+    }
     targetApplyAttempted = true;
     const targetResult = reconcileProductionRelease({
       execFile,
@@ -367,6 +409,9 @@ export function rollbackProduction({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       activeSourceCommit: preflight.target.receipt.sourceCommit,
       currentRestored: false,
       productionSigned: true,
@@ -425,6 +470,9 @@ export function rollbackProduction({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       currentRestored,
       activeSourceCommit: currentRestored ? preflight.current.receipt.sourceCommit : null,
       sourceCommit: currentRestored
@@ -439,7 +487,7 @@ export function rollbackProduction({
       readiness: currentRecovery?.readiness ?? null,
       publicProbes: currentRecovery?.publicProbes ?? null,
       productionSigned: true,
-      mutationPerformed: targetApplyAttempted,
+      mutationPerformed: approvalConsumptionAttempted || targetApplyAttempted,
       deployedPublic: currentRestored,
     };
     writeEvidence(evidencePath, failed);
@@ -465,17 +513,27 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (command === "preflight") {
       ({ receipt: result } = preflightProductionRollback(common));
     } else if (command === "rollback") {
+      const approvalPaths = args["authorization-approvals"]?.split(",").filter(Boolean) ?? [];
+      if (approvalPaths.length < 2 || approvalPaths.length > 5) {
+        throw new Error("production rollback requires 2-5 authorization approval files");
+      }
       result = rollbackProduction({
         ...common,
         operatorId: args["operator-id"],
         changeId: args["change-id"],
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
+        rollbackAuthorizationOptions: {
+          request: JSON.parse(readFileSync(resolve(args["authorization-request"]), "utf8")),
+          policy: JSON.parse(readFileSync(resolve(args["authorization-policy"]), "utf8")),
+          approvals: approvalPaths.map((path) => JSON.parse(readFileSync(resolve(path), "utf8"))),
+          trustedPolicySha256: args["trusted-authorization-policy-sha256"],
+        },
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
         leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
-      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [rollback flags]");
+      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--authorization-request PATH --authorization-policy PATH --authorization-approvals A,B --trusted-authorization-policy-sha256 SHA256] [rollback flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

@@ -18,6 +18,10 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  bindProductionReleaseApproval,
+  consumeProductionApproval,
+} from "./security-production-approval.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -461,6 +465,8 @@ export function deployProduction({
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
   authorize = verifyProductionOperatorRbac,
+  approvalBinder = bindProductionReleaseApproval,
+  approvalConsumer = consumeProductionApproval,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -475,8 +481,13 @@ export function deployProduction({
   if (!Number.isInteger(rolloutTimeoutSeconds) || rolloutTimeoutSeconds < 60 || rolloutTimeoutSeconds > 1800) {
     throw new Error("rolloutTimeoutSeconds must be between 60 and 1800");
   }
-  if (typeof now !== "function" || typeof leaseFactory !== "function") {
-    throw new Error("production deployment clock and Lease factory are required");
+  if (
+    typeof now !== "function"
+    || typeof leaseFactory !== "function"
+    || typeof approvalBinder !== "function"
+    || typeof approvalConsumer !== "function"
+  ) {
+    throw new Error("production deployment clock, approval, and Lease dependencies are required");
   }
   const startedAt = now();
   const preflight = preflightProductionDeployment({
@@ -488,6 +499,15 @@ export function deployProduction({
     authorize,
     now: startedAt,
   });
+  const changeApproval = approvalBinder({
+    release: preflight,
+    action: "production-deployment",
+    operatorId,
+    changeId,
+    expectedClusterUid,
+    now: startedAt,
+  });
+  if (changeApproval?.bound !== true) throw new Error("production change approval did not bind");
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -512,12 +532,26 @@ export function deployProduction({
     productionLeaseRenewals: leaseRenewals,
     productionLeaseRelease: null,
     productionLeaseReleased: false,
+    changeApproval,
+    approvalConsumption: null,
+    approvalConsumptionAttempted: false,
   };
   writeEvidence(evidencePath, intent);
 
   let applyOutput;
+  let approvalConsumption = null;
+  let approvalConsumptionAttempted = false;
   try {
     leaseRenewals.push(productionLease.renew());
+    approvalConsumptionAttempted = true;
+    approvalConsumption = approvalConsumer({
+      context,
+      approval: changeApproval,
+      execFile,
+    });
+    if (approvalConsumption?.consumed !== true) {
+      throw new Error("production change approval was not consumed");
+    }
     applyOutput = runText(execFile, "kubectl", [
       "--context", context,
       "apply",
@@ -574,6 +608,9 @@ export function deployProduction({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       productionSigned: true,
       mutationPerformed: true,
       deployedPublic: true,
@@ -600,8 +637,11 @@ export function deployProduction({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       productionSigned: true,
-      mutationPerformed: applyOutput !== undefined,
+      mutationPerformed: approvalConsumptionAttempted || applyOutput !== undefined,
       deployedPublic: false,
     };
     writeEvidence(evidencePath, result);

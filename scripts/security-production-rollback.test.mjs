@@ -109,6 +109,8 @@ function deploymentEvidence(role) {
     deployedPublic: true,
     productionLeaseReleased: true,
     operatorAuthorization: { pass: true },
+    changeApproval: { bound: true },
+    approvalConsumption: { consumed: true },
     releasedAt: role === "current"
       ? "2026-07-27T02:00:00.000Z"
       : "2026-07-27T01:00:00.000Z",
@@ -206,6 +208,22 @@ function authorize() {
   return { pass: true, authorizationPlanSha256: "1".repeat(64) };
 }
 
+function approvalBinder({ changeId }) {
+  return {
+    schemaVersion: 1,
+    action: "production-manual-rollback",
+    changeId,
+    authorizationId: "2".repeat(64),
+    resourceReferenceSha256: "3".repeat(64),
+    ledgerName: `ynx-change-approval-${"2".repeat(32)}`,
+    bound: true,
+  };
+}
+
+function approvalConsumer({ approval }) {
+  return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
+}
+
 function common(currentEvidence, targetEvidence) {
   return {
     currentReleaseOptions: { role: "current" },
@@ -218,6 +236,8 @@ function common(currentEvidence, targetEvidence) {
     expectedClusterUid: clusterUid,
     verifyRelease: verifier,
     authorize,
+    approvalBinder,
+    approvalConsumer,
     leaseFactory,
   };
 }
@@ -244,6 +264,12 @@ test("rollback preflight binds signed current and target releases to prior publi
     assert.equal(result.receipt.action, "production-manual-rollback-preflight");
     assert.equal(result.receipt.currentSourceCommit, currentCommit);
     assert.equal(result.receipt.targetSourceCommit, targetCommit);
+    assert.equal(result.receipt.rollbackAuthorizationScope, "deployment:rollback");
+    assert.equal(
+      result.receipt.rollbackAuthorizationResourceId,
+      `production-release:${targetCommit}`,
+    );
+    assert.match(result.receipt.rollbackResourceReferenceSha256, /^[0-9a-f]{64}$/);
     assert.equal(result.receipt.serverDryRunPassed, true);
     assert.equal(result.receipt.mutationPerformed, false);
     assert.equal(result.receipt.deployedPublic, true);

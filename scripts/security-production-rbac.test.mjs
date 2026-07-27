@@ -54,6 +54,7 @@ function fixture({
         || resource === "clusterrolebindings.rbac.authorization.k8s.io"
         || resource === "customresourcedefinitions.apiextensions.k8s.io"
         || resource === "persistentvolumes"
+        || (namespace === "default" && resource === "configmaps" && ["patch", "update", "delete"].includes(verb))
         || (verb === "delete" && resource === "namespaces");
       if (key === deniedRequired) return "no";
       if (key === allowedForbidden) return "yes";
@@ -82,6 +83,18 @@ test("initial plan derives named manifest permissions and a bounded Lease permis
     check.effect === "require"
     && check.verb === "update"
     && check.resource === "leases.coordination.k8s.io/ynx-production-release-lock"
+    && check.namespace === "default"
+  )));
+  assert.ok(plan.checks.some((check) => (
+    check.effect === "require"
+    && check.verb === "create"
+    && check.resource === "configmaps"
+    && check.namespace === "default"
+  )));
+  assert.ok(plan.checks.some((check) => (
+    check.effect === "forbid"
+    && check.verb === "delete"
+    && check.resource === "configmaps"
     && check.namespace === "default"
   )));
 });

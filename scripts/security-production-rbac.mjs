@@ -154,6 +154,10 @@ export function buildProductionRbacPlan({ manifest, mode }) {
     required("get", "leases.coordination.k8s.io/ynx-production-release-lock", "default"),
     required("create", "leases.coordination.k8s.io", "default"),
     required("update", "leases.coordination.k8s.io/ynx-production-release-lock", "default"),
+    required("create", "configmaps", "default"),
+    forbidden("patch", "configmaps", "default"),
+    forbidden("update", "configmaps", "default"),
+    forbidden("delete", "configmaps", "default"),
   );
   if (mode === "blue-green") {
     checks.push(

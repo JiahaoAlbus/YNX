@@ -22,6 +22,10 @@ import {
   verifyProductionPublicEndpoints,
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
+import {
+  bindProductionReleaseApproval,
+  consumeProductionApproval,
+} from "./security-production-approval.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -161,6 +165,8 @@ export function validateProductionDeploymentEvidence(
     || evidence.mutationPerformed !== true
     || evidence.productionLeaseReleased !== true
     || evidence.operatorAuthorization?.pass !== true
+    || evidence.changeApproval?.bound !== true
+    || evidence.approvalConsumption?.consumed !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
     || evidence.sourceCommit !== release.receipt.sourceCommit
@@ -552,6 +558,8 @@ export function promoteProductionBlueGreen({
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
   authorize = verifyProductionOperatorRbac,
+  approvalBinder = bindProductionReleaseApproval,
+  approvalConsumer = consumeProductionApproval,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   wait = defaultWait,
@@ -571,6 +579,8 @@ export function promoteProductionBlueGreen({
     || typeof verifyReadiness !== "function"
     || typeof verifyPublicEndpoints !== "function"
     || typeof leaseFactory !== "function"
+    || typeof approvalBinder !== "function"
+    || typeof approvalConsumer !== "function"
     || typeof wait !== "function"
     || typeof now !== "function"
   ) {
@@ -591,6 +601,15 @@ export function promoteProductionBlueGreen({
     authorize,
     now: startedAt,
   });
+  const changeApproval = approvalBinder({
+    release: preflight.candidate,
+    action: "production-blue-green-update",
+    operatorId,
+    changeId,
+    expectedClusterUid,
+    now: startedAt,
+  });
+  if (changeApproval?.bound !== true) throw new Error("production change approval did not bind");
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -615,15 +634,29 @@ export function promoteProductionBlueGreen({
     productionLeaseRenewals: leaseRenewals,
     productionLeaseRelease: null,
     productionLeaseReleased: false,
+    changeApproval,
+    approvalConsumption: null,
+    approvalConsumptionAttempted: false,
   };
   writeEvidence(evidencePath, intent);
 
   let greenApplyAttempted = false;
   let candidateApplyAttempted = false;
   let greenCleanup = null;
+  let approvalConsumption = null;
+  let approvalConsumptionAttempted = false;
   const samples = [];
   try {
     leaseRenewals.push(productionLease.renew());
+    approvalConsumptionAttempted = true;
+    approvalConsumption = approvalConsumer({
+      context,
+      approval: changeApproval,
+      execFile,
+    });
+    if (approvalConsumption?.consumed !== true) {
+      throw new Error("production change approval was not consumed");
+    }
     greenApplyAttempted = true;
     const greenApply = runText(execFile, "kubectl", [
       "--context", context, "apply", "--server-side",
@@ -704,6 +737,9 @@ export function promoteProductionBlueGreen({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       ...candidateResult,
       activeSourceCommit: preflight.candidate.receipt.sourceCommit,
       stableRestored: false,
@@ -788,6 +824,9 @@ export function promoteProductionBlueGreen({
       productionLeaseRelease,
       productionLeaseReleaseFailure,
       productionLeaseReleased: productionLeaseRelease !== null,
+      changeApproval,
+      approvalConsumption,
+      approvalConsumptionAttempted,
       stableRestored,
       activeSourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : null,
       sourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : preflight.candidate.receipt.sourceCommit,
@@ -798,7 +837,7 @@ export function promoteProductionBlueGreen({
       readiness: stableVerification?.readiness ?? null,
       publicProbes: stableVerification?.publicProbes ?? null,
       productionSigned: true,
-      mutationPerformed: greenApplyAttempted || candidateApplyAttempted,
+      mutationPerformed: approvalConsumptionAttempted || greenApplyAttempted || candidateApplyAttempted,
       deployedPublic: stableRestored,
     };
     writeEvidence(evidencePath, failed);

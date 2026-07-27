@@ -121,6 +121,8 @@ function stableEvidence() {
     mutationPerformed: true,
     productionLeaseReleased: true,
     operatorAuthorization: { pass: true },
+    changeApproval: { bound: true },
+    approvalConsumption: { consumed: true },
     readiness: { pass: true },
     publicProbes: { pass: true },
   };
@@ -252,6 +254,22 @@ function authorize() {
   return { pass: true, authorizationPlanSha256: "1".repeat(64) };
 }
 
+function approvalBinder({ action, changeId }) {
+  return {
+    schemaVersion: 1,
+    action,
+    changeId,
+    authorizationId: "2".repeat(64),
+    resourceReferenceSha256: "3".repeat(64),
+    ledgerName: `ynx-change-approval-${"2".repeat(32)}`,
+    bound: true,
+  };
+}
+
+function approvalConsumer({ approval }) {
+  return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
+}
+
 function tickingClock() {
   let value = Date.parse("2026-07-27T00:00:00.000Z");
   return () => {
@@ -273,6 +291,8 @@ function common(stable) {
     sampleIntervalSeconds: 30,
     verifyRelease: verifier,
     authorize,
+    approvalBinder,
+    approvalConsumer,
     leaseFactory,
   };
 }

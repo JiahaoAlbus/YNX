@@ -274,6 +274,26 @@ function authorize() {
   return { pass: true, authorizationPlanSha256: "1".repeat(64) };
 }
 
+function approvalBinder({ action, changeId }) {
+  return {
+    schemaVersion: 1,
+    action,
+    changeId,
+    authorizationId: "2".repeat(64),
+    resourceReferenceSha256: "3".repeat(64),
+    ledgerName: `ynx-change-approval-${"2".repeat(32)}`,
+    bound: true,
+  };
+}
+
+function approvalConsumer({ approval }) {
+  return {
+    authorizationId: approval.authorizationId,
+    immutable: true,
+    consumed: true,
+  };
+}
+
 test("production preflight binds signed release, cluster identity, and server dry-run", () => {
   const cluster = fixture();
   const verified = [];
@@ -309,6 +329,8 @@ test("initial deployment runtime rejects an existing production release before d
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
       authorize,
+      approvalBinder,
+      approvalConsumer,
       leaseFactory,
       now: new Date("2026-07-26T17:00:00.000Z"),
     }),
@@ -332,6 +354,8 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
       authorize,
+      approvalBinder,
+      approvalConsumer,
       leaseFactory,
       now: (() => {
         const values = [
@@ -348,6 +372,8 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(result.mutationPerformed, true);
     assert.equal(result.productionLeaseReleased, true);
     assert.equal(result.productionLeaseRenewals.length, 2);
+    assert.equal(result.changeApproval.bound, true);
+    assert.equal(result.approvalConsumption.consumed, true);
     assert.equal(result.readiness.pass, true);
     assert.equal(result.publicProbes.tls.length, 8);
     assert.equal(result.publicProbes.services.length, 4);
@@ -379,6 +405,8 @@ test("public identity failure records applied but not publicly verified truth", 
         execFile: cluster.execFile,
         verifyRelease: () => releaseBundle(),
         authorize,
+        approvalBinder,
+        approvalConsumer,
         leaseFactory,
         now: (() => {
           const values = [
@@ -396,6 +424,50 @@ test("public identity failure records applied but not publicly verified truth", 
     assert.equal(result.productionSigned, true);
     assert.equal(result.mutationPerformed, true);
     assert.equal(result.deployedPublic, false);
+  } finally {
+    rmSync(resolve(root, path), { force: true });
+  }
+});
+
+test("approval consumption failure prevents production Apply", () => {
+  const cluster = fixture();
+  const path = evidencePath("approval-consumption-failed");
+  try {
+    assert.throws(
+      () => deployProduction({
+        context,
+        expectedClusterUid: clusterUid,
+        operatorId: "production-operator",
+        changeId: "change-20260726-approval-failed",
+        acknowledge: "apply-production-release",
+        evidencePath: path,
+        execFile: cluster.execFile,
+        verifyRelease: () => releaseBundle(),
+        authorize,
+        approvalBinder,
+        approvalConsumer: () => {
+          throw new Error("production approval consumption failed");
+        },
+        leaseFactory,
+        now: (() => {
+          const values = [
+            new Date("2026-07-26T17:00:00.000Z"),
+            new Date("2026-07-26T17:00:30.000Z"),
+          ];
+          return () => values.shift();
+        })(),
+      }),
+      /production approval consumption failed/,
+    );
+    const result = JSON.parse(readFileSync(resolve(root, path), "utf8"));
+    assert.equal(result.approvalConsumptionAttempted, true);
+    assert.equal(result.approvalConsumption, null);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.mutationPerformed, true);
+    assert.equal(result.deployedPublic, false);
+    assert.equal(cluster.calls.some((call) => (
+      call.args.includes("apply") && !call.args.includes("--dry-run=server")
+    )), false);
   } finally {
     rmSync(resolve(root, path), { force: true });
   }
@@ -445,6 +517,8 @@ test("production Lease acquisition failure prevents production mutation", () => 
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
       authorize,
+      approvalBinder,
+      approvalConsumer,
       leaseFactory: () => {
         throw new Error("production release mutation is locked by another active operator");
       },

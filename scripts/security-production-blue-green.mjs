@@ -26,6 +26,7 @@ import {
   bindProductionReleaseApproval,
   consumeProductionApproval,
 } from "./security-production-approval.mjs";
+import { deliverProductionChangeAlert } from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -167,6 +168,7 @@ export function validateProductionDeploymentEvidence(
     || evidence.operatorAuthorization?.pass !== true
     || evidence.changeApproval?.bound !== true
     || evidence.approvalConsumption?.consumed !== true
+    || evidence.alertDelivery?.delivered !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
     || evidence.sourceCommit !== release.receipt.sourceCommit
@@ -560,6 +562,8 @@ export function promoteProductionBlueGreen({
   authorize = verifyProductionOperatorRbac,
   approvalBinder = bindProductionReleaseApproval,
   approvalConsumer = consumeProductionApproval,
+  alertDispatcher = deliverProductionChangeAlert,
+  alertOptions,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   wait = defaultWait,
@@ -581,6 +585,7 @@ export function promoteProductionBlueGreen({
     || typeof leaseFactory !== "function"
     || typeof approvalBinder !== "function"
     || typeof approvalConsumer !== "function"
+    || typeof alertDispatcher !== "function"
     || typeof wait !== "function"
     || typeof now !== "function"
   ) {
@@ -637,6 +642,8 @@ export function promoteProductionBlueGreen({
     changeApproval,
     approvalConsumption: null,
     approvalConsumptionAttempted: false,
+    alertDelivery: null,
+    alertDeliveryAttempted: false,
   };
   writeEvidence(evidencePath, intent);
 
@@ -645,9 +652,22 @@ export function promoteProductionBlueGreen({
   let greenCleanup = null;
   let approvalConsumption = null;
   let approvalConsumptionAttempted = false;
+  let alertDelivery = null;
+  let alertDeliveryAttempted = false;
   const samples = [];
   try {
     leaseRenewals.push(productionLease.renew());
+    alertDeliveryAttempted = true;
+    alertDelivery = alertDispatcher({
+      approval: changeApproval,
+      operatorId,
+      expectedClusterUid,
+      ...alertOptions,
+      execFile,
+    });
+    if (alertDelivery?.delivered !== true) {
+      throw new Error("production change alert was not delivered");
+    }
     approvalConsumptionAttempted = true;
     approvalConsumption = approvalConsumer({
       context,
@@ -740,6 +760,8 @@ export function promoteProductionBlueGreen({
       changeApproval,
       approvalConsumption,
       approvalConsumptionAttempted,
+      alertDelivery,
+      alertDeliveryAttempted,
       ...candidateResult,
       activeSourceCommit: preflight.candidate.receipt.sourceCommit,
       stableRestored: false,
@@ -827,6 +849,8 @@ export function promoteProductionBlueGreen({
       changeApproval,
       approvalConsumption,
       approvalConsumptionAttempted,
+      alertDelivery,
+      alertDeliveryAttempted,
       stableRestored,
       activeSourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : null,
       sourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : preflight.candidate.receipt.sourceCommit,
@@ -837,7 +861,10 @@ export function promoteProductionBlueGreen({
       readiness: stableVerification?.readiness ?? null,
       publicProbes: stableVerification?.publicProbes ?? null,
       productionSigned: true,
-      mutationPerformed: approvalConsumptionAttempted || greenApplyAttempted || candidateApplyAttempted,
+      mutationPerformed: alertDeliveryAttempted
+        || approvalConsumptionAttempted
+        || greenApplyAttempted
+        || candidateApplyAttempted,
       deployedPublic: stableRestored,
     };
     writeEvidence(evidencePath, failed);
@@ -923,11 +950,16 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         changeId: args["change-id"],
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
+        alertOptions: {
+          endpoint: args["alert-endpoint"],
+          expectedHost: args["alert-expected-host"],
+          credentialHeaderFile: args["alert-credential-header-file"],
+        },
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
         leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
-      throw new Error("usage: security-production-blue-green.mjs preflight|promote --stable-release-request PATH --candidate-release-request PATH --stable-evidence PATH --stable-evidence-sha256 SHA256 --context NAME --cluster-uid UID [promotion flags]");
+      throw new Error("usage: security-production-blue-green.mjs preflight|promote --stable-release-request PATH --candidate-release-request PATH --stable-evidence PATH --stable-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME] [promotion flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

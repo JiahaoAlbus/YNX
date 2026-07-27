@@ -294,6 +294,13 @@ function approvalConsumer({ approval }) {
   };
 }
 
+function alertDispatcher({ approval }) {
+  return {
+    authorizationId: approval.authorizationId,
+    delivered: true,
+  };
+}
+
 test("production preflight binds signed release, cluster identity, and server dry-run", () => {
   const cluster = fixture();
   const verified = [];
@@ -331,6 +338,7 @@ test("initial deployment runtime rejects an existing production release before d
       authorize,
       approvalBinder,
       approvalConsumer,
+      alertDispatcher,
       leaseFactory,
       now: new Date("2026-07-26T17:00:00.000Z"),
     }),
@@ -356,6 +364,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       authorize,
       approvalBinder,
       approvalConsumer,
+      alertDispatcher,
       leaseFactory,
       now: (() => {
         const values = [
@@ -374,6 +383,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(result.productionLeaseRenewals.length, 2);
     assert.equal(result.changeApproval.bound, true);
     assert.equal(result.approvalConsumption.consumed, true);
+    assert.equal(result.alertDelivery.delivered, true);
     assert.equal(result.readiness.pass, true);
     assert.equal(result.publicProbes.tls.length, 8);
     assert.equal(result.publicProbes.services.length, 4);
@@ -407,6 +417,7 @@ test("public identity failure records applied but not publicly verified truth", 
         authorize,
         approvalBinder,
         approvalConsumer,
+        alertDispatcher,
         leaseFactory,
         now: (() => {
           const values = [
@@ -445,6 +456,7 @@ test("approval consumption failure prevents production Apply", () => {
         verifyRelease: () => releaseBundle(),
         authorize,
         approvalBinder,
+        alertDispatcher,
         approvalConsumer: () => {
           throw new Error("production approval consumption failed");
         },
@@ -465,6 +477,56 @@ test("approval consumption failure prevents production Apply", () => {
     assert.equal(result.productionLeaseReleased, true);
     assert.equal(result.mutationPerformed, true);
     assert.equal(result.deployedPublic, false);
+    assert.equal(cluster.calls.some((call) => (
+      call.args.includes("apply") && !call.args.includes("--dry-run=server")
+    )), false);
+  } finally {
+    rmSync(resolve(root, path), { force: true });
+  }
+});
+
+test("alert delivery failure prevents approval consumption and production Apply", () => {
+  const cluster = fixture();
+  const path = evidencePath("alert-delivery-failed");
+  let consumptionAttempted = false;
+  try {
+    assert.throws(
+      () => deployProduction({
+        context,
+        expectedClusterUid: clusterUid,
+        operatorId: "production-operator",
+        changeId: "change-20260726-alert-failed",
+        acknowledge: "apply-production-release",
+        evidencePath: path,
+        execFile: cluster.execFile,
+        verifyRelease: () => releaseBundle(),
+        authorize,
+        approvalBinder,
+        alertDispatcher: () => {
+          throw new Error("production change alert delivery failed");
+        },
+        approvalConsumer: () => {
+          consumptionAttempted = true;
+        },
+        leaseFactory,
+        now: (() => {
+          const values = [
+            new Date("2026-07-26T17:00:00.000Z"),
+            new Date("2026-07-26T17:00:30.000Z"),
+          ];
+          return () => values.shift();
+        })(),
+      }),
+      /production change alert delivery failed/,
+    );
+    const result = JSON.parse(readFileSync(resolve(root, path), "utf8"));
+    assert.equal(result.alertDeliveryAttempted, true);
+    assert.equal(result.alertDelivery, null);
+    assert.equal(result.approvalConsumptionAttempted, false);
+    assert.equal(result.productionLeaseReleased, true);
+    assert.equal(result.mutationPerformed, true);
+    assert.equal(result.deployedPublic, false);
+    assert.equal(consumptionAttempted, false);
     assert.equal(cluster.calls.some((call) => (
       call.args.includes("apply") && !call.args.includes("--dry-run=server")
     )), false);

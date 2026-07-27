@@ -123,6 +123,7 @@ function stableEvidence() {
     operatorAuthorization: { pass: true },
     changeApproval: { bound: true },
     approvalConsumption: { consumed: true },
+    alertDelivery: { delivered: true },
     readiness: { pass: true },
     publicProbes: { pass: true },
   };
@@ -270,6 +271,10 @@ function approvalConsumer({ approval }) {
   return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
 }
 
+function alertDispatcher({ approval }) {
+  return { authorizationId: approval.authorizationId, delivered: true };
+}
+
 function tickingClock() {
   let value = Date.parse("2026-07-27T00:00:00.000Z");
   return () => {
@@ -293,6 +298,7 @@ function common(stable) {
     authorize,
     approvalBinder,
     approvalConsumer,
+    alertDispatcher,
     leaseFactory,
   };
 }
@@ -384,6 +390,7 @@ test("promotion observes green then verifies the complete signed candidate publi
     assert.equal(result.greenRemoved, true);
     assert.equal(result.productionLeaseReleased, true);
     assert.equal(result.productionLeaseRenewals.length, 5);
+    assert.equal(result.alertDelivery.delivered, true);
     assert.equal(result.deployedPublic, true);
     assert.equal(cluster.active(), "candidate");
     assert.deepEqual(JSON.parse(readFileSync(resolve(root, path), "utf8")), result);

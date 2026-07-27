@@ -89,6 +89,7 @@ jobs:
           node --check scripts/security-production-lease.mjs
           node --check scripts/security-production-rbac.mjs
           node --check scripts/security-production-approval.mjs
+          node --check scripts/security-production-alert.mjs
           node --check scripts/security-service-identity.mjs
           node --check scripts/security-rotation.mjs
           node --check scripts/security-seo-monitor.mjs

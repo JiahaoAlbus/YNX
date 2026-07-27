@@ -36,6 +36,7 @@ import {
   consumeProductionApproval,
   productionRollbackResourceReferenceSha256,
 } from "./security-production-approval.mjs";
+import { deliverProductionChangeAlert } from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
@@ -280,6 +281,8 @@ export function rollbackProduction({
   authorize = verifyProductionOperatorRbac,
   approvalBinder = bindProductionRollbackAuthorization,
   approvalConsumer = consumeProductionApproval,
+  alertDispatcher = deliverProductionChangeAlert,
+  alertOptions,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -300,6 +303,7 @@ export function rollbackProduction({
     || typeof leaseFactory !== "function"
     || typeof approvalBinder !== "function"
     || typeof approvalConsumer !== "function"
+    || typeof alertDispatcher !== "function"
     || typeof now !== "function"
   ) {
     throw new Error("production rollback runtime dependencies are invalid");
@@ -356,14 +360,29 @@ export function rollbackProduction({
     changeApproval,
     approvalConsumption: null,
     approvalConsumptionAttempted: false,
+    alertDelivery: null,
+    alertDeliveryAttempted: false,
   };
   writeEvidence(evidencePath, intent);
 
   let targetApplyAttempted = false;
   let approvalConsumption = null;
   let approvalConsumptionAttempted = false;
+  let alertDelivery = null;
+  let alertDeliveryAttempted = false;
   try {
     leaseRenewals.push(productionLease.renew());
+    alertDeliveryAttempted = true;
+    alertDelivery = alertDispatcher({
+      approval: changeApproval,
+      operatorId,
+      expectedClusterUid,
+      ...alertOptions,
+      execFile,
+    });
+    if (alertDelivery?.delivered !== true) {
+      throw new Error("production change alert was not delivered");
+    }
     approvalConsumptionAttempted = true;
     approvalConsumption = approvalConsumer({
       context,
@@ -412,6 +431,8 @@ export function rollbackProduction({
       changeApproval,
       approvalConsumption,
       approvalConsumptionAttempted,
+      alertDelivery,
+      alertDeliveryAttempted,
       activeSourceCommit: preflight.target.receipt.sourceCommit,
       currentRestored: false,
       productionSigned: true,
@@ -473,6 +494,8 @@ export function rollbackProduction({
       changeApproval,
       approvalConsumption,
       approvalConsumptionAttempted,
+      alertDelivery,
+      alertDeliveryAttempted,
       currentRestored,
       activeSourceCommit: currentRestored ? preflight.current.receipt.sourceCommit : null,
       sourceCommit: currentRestored
@@ -487,7 +510,7 @@ export function rollbackProduction({
       readiness: currentRecovery?.readiness ?? null,
       publicProbes: currentRecovery?.publicProbes ?? null,
       productionSigned: true,
-      mutationPerformed: approvalConsumptionAttempted || targetApplyAttempted,
+      mutationPerformed: alertDeliveryAttempted || approvalConsumptionAttempted || targetApplyAttempted,
       deployedPublic: currentRestored,
     };
     writeEvidence(evidencePath, failed);
@@ -523,6 +546,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         changeId: args["change-id"],
         acknowledge: args.acknowledge,
         evidencePath: args.evidence,
+        alertOptions: {
+          endpoint: args["alert-endpoint"],
+          expectedHost: args["alert-expected-host"],
+          credentialHeaderFile: args["alert-credential-header-file"],
+        },
         rollbackAuthorizationOptions: {
           request: JSON.parse(readFileSync(resolve(args["authorization-request"]), "utf8")),
           policy: JSON.parse(readFileSync(resolve(args["authorization-policy"]), "utf8")),
@@ -533,7 +561,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
-      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--authorization-request PATH --authorization-policy PATH --authorization-approvals A,B --trusted-authorization-policy-sha256 SHA256] [rollback flags]");
+      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--authorization-request PATH --authorization-policy PATH --authorization-approvals A,B --trusted-authorization-policy-sha256 SHA256] [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME] [rollback flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

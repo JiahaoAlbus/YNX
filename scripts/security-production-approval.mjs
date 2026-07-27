@@ -172,6 +172,7 @@ export function bindProductionReleaseApproval({
     approversSha256: sha256([...approval.approvers].sort().join("\n")),
     approvedAt: approvedAt.toISOString(),
     expiresAt: expiresAt.toISOString(),
+    immediateAlertRequired: true,
     ledgerName: ledgerName(authorizationId),
     bound: true,
   };
@@ -214,6 +215,7 @@ export function bindProductionRollbackAuthorization({
   });
   const authorizationExpiresAt = Date.parse(authorization?.expiresAt);
   const authorizationAuthorizedAt = Date.parse(authorization?.authorizedAt);
+  safeIdentifier(authorization?.incidentId, "rollback incidentId");
   if (
     authorization?.action !== "break-glass-authorization"
     || authorization.environment !== "production"
@@ -234,6 +236,7 @@ export function bindProductionRollbackAuthorization({
     || authorization.oneTimeUseRequired !== true
     || authorization.consumptionLedgerRequired !== true
     || authorization.automaticExecutionAllowed !== false
+    || authorization.immediateAlertRequired !== true
     || !Number.isFinite(authorizationAuthorizedAt)
     || authorizationAuthorizedAt > now.getTime() + 60_000
     || !Number.isFinite(authorizationExpiresAt)
@@ -255,10 +258,12 @@ export function bindProductionRollbackAuthorization({
     approvalThreshold: authorization.approvalThreshold,
     distinctRoleThreshold: authorization.distinctRoleThreshold,
     approvalCount: authorization.approvals?.length,
+    incidentId: authorization.incidentId,
     currentSourceCommit: currentIdentity.sourceCommit,
     targetSourceCommit: targetIdentity.sourceCommit,
     authorizedAt: authorization.authorizedAt,
     expiresAt: authorization.expiresAt,
+    immediateAlertRequired: true,
     ledgerName: ledgerName(authorization.authorizationId),
     bound: true,
   };

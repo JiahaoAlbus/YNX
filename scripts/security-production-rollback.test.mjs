@@ -111,6 +111,7 @@ function deploymentEvidence(role) {
     operatorAuthorization: { pass: true },
     changeApproval: { bound: true },
     approvalConsumption: { consumed: true },
+    alertDelivery: { delivered: true },
     releasedAt: role === "current"
       ? "2026-07-27T02:00:00.000Z"
       : "2026-07-27T01:00:00.000Z",
@@ -224,6 +225,10 @@ function approvalConsumer({ approval }) {
   return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
 }
 
+function alertDispatcher({ approval }) {
+  return { authorizationId: approval.authorizationId, delivered: true };
+}
+
 function common(currentEvidence, targetEvidence) {
   return {
     currentReleaseOptions: { role: "current" },
@@ -238,6 +243,7 @@ function common(currentEvidence, targetEvidence) {
     authorize,
     approvalBinder,
     approvalConsumer,
+    alertDispatcher,
     leaseFactory,
   };
 }
@@ -303,6 +309,7 @@ test("manual rollback applies and publicly verifies the signed target release", 
     assert.equal(result.currentRestored, false);
     assert.equal(result.productionLeaseReleased, true);
     assert.equal(result.productionLeaseRenewals.length, 1);
+    assert.equal(result.alertDelivery.delivered, true);
     assert.equal(result.deployedPublic, true);
     assert.equal(cluster.active(), "target");
     assert.deepEqual(JSON.parse(readFileSync(resolve(root, path), "utf8")), result);

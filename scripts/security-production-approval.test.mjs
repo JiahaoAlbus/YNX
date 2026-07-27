@@ -93,6 +93,7 @@ function rollbackAuthorization(overrides = {}) {
   return {
     action: "break-glass-authorization",
     source: "YNX break-glass multi-party signature verifier",
+    incidentId: "inc-20260727-production",
     environment: "production",
     scope: "deployment:rollback",
     product: "YNX Security Platform",
@@ -111,6 +112,7 @@ function rollbackAuthorization(overrides = {}) {
     oneTimeUseRequired: true,
     consumptionLedgerRequired: true,
     automaticExecutionAllowed: false,
+    immediateAlertRequired: true,
     ...overrides,
   };
 }
@@ -144,6 +146,8 @@ test("manual rollback binds a freshly verified multi-party authorization", () =>
   assert.equal(result.bound, true);
   assert.equal(result.type, "break-glass-authorization");
   assert.equal(result.approvalCount, 2);
+  assert.equal(result.incidentId, "inc-20260727-production");
+  assert.equal(result.immediateAlertRequired, true);
   assert.equal(result.resourceReferenceSha256, expectedDigest);
 });
 

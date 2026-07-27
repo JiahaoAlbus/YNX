@@ -96,20 +96,20 @@ function writeEvidence(relativePath, value) {
   writeFileSync(output, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
 }
 
-function readPinnedEvidence(relativePath, expectedSha256) {
-  digest(expectedSha256, "stableEvidenceSha256");
+export function readPinnedProductionEvidence(relativePath, expectedSha256, label = "deployment") {
+  digest(expectedSha256, `${label}EvidenceSha256`);
   let bytes;
   try {
-    bytes = readFileSync(repositoryPath(relativePath, "stableEvidencePath"));
+    bytes = readFileSync(repositoryPath(relativePath, `${label}EvidencePath`));
   } catch {
-    throw new Error("stable deployment evidence read failed");
+    throw new Error(`${label} production evidence read failed`);
   }
-  if (sha256(bytes) !== expectedSha256) throw new Error("stable deployment evidence digest mismatch");
+  if (sha256(bytes) !== expectedSha256) throw new Error(`${label} production evidence digest mismatch`);
   let value;
   try {
     value = JSON.parse(bytes);
   } catch {
-    throw new Error("stable deployment evidence is invalid JSON");
+    throw new Error(`${label} production evidence is invalid JSON`);
   }
   return { value, sha256: expectedSha256 };
 }
@@ -122,7 +122,7 @@ function quantWorkerReference(release, label) {
   return matches[0].reference;
 }
 
-function validateSignedRelease(release, label) {
+export function validateSignedProductionBundle(release, label) {
   if (
     release?.receipt?.productionSigned !== true
     || release.receipt.deployedPublic !== false
@@ -140,10 +140,17 @@ function validateSignedRelease(release, label) {
   return release;
 }
 
-function validateStableEvidence(pinned, stable, context, expectedClusterUid) {
+export function validateProductionDeploymentEvidence(
+  pinned,
+  release,
+  context,
+  expectedClusterUid,
+  label = "stable",
+) {
   const evidence = pinned.value;
   const validAction = evidence.action === "production-deployment"
-    || evidence.action === "production-blue-green-update";
+    || evidence.action === "production-blue-green-update"
+    || evidence.action === "production-manual-rollback";
   if (
     !validAction
     || evidence.state !== "deployed-public-verified"
@@ -152,14 +159,14 @@ function validateStableEvidence(pinned, stable, context, expectedClusterUid) {
     || evidence.mutationPerformed !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
-    || evidence.sourceCommit !== stable.receipt.sourceCommit
-    || evidence.version !== stable.receipt.version
-    || evidence.productionManifestSha256 !== stable.receipt.productionManifestSha256
-    || evidence.publicProbePolicySha256 !== stable.receipt.publicProbePolicySha256
+    || evidence.sourceCommit !== release.receipt.sourceCommit
+    || evidence.version !== release.receipt.version
+    || evidence.productionManifestSha256 !== release.receipt.productionManifestSha256
+    || evidence.publicProbePolicySha256 !== release.receipt.publicProbePolicySha256
     || evidence.contextSha256 !== sha256(context)
     || evidence.clusterUidSha256 !== sha256(expectedClusterUid)
   ) {
-    throw new Error("stable deployment evidence does not bind the active signed release and cluster");
+    throw new Error(`${label} production evidence does not bind the signed release and cluster`);
   }
 }
 
@@ -167,7 +174,7 @@ function manifestDocuments(manifest) {
   return manifest.split(/^---\s*$/m).filter((document) => document.trim());
 }
 
-function manifestInventory(manifest, label) {
+export function productionManifestInventory(manifest, label) {
   const identities = manifestDocuments(manifest).map((document) => {
     const kind = document.match(/^kind:\s*([A-Za-z0-9.]+)\s*$/m)?.[1];
     const lines = document.split("\n");
@@ -235,7 +242,7 @@ export function buildProductionGreenManifest(candidateManifest, candidateRelease
   return `${green.trim()}\n`;
 }
 
-function clusterPreflight(execFile, context, expectedClusterUid, stable, candidate) {
+export function inspectLiveProductionRelease(execFile, context, expectedClusterUid, release) {
   safeIdentifier(context, "context");
   safeIdentifier(expectedClusterUid, "expectedClusterUid");
   const currentContext = runText(
@@ -264,16 +271,25 @@ function clusterPreflight(execFile, context, expectedClusterUid, stable, candida
   const containers = deployment.spec?.template?.spec?.containers ?? [];
   const replicas = Number(deployment.spec?.replicas ?? 0);
   if (
-    deployment.metadata?.labels?.["security.ynx/source-commit"] !== stable.receipt.sourceCommit
+    deployment.metadata?.labels?.["security.ynx/source-commit"] !== release.receipt.sourceCommit
     || containers.length !== 1
-    || containers[0].image !== quantWorkerReference(stable, "stable")
+    || containers[0].image !== quantWorkerReference(release, "active")
     || replicas < 3
     || Number(deployment.status?.observedGeneration ?? -1) < Number(deployment.metadata?.generation ?? 0)
     || Number(deployment.status?.availableReplicas ?? 0) < replicas
   ) {
-    throw new Error("live production deployment does not match the pinned stable release");
+    throw new Error("live production deployment does not match the signed active release");
   }
-  if (containers[0].image === quantWorkerReference(candidate, "candidate")) {
+  return {
+    serverVersion: server.serverVersion.gitVersion,
+    replicas,
+    stableImageDigest: containers[0].image.match(/@sha256:([0-9a-f]{64})$/)[1],
+  };
+}
+
+function clusterPreflight(execFile, context, expectedClusterUid, stable, candidate) {
+  const cluster = inspectLiveProductionRelease(execFile, context, expectedClusterUid, stable);
+  if (quantWorkerReference(stable, "stable") === quantWorkerReference(candidate, "candidate")) {
     throw new Error("candidate quant-worker image must differ from the active release");
   }
   const existingGreen = runText(execFile, "kubectl", [
@@ -281,11 +297,7 @@ function clusterPreflight(execFile, context, expectedClusterUid, stable, candida
     "-n", namespace, "--ignore-not-found=true", "-o", "json",
   ], "existing green deployment inspection");
   if (existingGreen !== "") throw new Error("a production green deployment already exists");
-  return {
-    serverVersion: server.serverVersion.gitVersion,
-    replicas,
-    stableImageDigest: containers[0].image.match(/@sha256:([0-9a-f]{64})$/)[1],
-  };
+  return cluster;
 }
 
 function validateWindow(observationSeconds, sampleIntervalSeconds) {
@@ -322,12 +334,12 @@ export function preflightProductionBlueGreen({
   if (stableReleaseOptions == null || candidateReleaseOptions == null) {
     throw new Error("stable and candidate signed release options are required");
   }
-  const stable = validateSignedRelease(verifyRelease({
+  const stable = validateSignedProductionBundle(verifyRelease({
     ...stableReleaseOptions,
     execFile,
     now,
   }), "stable");
-  const candidate = validateSignedRelease(verifyRelease({
+  const candidate = validateSignedProductionBundle(verifyRelease({
     ...candidateReleaseOptions,
     execFile,
     now,
@@ -341,14 +353,14 @@ export function preflightProductionBlueGreen({
   if (stable.receipt.publicProbePolicySha256 !== candidate.receipt.publicProbePolicySha256) {
     throw new Error("blue-green update cannot change the signed public probe boundary");
   }
-  const stableInventory = manifestInventory(stable.manifest, "stable");
-  const candidateInventory = manifestInventory(candidate.manifest, "candidate");
+  const stableInventory = productionManifestInventory(stable.manifest, "stable");
+  const candidateInventory = productionManifestInventory(candidate.manifest, "candidate");
   if (JSON.stringify(stableInventory) !== JSON.stringify(candidateInventory)) {
     throw new Error("blue-green update requires an identical Kubernetes resource inventory");
   }
   const requiredSamples = validateWindow(observationSeconds, sampleIntervalSeconds);
-  const pinned = readPinnedEvidence(stableEvidencePath, stableEvidenceSha256);
-  validateStableEvidence(pinned, stable, context, expectedClusterUid);
+  const pinned = readPinnedProductionEvidence(stableEvidencePath, stableEvidenceSha256, "stable");
+  validateProductionDeploymentEvidence(pinned, stable, context, expectedClusterUid, "stable");
   const cluster = clusterPreflight(execFile, context, expectedClusterUid, stable, candidate);
   const greenManifest = buildProductionGreenManifest(candidate.manifest, candidate);
   const greenDryRun = runText(execFile, "kubectl", [
@@ -460,7 +472,7 @@ function cleanupGreen(execFile, context) {
   return { outputSha256: sha256(output), outputBytes: Buffer.byteLength(output) };
 }
 
-function reconcileRelease({
+export function reconcileProductionRelease({
   execFile,
   context,
   release,
@@ -611,7 +623,7 @@ export function promoteProductionBlueGreen({
     }
 
     candidateApplyAttempted = true;
-    const candidateResult = reconcileRelease({
+    const candidateResult = reconcileProductionRelease({
       execFile,
       context,
       release: preflight.candidate,
@@ -660,7 +672,7 @@ export function promoteProductionBlueGreen({
     let automaticRollbackFailure = null;
     try {
       stableVerification = candidateApplyAttempted
-        ? reconcileRelease({
+        ? reconcileProductionRelease({
           execFile,
           context,
           release: preflight.stable,
@@ -720,7 +732,7 @@ export function promoteProductionBlueGreen({
   }
 }
 
-function loadReleaseRequest(path) {
+export function loadProductionReleaseRequest(path) {
   let request;
   try {
     request = JSON.parse(readFileSync(resolve(path), "utf8"));
@@ -779,8 +791,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const command = process.argv[2];
     const args = parseArgs(process.argv.slice(3));
     const common = {
-      stableReleaseOptions: loadReleaseRequest(args["stable-release-request"]),
-      candidateReleaseOptions: loadReleaseRequest(args["candidate-release-request"]),
+      stableReleaseOptions: loadProductionReleaseRequest(args["stable-release-request"]),
+      candidateReleaseOptions: loadProductionReleaseRequest(args["candidate-release-request"]),
       stableEvidencePath: args["stable-evidence"],
       stableEvidenceSha256: args["stable-evidence-sha256"],
       context: args.context,

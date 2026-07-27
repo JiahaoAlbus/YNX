@@ -85,6 +85,7 @@ jobs:
           node --check scripts/security-production-release.mjs
           node --check scripts/security-production-deploy.mjs
           node --check scripts/security-production-blue-green.mjs
+          node --check scripts/security-production-rollback.mjs
           node --check scripts/security-service-identity.mjs
           node --check scripts/security-rotation.mjs
           node --check scripts/security-seo-monitor.mjs

@@ -31,6 +31,7 @@ import {
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -109,6 +110,7 @@ export function preflightProductionRollback({
   expectedClusterUid,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
+  authorize = verifyProductionOperatorRbac,
   now = new Date(),
 }) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
@@ -185,6 +187,16 @@ export function preflightProductionRollback({
     expectedClusterUid,
     current,
   );
+  if (typeof authorize !== "function") throw new Error("production RBAC verifier is required");
+  const operatorAuthorization = authorize({
+    context,
+    manifest: target.manifest,
+    mode: "rollback",
+    execFile,
+  });
+  if (operatorAuthorization?.pass !== true) {
+    throw new Error("production operator RBAC preflight did not pass");
+  }
   const existingGreen = runText(execFile, "kubectl", [
     "--context", context, "get", "deployment", greenDeployment,
     "-n", namespace, "--ignore-not-found=true", "-o", "json",
@@ -222,6 +234,7 @@ export function preflightProductionRollback({
       contextSha256: sha256(context),
       clusterUidSha256: sha256(expectedClusterUid),
       serverVersion: cluster.serverVersion,
+      operatorAuthorization,
       currentImageDigest: cluster.stableImageDigest,
       serverDryRunPassed: true,
       serverDryRunOutputSha256: sha256(dryRun),
@@ -250,6 +263,7 @@ export function rollbackProduction({
   verifyRelease = verifyProductionReleaseBundle,
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
+  authorize = verifyProductionOperatorRbac,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -284,6 +298,7 @@ export function rollbackProduction({
     expectedClusterUid,
     execFile,
     verifyRelease,
+    authorize,
     now: startedAt,
   });
   const productionLease = leaseFactory({

@@ -120,6 +120,7 @@ function stableEvidence() {
     deployedPublic: true,
     mutationPerformed: true,
     productionLeaseReleased: true,
+    operatorAuthorization: { pass: true },
     readiness: { pass: true },
     publicProbes: { pass: true },
   };
@@ -247,6 +248,10 @@ function leaseFactory() {
   };
 }
 
+function authorize() {
+  return { pass: true, authorizationPlanSha256: "1".repeat(64) };
+}
+
 function tickingClock() {
   let value = Date.parse("2026-07-27T00:00:00.000Z");
   return () => {
@@ -267,6 +272,7 @@ function common(stable) {
     observationSeconds: 60,
     sampleIntervalSeconds: 30,
     verifyRelease: verifier,
+    authorize,
     leaseFactory,
   };
 }

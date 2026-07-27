@@ -108,6 +108,7 @@ function deploymentEvidence(role) {
     mutationPerformed: true,
     deployedPublic: true,
     productionLeaseReleased: true,
+    operatorAuthorization: { pass: true },
     releasedAt: role === "current"
       ? "2026-07-27T02:00:00.000Z"
       : "2026-07-27T01:00:00.000Z",
@@ -201,6 +202,10 @@ function leaseFactory() {
   };
 }
 
+function authorize() {
+  return { pass: true, authorizationPlanSha256: "1".repeat(64) };
+}
+
 function common(currentEvidence, targetEvidence) {
   return {
     currentReleaseOptions: { role: "current" },
@@ -212,6 +217,7 @@ function common(currentEvidence, targetEvidence) {
     context,
     expectedClusterUid: clusterUid,
     verifyRelease: verifier,
+    authorize,
     leaseFactory,
   };
 }

@@ -23,6 +23,7 @@ import {
   verifyProductionReadiness,
 } from "./security-production-deploy.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -159,6 +160,7 @@ export function validateProductionDeploymentEvidence(
     || evidence.deployedPublic !== true
     || evidence.mutationPerformed !== true
     || evidence.productionLeaseReleased !== true
+    || evidence.operatorAuthorization?.pass !== true
     || evidence.readiness?.pass !== true
     || evidence.publicProbes?.pass !== true
     || evidence.sourceCommit !== release.receipt.sourceCommit
@@ -328,6 +330,7 @@ export function preflightProductionBlueGreen({
   sampleIntervalSeconds = 30,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
+  authorize = verifyProductionOperatorRbac,
   now = new Date(),
 }) {
   if (!(now instanceof Date) || !Number.isFinite(now.getTime())) {
@@ -364,6 +367,16 @@ export function preflightProductionBlueGreen({
   const pinned = readPinnedProductionEvidence(stableEvidencePath, stableEvidenceSha256, "stable");
   validateProductionDeploymentEvidence(pinned, stable, context, expectedClusterUid, "stable");
   const cluster = clusterPreflight(execFile, context, expectedClusterUid, stable, candidate);
+  if (typeof authorize !== "function") throw new Error("production RBAC verifier is required");
+  const operatorAuthorization = authorize({
+    context,
+    manifest: candidate.manifest,
+    mode: "blue-green",
+    execFile,
+  });
+  if (operatorAuthorization?.pass !== true) {
+    throw new Error("production operator RBAC preflight did not pass");
+  }
   const greenManifest = buildProductionGreenManifest(candidate.manifest, candidate);
   const greenDryRun = runText(execFile, "kubectl", [
     "--context", context, "apply", "--server-side", "--dry-run=server",
@@ -402,6 +415,7 @@ export function preflightProductionBlueGreen({
       contextSha256: sha256(context),
       clusterUidSha256: sha256(expectedClusterUid),
       serverVersion: cluster.serverVersion,
+      operatorAuthorization,
       observationSeconds,
       sampleIntervalSeconds,
       requiredSamples,
@@ -537,6 +551,7 @@ export function promoteProductionBlueGreen({
   verifyRelease = verifyProductionReleaseBundle,
   verifyReadiness = verifyProductionReadiness,
   verifyPublicEndpoints = verifyProductionPublicEndpoints,
+  authorize = verifyProductionOperatorRbac,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   wait = defaultWait,
@@ -573,6 +588,7 @@ export function promoteProductionBlueGreen({
     sampleIntervalSeconds,
     execFile,
     verifyRelease,
+    authorize,
     now: startedAt,
   });
   const productionLease = leaseFactory({

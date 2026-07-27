@@ -19,6 +19,7 @@ import {
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -140,6 +141,7 @@ export function preflightProductionDeployment({
   expectedClusterUid,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
+  authorize = verifyProductionOperatorRbac,
   now = new Date(),
   ...releaseOptions
 }) {
@@ -160,6 +162,16 @@ export function preflightProductionDeployment({
     throw new Error("production release preflight did not return a signed deployable manifest");
   }
   const cluster = clusterPreflight(execFile, context, expectedClusterUid);
+  if (typeof authorize !== "function") throw new Error("production RBAC verifier is required");
+  const operatorAuthorization = authorize({
+    context,
+    manifest: release.manifest,
+    mode: "initial",
+    execFile,
+  });
+  if (operatorAuthorization?.pass !== true) {
+    throw new Error("production operator RBAC preflight did not pass");
+  }
   const dryRun = runText(execFile, "kubectl", [
     "--context", context,
     "apply",
@@ -181,6 +193,7 @@ export function preflightProductionDeployment({
       contextSha256: cluster.contextSha256,
       clusterUidSha256: cluster.clusterUidSha256,
       serverVersion: cluster.serverVersion,
+      operatorAuthorization,
       serverDryRunPassed: true,
       serverDryRunOutputSha256: sha256(dryRun),
       mutationPerformed: false,
@@ -190,6 +203,8 @@ export function preflightProductionDeployment({
 }
 
 export function verifyProductionReadiness(execFile, context, release) {
+  const releaseAsOf = Date.parse(release.receipt?.asOf);
+  if (!Number.isFinite(releaseAsOf)) throw new Error("production release readiness time is invalid");
   const namespaceState = runJson(execFile, "kubectl", [
     "--context", context, "get", "namespace", namespace, "-o", "json",
   ], "production namespace verification");
@@ -227,10 +242,10 @@ export function verifyProductionReadiness(execFile, context, release) {
     "--context", context, "get", "configmap", "nginx-ingress-waf-config",
     "-n", "ingress-nginx", "-o", "json",
   ], "production WAF verification");
-  const tlsSecretType = runText(execFile, "kubectl", [
-    "--context", context, "get", "secret", "ynx-tls-cert",
-    "-n", namespace, "-o", "jsonpath={.type}",
-  ], "production TLS secret type verification");
+  const certificate = runJson(execFile, "kubectl", [
+    "--context", context, "get", "certificate", "ynx-tls-cert",
+    "-n", namespace, "-o", "json",
+  ], "production TLS certificate verification");
 
   const allowedImageDigests = new Set(release.attestation.images.map((image) => (
     image.reference.match(/@sha256:([0-9a-f]{64})$/)?.[1]
@@ -309,8 +324,18 @@ export function verifyProductionReadiness(execFile, context, release) {
         && waf.data?.["enable-owasp-modsecurity-crs"] === "true",
     },
     {
-      id: "tls-secret-type",
-      pass: tlsSecretType === "kubernetes.io/tls",
+      id: "tls-certificate-ready",
+      pass: certificate.spec?.secretName === "ynx-tls-cert"
+        && certificate.spec?.issuerRef?.kind === "ClusterIssuer"
+        && certificate.spec?.issuerRef?.name === "letsencrypt-production"
+        && certificate.spec?.issuerRef?.group === "cert-manager.io"
+        && certificate.status?.conditions?.some((condition) => (
+          condition.type === "Ready" && condition.status === "True"
+        ))
+        && Number.isFinite(Date.parse(certificate.status?.notBefore))
+        && Date.parse(certificate.status.notBefore) <= releaseAsOf + (5 * 60 * 1000)
+        && Number.isFinite(Date.parse(certificate.status?.notAfter))
+        && Date.parse(certificate.status.notAfter) >= releaseAsOf + (24 * 60 * 60 * 1000),
     },
   ];
   return {
@@ -435,6 +460,7 @@ export function deployProduction({
   rolloutTimeoutSeconds = 600,
   execFile = execFileSync,
   verifyRelease = verifyProductionReleaseBundle,
+  authorize = verifyProductionOperatorRbac,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -459,6 +485,7 @@ export function deployProduction({
     expectedClusterUid,
     execFile,
     verifyRelease,
+    authorize,
     now: startedAt,
   });
   const productionLease = leaseFactory({

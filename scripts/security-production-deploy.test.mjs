@@ -81,6 +81,7 @@ function releaseBundle() {
       version,
       productionManifestSha256: "e".repeat(64),
       publicProbePolicySha256: "f".repeat(64),
+      asOf: "2026-07-26T17:00:00.000Z",
       productionSigned: true,
       deployedPublic: false,
       mutationPerformed: false,
@@ -206,8 +207,22 @@ function fixture({
           },
         });
       }
-      if (args.includes("secret") && args.some((value) => value.startsWith("jsonpath="))) {
-        return "kubernetes.io/tls";
+      if (args.includes("certificate")) {
+        return JSON.stringify({
+          spec: {
+            secretName: "ynx-tls-cert",
+            issuerRef: {
+              kind: "ClusterIssuer",
+              name: "letsencrypt-production",
+              group: "cert-manager.io",
+            },
+          },
+          status: {
+            notBefore: "2026-07-26T16:00:00.000Z",
+            notAfter: "2027-07-26T17:00:00.000Z",
+            conditions: [{ type: "Ready", status: "True" }],
+          },
+        });
       }
       throw new Error(`unexpected kubectl command: ${args.join(" ")}`);
     }
@@ -255,6 +270,10 @@ function leaseFactory() {
   };
 }
 
+function authorize() {
+  return { pass: true, authorizationPlanSha256: "1".repeat(64) };
+}
+
 test("production preflight binds signed release, cluster identity, and server dry-run", () => {
   const cluster = fixture();
   const verified = [];
@@ -266,10 +285,12 @@ test("production preflight binds signed release, cluster identity, and server dr
       verified.push(options);
       return releaseBundle();
     },
+    authorize,
     now: new Date("2026-07-26T17:00:00.000Z"),
   });
   assert.equal(result.receipt.action, "production-deployment-preflight");
   assert.equal(result.receipt.productionSigned, true);
+  assert.equal(result.receipt.operatorAuthorization.pass, true);
   assert.equal(result.receipt.serverDryRunPassed, true);
   assert.equal(result.receipt.mutationPerformed, false);
   assert.equal(result.receipt.deployedPublic, false);
@@ -287,6 +308,7 @@ test("initial deployment runtime rejects an existing production release before d
       expectedClusterUid: clusterUid,
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      authorize,
       leaseFactory,
       now: new Date("2026-07-26T17:00:00.000Z"),
     }),
@@ -309,6 +331,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       rolloutTimeoutSeconds: 600,
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      authorize,
       leaseFactory,
       now: (() => {
         const values = [
@@ -335,6 +358,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(mutationCalls.length, 1);
     assert.equal(cluster.calls.some((call) => call.args.includes("--force-conflicts")), false);
     assert.equal(cluster.calls.some((call) => call.args.includes("delete")), false);
+    assert.equal(cluster.calls.some((call) => call.args.includes("secret")), false);
   } finally {
     rmSync(resolve(root, path), { force: true });
   }
@@ -354,6 +378,7 @@ test("public identity failure records applied but not publicly verified truth", 
         evidencePath: path,
         execFile: cluster.execFile,
         verifyRelease: () => releaseBundle(),
+        authorize,
         leaseFactory,
         now: (() => {
           const values = [
@@ -376,6 +401,36 @@ test("public identity failure records applied but not publicly verified truth", 
   }
 });
 
+test("production RBAC failure prevents dry-run, Lease, and mutation", () => {
+  const cluster = fixture();
+  let leaseAttempted = false;
+  assert.throws(
+    () => deployProduction({
+      context,
+      expectedClusterUid: clusterUid,
+      operatorId: "production-operator",
+      changeId: "change-20260726-rbac-rejected",
+      acknowledge: "apply-production-release",
+      evidencePath: evidencePath("rbac-rejected"),
+      execFile: cluster.execFile,
+      verifyRelease: () => releaseBundle(),
+      authorize: () => {
+        throw new Error("production operator RBAC boundary failed: require:patch");
+      },
+      leaseFactory: () => {
+        leaseAttempted = true;
+      },
+      now: () => new Date("2026-07-26T17:00:00.000Z"),
+    }),
+    /production operator RBAC boundary failed/,
+  );
+  assert.equal(cluster.calls.some((call) => call.args.includes("--dry-run=server")), false);
+  assert.equal(cluster.calls.some((call) => (
+    call.args.includes("apply") && !call.args.includes("--dry-run=server")
+  )), false);
+  assert.equal(leaseAttempted, false);
+});
+
 test("production Lease acquisition failure prevents production mutation", () => {
   const cluster = fixture();
   const path = evidencePath("lease-rejected");
@@ -389,6 +444,7 @@ test("production Lease acquisition failure prevents production mutation", () => 
       evidencePath: path,
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      authorize,
       leaseFactory: () => {
         throw new Error("production release mutation is locked by another active operator");
       },
@@ -414,6 +470,7 @@ test("production mutation requires exact acknowledgement and a bounded evidence 
       evidencePath: evidencePath("ack"),
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      authorize,
     }),
     /acknowledge=apply-production-release/,
   );
@@ -428,6 +485,7 @@ test("production mutation requires exact acknowledgement and a bounded evidence 
       evidencePath: "../outside.json",
       execFile: cluster.execFile,
       verifyRelease: () => releaseBundle(),
+      authorize,
     }),
     /must stay inside/,
   );

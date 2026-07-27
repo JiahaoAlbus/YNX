@@ -321,6 +321,29 @@ function alertDispatcher({ approval, sourceCommit: executingCommit }) {
   };
 }
 
+function operatorBundlePreflight() {
+  return {
+    schemaVersion: 1,
+    action: "production-operation-bundle-preflight",
+    operation: "initial-deployment",
+    bundleSha256: "6".repeat(64),
+    runtimeSourceCommit: sourceCommit,
+    changeAuthorization: {
+      authorizationId: "2".repeat(64),
+    },
+    alertPreflight: {
+      credentialBinding: {
+        credentialIdentitySha256: alertCredentialIdentity,
+      },
+    },
+    receiptSha256: "7".repeat(64),
+    leaseAcquired: false,
+    alertDeliveryPerformed: false,
+    productionMutationPerformed: false,
+    ready: true,
+  };
+}
+
 test("production preflight binds signed release, cluster identity, and server dry-run", () => {
   const cluster = fixture();
   const verified = [];
@@ -387,6 +410,7 @@ test("production deploy sets public truth only after live controls and HTTPS pro
       approvalConsumer,
       alertDispatcher,
       alertInputPreflight,
+      operatorBundlePreflight: operatorBundlePreflight(),
       leaseFactory,
       now: (() => {
         const values = [
@@ -407,6 +431,8 @@ test("production deploy sets public truth only after live controls and HTTPS pro
     assert.equal(result.approvalConsumption.consumed, true);
     assert.equal(result.alertDelivery.delivered, true);
     assert.equal(result.alertInputPreflight.ready, true);
+    assert.equal(result.operatorBundleBinding.bound, true);
+    assert.equal(result.operatorBundleBinding.bundleSha256, "6".repeat(64));
     assert.equal(result.readiness.pass, true);
     assert.equal(result.publicProbes.tls.length, 8);
     assert.equal(result.publicProbes.services.length, 4);

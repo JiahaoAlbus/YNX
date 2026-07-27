@@ -60,6 +60,18 @@ const secretMetadataFields = [
   "secretType",
   "storageLocation",
 ];
+const secretInventoryFields = [
+  "asOf",
+  "blockedBy",
+  "requiredSecretTypes",
+  "schema",
+  "schemaVersion",
+  "secrets",
+  "separationRules",
+  "source",
+  "status",
+  "valueMaterialStored",
+];
 
 function canonicalJson(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -246,6 +258,7 @@ function selectCredentialSecret(inventory, trustedInventorySha256, checkedAt) {
     inventory == null
     || typeof inventory !== "object"
     || Array.isArray(inventory)
+    || Object.keys(inventory).sort().join(",") !== secretInventoryFields.join(",")
     || inventory.schemaVersion !== 1
     || inventory.schema !== "security-platform/secret-inventory.schema.json"
     || typeof inventory.source !== "string"

@@ -336,6 +336,10 @@ test("credential inventory identity, lifecycle, and no-value boundary fail close
     () => bindCredential({ inventoryOverrides: { valueMaterialStored: true } }),
     /not trusted and current/,
   );
+  assert.throws(
+    () => bindCredential({ inventoryOverrides: { secretValue: "must-not-exist" } }),
+    /not trusted and current/,
+  );
 });
 
 test("credential provider version and private mount drift fail closed", () => {

@@ -27,6 +27,7 @@ import {
   preflightProductionAlertInputs,
 } from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { bindProductionOperationExecution } from "./security-production-operation-binding.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
@@ -474,6 +475,7 @@ export function deployProduction({
   alertDispatcher = deliverProductionChangeAlert,
   alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
+  operatorBundlePreflight = null,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -535,6 +537,15 @@ export function deployProduction({
   ) {
     throw new Error("production alert external input preflight failed");
   }
+  const operatorBundleBinding = operatorBundlePreflight === null
+    ? null
+    : bindProductionOperationExecution({
+      preflight: operatorBundlePreflight,
+      expectedOperation: "initial-deployment",
+      runtimeSourceCommit: preflight.receipt.runtimeSourceCommit,
+      changeApproval,
+      alertInputPreflight: alertPreflight,
+    });
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -565,6 +576,7 @@ export function deployProduction({
     alertDelivery: null,
     alertDeliveryAttempted: false,
     alertInputPreflight: alertPreflight,
+    operatorBundleBinding,
   };
   writeEvidence(evidencePath, intent);
 
@@ -664,6 +676,7 @@ export function deployProduction({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       productionSigned: true,
       mutationPerformed: true,
       deployedPublic: true,
@@ -696,6 +709,7 @@ export function deployProduction({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       productionSigned: true,
       mutationPerformed: alertDeliveryAttempted || approvalConsumptionAttempted || applyOutput !== undefined,
       deployedPublic: false,

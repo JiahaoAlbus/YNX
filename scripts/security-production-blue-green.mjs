@@ -31,6 +31,7 @@ import {
   preflightProductionAlertInputs,
 } from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { bindProductionOperationExecution } from "./security-production-operation-binding.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
@@ -569,6 +570,7 @@ export function promoteProductionBlueGreen({
   alertDispatcher = deliverProductionChangeAlert,
   alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
+  operatorBundlePreflight = null,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   wait = defaultWait,
@@ -639,6 +641,15 @@ export function promoteProductionBlueGreen({
   ) {
     throw new Error("production alert external input preflight failed");
   }
+  const operatorBundleBinding = operatorBundlePreflight === null
+    ? null
+    : bindProductionOperationExecution({
+      preflight: operatorBundlePreflight,
+      expectedOperation: "blue-green-update",
+      runtimeSourceCommit: preflight.candidate.receipt.runtimeSourceCommit,
+      changeApproval,
+      alertInputPreflight: alertPreflight,
+    });
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -669,6 +680,7 @@ export function promoteProductionBlueGreen({
     alertDelivery: null,
     alertDeliveryAttempted: false,
     alertInputPreflight: alertPreflight,
+    operatorBundleBinding,
   };
   writeEvidence(evidencePath, intent);
 
@@ -795,6 +807,7 @@ export function promoteProductionBlueGreen({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       ...candidateResult,
       activeSourceCommit: preflight.candidate.receipt.sourceCommit,
       stableRestored: false,
@@ -885,6 +898,7 @@ export function promoteProductionBlueGreen({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       stableRestored,
       activeSourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : null,
       sourceCommit: stableRestored ? preflight.stable.receipt.sourceCommit : preflight.candidate.receipt.sourceCommit,

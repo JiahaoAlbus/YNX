@@ -41,6 +41,7 @@ import {
   preflightProductionAlertInputs,
 } from "./security-production-alert.mjs";
 import { acquireProductionLease } from "./security-production-lease.mjs";
+import { bindProductionOperationExecution } from "./security-production-operation-binding.mjs";
 import { verifyProductionOperatorRbac } from "./security-production-rbac.mjs";
 import { verifyProductionReleaseBundle } from "./security-production-release.mjs";
 
@@ -287,6 +288,7 @@ export function rollbackProduction({
   alertDispatcher = deliverProductionChangeAlert,
   alertInputPreflight = preflightProductionAlertInputs,
   alertOptions,
+  operatorBundlePreflight = null,
   leaseFactory = acquireProductionLease,
   leaseDurationSeconds = 600,
   now = () => new Date(),
@@ -356,6 +358,15 @@ export function rollbackProduction({
   ) {
     throw new Error("production alert external input preflight failed");
   }
+  const operatorBundleBinding = operatorBundlePreflight === null
+    ? null
+    : bindProductionOperationExecution({
+      preflight: operatorBundlePreflight,
+      expectedOperation: "manual-rollback",
+      runtimeSourceCommit: preflight.current.receipt.runtimeSourceCommit,
+      changeApproval,
+      alertInputPreflight: alertPreflight,
+    });
   const productionLease = leaseFactory({
     context,
     operatorId,
@@ -386,6 +397,7 @@ export function rollbackProduction({
     alertDelivery: null,
     alertDeliveryAttempted: false,
     alertInputPreflight: alertPreflight,
+    operatorBundleBinding,
   };
   writeEvidence(evidencePath, intent);
 
@@ -465,6 +477,7 @@ export function rollbackProduction({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       activeSourceCommit: preflight.target.receipt.sourceCommit,
       currentRestored: false,
       productionSigned: true,
@@ -529,6 +542,7 @@ export function rollbackProduction({
       alertDelivery,
       alertDeliveryAttempted,
       alertInputPreflight: alertPreflight,
+      operatorBundleBinding,
       currentRestored,
       activeSourceCommit: currentRestored ? preflight.current.receipt.sourceCommit : null,
       sourceCommit: currentRestored

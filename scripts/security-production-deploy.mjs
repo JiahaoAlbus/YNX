@@ -188,7 +188,7 @@ export function preflightProductionDeployment({
   };
 }
 
-function liveReadiness(execFile, context, release) {
+export function verifyProductionReadiness(execFile, context, release) {
   const namespaceState = runJson(execFile, "kubectl", [
     "--context", context, "get", "namespace", namespace, "-o", "json",
   ], "production namespace verification");
@@ -351,7 +351,7 @@ function validProbeTimestamp(value, probedAt) {
     && timestamp <= reference + (30 * 1000);
 }
 
-function publicProbes(execFile, release, probedAt) {
+export function verifyProductionPublicEndpoints(execFile, release, probedAt) {
   const policy = release.publicProbePolicy;
   const tls = [];
   for (const host of policy.tlsHosts) {
@@ -491,12 +491,12 @@ export function deployProduction({
       `--timeout=${rolloutTimeoutSeconds}s`,
     ], "production rollout verification");
     if (rollout === "") throw new Error("production rollout returned no receipt");
-    const readiness = liveReadiness(execFile, context, preflight);
+    const readiness = verifyProductionReadiness(execFile, context, preflight);
     if (!readiness.pass) {
       throw new Error(`production readiness failed: ${readiness.checks.filter((check) => !check.pass).map((check) => check.id).join(",")}`);
     }
     const probedAt = now();
-    const probes = publicProbes(execFile, preflight, probedAt);
+    const probes = verifyProductionPublicEndpoints(execFile, preflight, probedAt);
     const completedAt = now();
     const result = {
       ...intent,

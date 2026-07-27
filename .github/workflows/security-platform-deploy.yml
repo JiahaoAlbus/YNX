@@ -2,25 +2,11 @@ name: Security Platform Gates
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/security-platform-deploy.yml"
-      - "infra/k8s/**"
-      - "scripts/security-*.mjs"
-      - "security-platform/**"
-      - "release/**"
-      - "package.json"
-      - "package-lock.json"
+    branches:
+      - codex/final-security-platform
   push:
     branches:
       - codex/final-security-platform
-    paths:
-      - ".github/workflows/security-platform-deploy.yml"
-      - "infra/k8s/**"
-      - "scripts/security-*.mjs"
-      - "security-platform/**"
-      - "release/**"
-      - "package.json"
-      - "package-lock.json"
   workflow_dispatch:
 
 permissions:

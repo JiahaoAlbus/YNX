@@ -1,21 +1,21 @@
 # YNX 30 Current Plan
 
 Status: ACTIVE
-Phase: PROTECT
-Recovery source commit: `8577f8a6086946297faddf1ffc7e04ca8359af05`
-Updated: 2026-07-27T14:58:39Z
+Phase: FREEZE
+Accepted source commit: `fa5f3edfdac0fe21ed17028845e4faa09ae89143`
+Updated: 2026-07-27T15:18:12Z
 
 ## Current objective
 
-Close the highest-risk release blockers without overstating external state:
+Freeze release truth and supply-chain evidence around the exact CI-green source without overstating external state:
 
-1. Commit and push the verified cross-platform lifecycle-script audit fix.
-2. Require both GitHub security workflows to pass at the new exact SHA.
-3. Rebuild the clean-source artifact, SBOM, provenance, manifest, hash and test-signing evidence for the accepted source commit.
-4. Rebind `release/platform-status.json`, `release/product-release.json`, `release/artifact-registry.json`, `public-product-metadata.json`, integration evidence and completion evidence to the actual release source.
-5. Verify installation and cold start in a clean local environment.
-6. Advance in order through FREEZE, INTEGRATE, TESTNET and PUBLIC only when direct evidence permits.
+1. Generate a reproducible source artifact, CycloneDX SBOM, SLSA-candidate provenance, manifest, ephemeral test signature and tamper-rejection evidence for `fa5f3ed...`.
+2. Update the artifact registry and product release to select that exact source artifact while retaining `productionSigned=false`, `downloadHosted=false`, `deployedStaging=false` and `deployedPublic=false`.
+3. Rebind the integration contract, public metadata, completion evidence and coverage matrix to the accepted source and exact evidence paths.
+4. Commit and push the release metadata/artifact checkpoint and require green protected-branch checks.
+5. Verify the checkpoint from a clean Git archive, then implement real clean-install and CLI cold-start evidence.
+6. Continue in order through INTEGRATE, TESTNET and PUBLIC only when direct evidence permits.
 
 ## Immediate next action
 
-Commit and push the reviewed fix, verify Local SHA equals Remote SHA, and inspect both workflows at that exact commit. Do not request operator secrets or mutate a cluster.
+Run the local reproducible artifact drill for `fa5f3ed...`, inspect every generated file, and update release truth without changing any external deployment or signing boolean.

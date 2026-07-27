@@ -664,6 +664,7 @@ export function promoteProductionBlueGreen({
       expectedClusterUid,
       ...alertOptions,
       execFile,
+      sourceCommit: preflight.candidate.receipt.runtimeSourceCommit,
     });
     if (alertDelivery?.delivered !== true) {
       throw new Error("production change alert was not delivered");
@@ -954,12 +955,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           endpoint: args["alert-endpoint"],
           expectedHost: args["alert-expected-host"],
           credentialHeaderFile: args["alert-credential-header-file"],
+          credentialVersionFile: args["alert-credential-version-file"],
+          credentialSecretInventory: JSON.parse(readFileSync(
+            resolve(args["alert-secret-inventory"]),
+            "utf8",
+          )),
+          trustedCredentialSecretInventorySha256: args["alert-secret-inventory-sha256"],
         },
         rolloutTimeoutSeconds: Number(args["rollout-timeout-seconds"] ?? 600),
         leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
-      throw new Error("usage: security-production-blue-green.mjs preflight|promote --stable-release-request PATH --candidate-release-request PATH --stable-evidence PATH --stable-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME] [promotion flags]");
+      throw new Error("usage: security-production-blue-green.mjs preflight|promote --stable-release-request PATH --candidate-release-request PATH --stable-evidence PATH --stable-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME --alert-credential-version-file /run/secrets/ynx/NAME.version-id --alert-secret-inventory PATH --alert-secret-inventory-sha256 SHA256] [promotion flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

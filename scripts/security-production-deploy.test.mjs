@@ -294,7 +294,8 @@ function approvalConsumer({ approval }) {
   };
 }
 
-function alertDispatcher({ approval }) {
+function alertDispatcher({ approval, sourceCommit: executingCommit }) {
+  assert.equal(executingCommit, sourceCommit);
   return {
     authorizationId: approval.authorizationId,
     delivered: true,

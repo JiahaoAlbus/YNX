@@ -379,6 +379,7 @@ export function rollbackProduction({
       expectedClusterUid,
       ...alertOptions,
       execFile,
+      sourceCommit: preflight.current.receipt.runtimeSourceCommit,
     });
     if (alertDelivery?.delivered !== true) {
       throw new Error("production change alert was not delivered");
@@ -550,6 +551,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           endpoint: args["alert-endpoint"],
           expectedHost: args["alert-expected-host"],
           credentialHeaderFile: args["alert-credential-header-file"],
+          credentialVersionFile: args["alert-credential-version-file"],
+          credentialSecretInventory: JSON.parse(readFileSync(
+            resolve(args["alert-secret-inventory"]),
+            "utf8",
+          )),
+          trustedCredentialSecretInventorySha256: args["alert-secret-inventory-sha256"],
         },
         rollbackAuthorizationOptions: {
           request: JSON.parse(readFileSync(resolve(args["authorization-request"]), "utf8")),
@@ -561,7 +568,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         leaseDurationSeconds: Number(args["lease-duration-seconds"] ?? 600),
       });
     } else {
-      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--authorization-request PATH --authorization-policy PATH --authorization-approvals A,B --trusted-authorization-policy-sha256 SHA256] [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME] [rollback flags]");
+      throw new Error("usage: security-production-rollback.mjs preflight|rollback --current-release-request PATH --target-release-request PATH --current-evidence PATH --current-evidence-sha256 SHA256 --target-evidence PATH --target-evidence-sha256 SHA256 --context NAME --cluster-uid UID [--authorization-request PATH --authorization-policy PATH --authorization-approvals A,B --trusted-authorization-policy-sha256 SHA256] [--alert-endpoint URL --alert-expected-host HOST --alert-credential-header-file /run/secrets/ynx/NAME --alert-credential-version-file /run/secrets/ynx/NAME.version-id --alert-secret-inventory PATH --alert-secret-inventory-sha256 SHA256] [rollback flags]");
     }
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } catch (error) {

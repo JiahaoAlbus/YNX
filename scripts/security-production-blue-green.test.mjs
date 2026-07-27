@@ -17,6 +17,7 @@ import {
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const stableCommit = "a".repeat(40);
 const candidateCommit = "b".repeat(40);
+const runtimeCommit = "9".repeat(40);
 const stableDigest = "c".repeat(64);
 const candidateDigest = "d".repeat(64);
 const backupDigest = "e".repeat(64);
@@ -75,6 +76,7 @@ function release(role) {
       productionSigned: true,
       deployedPublic: false,
       sourceCommit,
+      runtimeSourceCommit: runtimeCommit,
       version,
       productionManifestSha256: sha256(productionManifest),
       publicProbePolicySha256: probePolicySha256,
@@ -271,7 +273,8 @@ function approvalConsumer({ approval }) {
   return { authorizationId: approval.authorizationId, immutable: true, consumed: true };
 }
 
-function alertDispatcher({ approval }) {
+function alertDispatcher({ approval, sourceCommit }) {
+  assert.equal(sourceCommit, runtimeCommit);
   return { authorizationId: approval.authorizationId, delivered: true };
 }
 

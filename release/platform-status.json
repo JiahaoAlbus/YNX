@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "product": "YNX Security Platform",
-  "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
-  "asOf": "2026-07-25T07:28:07Z",
-  "source": "repository and direct local evidence",
+  "sourceCommit": "1853dd46ce1535dc01911308b53f2d14860337c2",
+  "asOf": "2026-07-27T15:48:52.499Z",
+  "source": "repository, GitHub branch protection, and direct local evidence",
   "version": "0.2.0-candidate",
   "confidence": "direct-evidence-only",
   "states": {
@@ -24,7 +24,9 @@
       "commit:6ef00f8e7d9d36adee813530698e4188cf384f85",
       "commit:58fe6796593a7cedaee01d88e1b534f0e70c4d6a",
       "commit:0cb9b5891cdcf74ce3e4c727470dcb0b60a8933c",
-      "commit:53b037eb6fff51e3cb149231fad5bb5f2599527f"
+      "commit:53b037eb6fff51e3cb149231fad5bb5f2599527f",
+      "commit:fa5f3edfdac0fe21ed17028845e4faa09ae89143",
+      "commit:1853dd46ce1535dc01911308b53f2d14860337c2"
     ],
     "testedLocal": [
       "evidence/security-platform/LOCAL_VERIFICATION_2026-07-22.md",
@@ -32,16 +34,21 @@
       "evidence/security-platform/LOCAL_CAPACITY_2026-07-22.json",
       "evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json",
       "evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json",
-      "evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json"
+      "evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json",
+      "evidence/security-platform/LOCAL_ARTIFACT_DRILL_fa5f3ed.json",
+      "evidence/security-platform/LOCAL_ARTIFACT_DRILL_1853dd4.json",
+      "evidence/security-platform/GITHUB_BRANCH_PROTECTION_2026-07-27.json",
+      "evidence/security-platform/GITHUB_CI_1853dd4.json"
     ]
   },
   "blockedStates": {
-    "installedLocal": "no cluster installation evidence",
+    "installedLocal": "no clean installation and CLI cold-start evidence for the selected source artifact",
     "integratedCentral": "central owners have not accepted the candidate contract",
     "deployedStaging": "no staging deployment run or URL evidence",
     "deployedPublic": "no public deployment or health evidence",
     "downloadHosted": "artifact exists only in Git and has no immutable hosted download URL",
     "productionSigned": "current artifact is test-signed with an ephemeral local signer; no approved production signer or signature evidence",
     "storeReleased": "no store release evidence"
-  }
+  },
+  "externalBlockerRecord": "release/operator-inputs.request.json"
 }

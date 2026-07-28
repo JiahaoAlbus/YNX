@@ -5,6 +5,8 @@
   "branch": "codex/final-security-platform",
   "sourceCommit": "fa5f3edfdac0fe21ed17028845e4faa09ae89143",
   "verifiedAt": "2026-07-27T15:18:12Z",
+  "reverifiedAt": "2026-07-28T10:08:56Z",
+  "reverifiedForSourceCommit": "1853dd46ce1535dc01911308b53f2d14860337c2",
   "result": "protected-with-admin-bypass",
   "requiredStatusChecks": {
     "strict": true,

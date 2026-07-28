@@ -4,12 +4,12 @@
   "version": "0.2.0-candidate",
   "channel": "development",
   "environment": "local",
-  "sourceCommit": "53b037eb6fff51e3cb149231fad5bb5f2599527f",
+  "sourceCommit": "1853dd46ce1535dc01911308b53f2d14860337c2",
   "branch": "codex/final-security-platform",
-  "buildRun": "local-reproducibility-drill:53b037eb6fff51e3cb149231fad5bb5f2599527f",
+  "buildRun": "local-reproducibility-drill:1853dd46ce1535dc01911308b53f2d14860337c2",
   "releasedAt": null,
   "artifacts": [
-    "security-platform-source-53b037e"
+    "security-platform-source-1853dd4"
   ],
   "statusRecord": "release/platform-status.json",
   "productionSigned": false,
@@ -35,6 +35,12 @@
     "immutable hosted download and independent verification",
     "installation and cold-start evidence",
     "staging deployment and rollback evidence",
-    "public deployment and health/version/security/status URLs"
-  ]
+    "public deployment and health/version/security/status URLs",
+    "central owner acceptance recorded by Product 29"
+  ],
+  "remoteVerification": [
+    "evidence/security-platform/GITHUB_CI_1853dd4.json",
+    "evidence/security-platform/GITHUB_BRANCH_PROTECTION_2026-07-27.json"
+  ],
+  "externalInputRequest": "release/operator-inputs.request.json"
 }

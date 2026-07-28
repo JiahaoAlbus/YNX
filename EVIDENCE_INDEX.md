@@ -8,7 +8,9 @@
 - Service identity and mTLS enforcement: `scripts/security-service-identity.mjs`; `scripts/security-service-identity.test.mjs`
 - Policy engine: `scripts/security-platform.mjs`
 - Policy regression tests: `scripts/security-platform.test.mjs`
-- CI enforcement: `.github/workflows/ci.yml`; `.github/workflows/security-platform-deploy.yml`
+- CI enforcement: `.github/workflows/security.yml`; `.github/workflows/security-platform-deploy.yml`
+- Exact-source remote CI: `evidence/security-platform/GITHUB_CI_1853dd4.json`
+- Branch protection: `evidence/security-platform/GITHUB_BRANCH_PROTECTION_2026-07-27.json`
 - Security boundaries: `THREAT_MODEL.md`
 - Operations and drills: `OPERATIONS.md`
 - Monitoring contract: `OBSERVABILITY.md`
@@ -25,10 +27,11 @@
 - Artifact and restore drill: `evidence/security-platform/ARTIFACT_AND_RESTORE_DRILL_2026-07-22.md`
 - Encrypted local restore drill: `evidence/security-platform/LOCAL_RESTORE_DRILL_58fe679.json`
 - Local Service Identity and mTLS drill: `evidence/security-platform/LOCAL_MTLS_DRILL_0cb9b58.json`
-- Local reproducible artifact, SBOM, provenance, test-signature, and tamper drill: `evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json`
-- Active local test-signed artifact set: `release/artifacts/53b037eb6fff51e3cb149231fad5bb5f2599527f/`
+- Local reproducible artifact, SBOM, provenance, test-signature, and tamper drills: `evidence/security-platform/LOCAL_ARTIFACT_DRILL_53b037e.json`; `evidence/security-platform/LOCAL_ARTIFACT_DRILL_fa5f3ed.json`; `evidence/security-platform/LOCAL_ARTIFACT_DRILL_1853dd4.json`
+- Active local test-signed artifact set: `release/artifacts/1853dd46ce1535dc01911308b53f2d14860337c2/`
 - Deployment-candidate review: `evidence/security-platform/PLATFORM_INFRASTRUCTURE_2026-07-23.md`
 - Dependency remediation: `evidence/security-platform/DEPENDENCY_REMEDIATION_2026-07-22.md`
 - Integration contract and vectors: `release/integration/security-platform-contract.json`; `docs/integration/CROSS_PRODUCT_TEST_VECTORS.json`
+- Minimal external input boundary: `release/operator-inputs.request.json`
 
 Generated evidence must include a full source commit, UTC timestamps, environment, result, and explicit limitations. Commit-named files or source-commit directories are both accepted. Public evidence must not expose local paths, internal hosts, authentication material, or private operational details.

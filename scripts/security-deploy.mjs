@@ -122,7 +122,10 @@ export function validateStagingReleaseManifest(manifest, { sourceCommit } = {}) 
     validateSourceCommit(sourceCommit);
     for (const document of documents.filter((value) => /^kind:\s*(?:Deployment|CronJob)\b/m.test(value))) {
       const name = document.match(/\nmetadata:\n(?:[\s\S]*?\n)?\s*name:\s*([^\s]+)/)?.[1] ?? "unknown";
-      if (!new RegExp(`security\\.ynx/source-commit:\\s*${sourceCommit}\\b`).test(document)) {
+      const boundSourceCommit = document.match(
+        /^\s*security\.ynx\/source-commit:\s*([^\s#]+)\s*(?:#.*)?$/m,
+      )?.[1];
+      if (boundSourceCommit !== sourceCommit) {
         failures.push(`staging: workload ${name} is not bound to sourceCommit`);
       }
     }

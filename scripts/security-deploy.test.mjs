@@ -177,6 +177,15 @@ test("staging release requires immutable images, active backups, and SecretProvi
   );
   assert.equal(unbound.pass, false);
   assert.ok(unbound.failures.some((failure) => failure.includes("not bound to sourceCommit")));
+  const suffixed = validateStagingReleaseManifest(
+    manifest().replaceAll(
+      `security.ynx/source-commit: ${sourceCommit}`,
+      `security.ynx/source-commit: ${sourceCommit}0`,
+    ),
+    { sourceCommit },
+  );
+  assert.equal(suffixed.pass, false);
+  assert.ok(suffixed.failures.some((failure) => failure.includes("not bound to sourceCommit")));
 });
 
 test("preflight binds clean Git, context, cluster UID, manifest, and server dry-run", () => {

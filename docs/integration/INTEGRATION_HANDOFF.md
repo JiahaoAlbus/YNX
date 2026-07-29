@@ -4,7 +4,7 @@
 
 Owner: `30-security-sre-release`
 
-Source commit: `1853dd46ce1535dc01911308b53f2d14860337c2`
+Source commit: `aa5d5e92d28a872c8d449eadbb7acbadc3094e97`
 
 Contract: `release/integration/security-platform-contract.json`
 
@@ -14,10 +14,11 @@ This platform owns the security framework, enforcement tools, release evidence, 
 
 - Local implementation: accepted by Product 30 tests.
 - Local tests: accepted; security suite and repository suite pass.
-- Remote validation: accepted for exact source `1853dd46ce1535dc01911308b53f2d14860337c2`; both required GitHub workflows completed successfully.
+- Remote validation: accepted for exact source `aa5d5e92d28a872c8d449eadbb7acbadc3094e97`; CI, Security, and Security Platform Gates completed successfully.
 - Branch controls: strict required checks, code-owner review, last-push approval, linear history, conversation resolution, and force-push/deletion rejection are enabled; administrator enforcement and signed commits remain final-lock actions.
 - Local encrypted restore drill: passed for the committed `security-platform/` metadata set.
-- Local reproducible artifact drill: passed for source commit `1853dd46ce1535dc01911308b53f2d14860337c2`, including SBOM, provenance, test signature, tamper rejection, wrong-identity rejection, and unsigned-public rejection.
+- Local reproducible artifact drill: passed for source commit `aa5d5e92d28a872c8d449eadbb7acbadc3094e97`, including SBOM, provenance, test signature, tamper rejection, wrong-identity rejection, and unsigned-public rejection.
+- Clean installation: a Git archive of the same source passed locked dependency installation, production dependency audit, workspace build, policy verification, and CLI cold start.
 - Artifact distribution: not hosted; the active artifact remains local/test-signed and is not public-release eligible.
 - Central integration: not accepted.
 - Staging deployment: not evidenced.

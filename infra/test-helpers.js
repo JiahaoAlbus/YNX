@@ -44,9 +44,10 @@ async function waitForJson(url, { attempts = 50, sleepMs = 100 } = {}) {
   throw lastError || new Error(`Unable to reach ${url}`);
 }
 
-async function requestJson(url, { method = "GET", body, headers = {} } = {}) {
+async function requestJson(url, { method = "GET", body, headers = {}, timeoutMs = 5000 } = {}) {
   const response = await fetch(url, {
     method,
+    signal: AbortSignal.timeout(timeoutMs),
     headers: {
       ...(body !== undefined ? { "content-type": "application/json" } : {}),
       ...headers,

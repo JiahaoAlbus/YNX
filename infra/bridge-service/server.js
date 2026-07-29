@@ -643,6 +643,7 @@ async function sourceStatus(route) {
 }
 
 async function verifyGatewayRoute(route) {
+  if (!BRIDGE_ONCHAIN_ENABLED) return { routeId: route.routeId, ok: false, error: "bridge_onchain_disabled" };
   if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) return { routeId: route.routeId, ok: false, error: "ynx_gateway_unconfigured" };
   const provider = new ethers.JsonRpcProvider(BRIDGE_YNX_RPC_URL);
   const gateway = new ethers.Contract(gatewayAddress(), GATEWAY_ABI, provider);
@@ -658,6 +659,9 @@ async function verifyGatewayRoute(route) {
 }
 
 async function fetchGatewaySignerSet() {
+  if (!BRIDGE_ONCHAIN_ENABLED) {
+    return { configured: false, signers: [], threshold: 0, epoch: 0, error: "bridge_onchain_disabled" };
+  }
   if (!BRIDGE_YNX_RPC_URL || !gatewayAddress()) {
     return {
       configured: false,
@@ -706,7 +710,7 @@ async function routeReadiness(route, options = {}) {
     includeSource
       ? sourceStatus(route).catch((error) => ({ routeId: route.routeId, ok: false, error: error.message || String(error) }))
       : Promise.resolve({ routeId: route.routeId, configured: Boolean(route.rpc), live_check: false }),
-    route.sourceKind === "evm" && route.lockboxAddress
+    BRIDGE_ONCHAIN_ENABLED && route.sourceKind === "evm" && route.lockboxAddress
       ? (async () => {
           try {
             const provider = new ethers.JsonRpcProvider(route.rpc);

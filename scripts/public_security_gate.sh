@@ -155,6 +155,11 @@ post_json_status() {
   if [[ -z "$status" || ! -s "$out" ]]; then
     printf '{"ok":false,"error":"request_failed_or_timed_out","url":"%s"}\n' "$url" > "$out"
     status="${status:-000}"
+  elif ! jq -e . "$out" >/dev/null 2>&1; then
+    local raw
+    raw="$(cat "$out")"
+    jq -n --arg error "non_json_response" --arg url "$url" --arg raw "$raw" \
+      '{ok:false,error:$error,url:$url,raw:$raw}' > "$out"
   fi
   printf '%s' "$status"
 }

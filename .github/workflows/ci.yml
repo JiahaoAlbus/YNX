@@ -9,6 +9,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,6 +33,20 @@ jobs:
 
       - name: Docs readiness
         run: npm run verify:docs
+
+      - name: Unified security platform gate
+        run: npm run security:verify && npm run security:test
+
+      - name: Build reproducible security platform artifact
+        run: npm run security:artifact
+
+      - name: Upload unsigned local artifact evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-platform-${{ github.sha }}
+          path: dist/security-platform/
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Test
         run: npm test

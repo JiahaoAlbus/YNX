@@ -1,0 +1,6 @@
+# Replace GitHub handles through repository administration before enforcing this file.
+/.github/ @JiahaoAlbus
+/security-platform/ @JiahaoAlbus
+/release/ @JiahaoAlbus
+/scripts/security-platform.mjs @JiahaoAlbus
+/infra/ @JiahaoAlbus

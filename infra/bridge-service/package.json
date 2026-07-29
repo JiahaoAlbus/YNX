@@ -6,12 +6,12 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1"
   },
   "overrides": {
-    "ws": "8.20.1"
+    "ws": "8.21.1"
   },
   "dependencies": {
-    "ethers": "^6.15.0"
+    "ethers": "^6.17.0"
   }
 }

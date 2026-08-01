@@ -267,6 +267,12 @@ const WEB4_REQUIRE_CHAIN_BINDING = process.env.WEB4_REQUIRE_CHAIN_BINDING === "1
 const WEB4_CHAIN_STATUS_URL = String(process.env.WEB4_CHAIN_STATUS_URL || "").trim();
 const WEB4_CHAIN_STATUS_TIMEOUT_MS = Math.max(250, toNumber(process.env.WEB4_CHAIN_STATUS_TIMEOUT_MS, 3000));
 const WEB4_CHAIN_STATUS_CACHE_MS = Math.max(0, toNumber(process.env.WEB4_CHAIN_STATUS_CACHE_MS, 2000));
+const WEB4_CHAIN_RELEASE_PREFIXES = new Set(
+  String(process.env.WEB4_CHAIN_RELEASE_PREFIXES || "ynx-chain,ynx-explorer-advanced")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => /^ynx-[a-z0-9-]+$/.test(value))
+);
 const WEB4_TRACK = process.env.WEB4_TRACK || "v2-web4";
 const WEB4_DATA_DIR = process.env.WEB4_DATA_DIR || path.resolve(__dirname, "data");
 const WEB4_DATA_FILE = path.join(WEB4_DATA_DIR, "state.json");
@@ -334,6 +340,12 @@ function expectedNumericChainId() {
   return match ? Number(match[1]) : null;
 }
 
+function releaseMatchesObservedBuild(release, commit) {
+  if (!/^(?:[0-9a-f]{12}|[0-9a-f]{40})$/.test(commit)) return false;
+  const releaseCommit = commit.slice(0, 12);
+  return [...WEB4_CHAIN_RELEASE_PREFIXES].some((prefix) => release === `${prefix}-${releaseCommit}`);
+}
+
 function chainBindingSnapshot() {
   return {
     required: WEB4_REQUIRE_CHAIN_BINDING,
@@ -342,6 +354,7 @@ function chainBindingSnapshot() {
     checked_at: chainBindingRuntime.checked_at_ms ? new Date(chainBindingRuntime.checked_at_ms).toISOString() : "",
     expected_chain_id: WEB4_CHAIN_ID,
     expected_numeric_chain_id: expectedNumericChainId(),
+    accepted_release_prefixes: [...WEB4_CHAIN_RELEASE_PREFIXES],
     observed: chainBindingRuntime.observed,
     error: chainBindingRuntime.error,
   };
@@ -382,8 +395,7 @@ async function verifyChainBinding(force = false) {
         observed.native_symbol === "YNXT" &&
         Number.isSafeInteger(observed.height) && observed.height > 0 &&
         observed.public_network === true &&
-        /^[0-9a-f]{12}$/.test(observed.build_commit) &&
-        observed.build_release === `ynx-chain-${observed.build_commit}`;
+        releaseMatchesObservedBuild(observed.build_release, observed.build_commit);
       chainBindingRuntime.observed = observed;
       chainBindingRuntime.verified = verified;
       chainBindingRuntime.status = verified ? "verified" : "mismatch";

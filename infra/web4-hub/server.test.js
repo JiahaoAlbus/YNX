@@ -89,8 +89,41 @@ test("binds health and mutations to the verified current chain", async (t) => {
   assert.equal(healthy.chain_binding.observed.chain_id, 6423);
   assert.equal(healthy.chain_binding.observed.native_symbol, "YNXT");
   assert.equal(healthy.chain_binding.observed.build_release, "ynx-chain-abcdef123456");
+  assert.deepEqual(healthy.chain_binding.accepted_release_prefixes, ["ynx-chain", "ynx-explorer-advanced"]);
 
-  chainStatus = { ...chainStatus, chainId: 9102 };
+  chainStatus = {
+    ...chainStatus,
+    build: { commit: "abcdef123456", release: "ynx-explorer-advanced-abcdef123456" },
+  };
+  await delay(5);
+  const advancedRelease = assertJson(await requestJson(`http://127.0.0.1:${web4Port}/health`), 200);
+  assert.equal(advancedRelease.chain_binding.verified, true);
+
+  chainStatus = {
+    ...chainStatus,
+    build: {
+      commit: "abcdef1234567890abcdef1234567890abcdef12",
+      release: "ynx-explorer-advanced-abcdef123456",
+    },
+  };
+  await delay(5);
+  const fullCommitRelease = assertJson(await requestJson(`http://127.0.0.1:${web4Port}/health`), 200);
+  assert.equal(fullCommitRelease.chain_binding.observed.build_commit, "abcdef1234567890abcdef1234567890abcdef12");
+
+  chainStatus = {
+    ...chainStatus,
+    build: { commit: "abcdef123456", release: "ynx-explorer-advanced-000000000000" },
+  };
+  await delay(5);
+  const wrongCommit = await requestJson(`http://127.0.0.1:${web4Port}/health`);
+  assert.equal(wrongCommit.status, 503);
+  assert.equal(wrongCommit.body.chain_binding.error, "chain_identity_mismatch");
+
+  chainStatus = {
+    ...chainStatus,
+    chainId: 9102,
+    build: { commit: "abcdef123456", release: "ynx-chain-abcdef123456" },
+  };
   await delay(5);
   const unhealthy = await requestJson(`http://127.0.0.1:${web4Port}/health`);
   assert.equal(unhealthy.status, 503);

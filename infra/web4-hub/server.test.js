@@ -101,6 +101,17 @@ test("binds health and mutations to the verified current chain", async (t) => {
 
   chainStatus = {
     ...chainStatus,
+    build: {
+      commit: "abcdef1234567890abcdef1234567890abcdef12",
+      release: "ynx-explorer-advanced-abcdef123456",
+    },
+  };
+  await delay(5);
+  const fullCommitRelease = assertJson(await requestJson(`http://127.0.0.1:${web4Port}/health`), 200);
+  assert.equal(fullCommitRelease.chain_binding.observed.build_commit, "abcdef1234567890abcdef1234567890abcdef12");
+
+  chainStatus = {
+    ...chainStatus,
     build: { commit: "abcdef123456", release: "ynx-explorer-advanced-000000000000" },
   };
   await delay(5);

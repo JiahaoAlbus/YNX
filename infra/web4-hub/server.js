@@ -341,8 +341,9 @@ function expectedNumericChainId() {
 }
 
 function releaseMatchesObservedBuild(release, commit) {
-  if (!/^[0-9a-f]{12}$/.test(commit)) return false;
-  return [...WEB4_CHAIN_RELEASE_PREFIXES].some((prefix) => release === `${prefix}-${commit}`);
+  if (!/^(?:[0-9a-f]{12}|[0-9a-f]{40})$/.test(commit)) return false;
+  const releaseCommit = commit.slice(0, 12);
+  return [...WEB4_CHAIN_RELEASE_PREFIXES].some((prefix) => release === `${prefix}-${releaseCommit}`);
 }
 
 function chainBindingSnapshot() {

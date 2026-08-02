@@ -606,3 +606,54 @@ test("builds lot lineage and pro-rata taint tracking traces", async (t) => {
   assert.equal(searchTx.trace.tx_effect.flows[0].transferred_lots[0].issuance_id, undefined);
   assert.equal(searchTx.trace.tx_effect.flows[0].transferred_lots[0].deposit_batch_id, undefined);
 });
+
+test("boots from a JSONL file larger than the Node string limit", async (t) => {
+  const rpcPort = await getFreePort();
+  const indexerPort = await getFreePort();
+  const dataDir = await makeTempDir("ynx-indexer-large-jsonl-");
+  const rpc = await startMockRpcServer(rpcPort);
+  t.after(() => new Promise((resolve) => rpc.close(resolve)));
+
+  await writeJson(path.join(dataDir, "state.json"), {
+    last_height: 100,
+    blocks_indexed: 1,
+    txs_indexed: 0,
+  });
+  const blockLine = Buffer.from(JSON.stringify({
+    height: 100,
+    hash: "BLOCKHASH100",
+    time: "2026-08-02T00:00:00Z",
+    proposer: "ABCDEF1234567890",
+    num_txs: 0,
+    app_hash: "APPHASH100",
+  }) + "\n");
+  const largeBlocks = await fs.open(path.join(dataDir, "blocks.jsonl"), "w+");
+  const sparseBytes = 600 * 1024 * 1024;
+  await largeBlocks.truncate(sparseBytes);
+  await largeBlocks.write(Buffer.from("\n"), 0, 1, sparseBytes - blockLine.length - 1);
+  await largeBlocks.write(blockLine, 0, blockLine.length, sparseBytes - blockLine.length);
+  await largeBlocks.close();
+  await fs.writeFile(path.join(dataDir, "txs.jsonl"), "");
+
+  const startedAt = Date.now();
+  const server = await startNodeServer(
+    serverPath,
+    {
+      INDEXER_RPC: "http://127.0.0.1:" + rpcPort,
+      INDEXER_PORT: String(indexerPort),
+      INDEXER_DATA_DIR: dataDir,
+      YNX_PUBLIC_RPC: "http://127.0.0.1:" + rpcPort,
+      YNX_PUBLIC_REST: "http://127.0.0.1:" + rpcPort,
+      YNX_PUBLIC_BRIDGE_HEALTH: "http://127.0.0.1:" + rpcPort + "/bridge/health",
+      YNX_PUBLIC_AI_GATEWAY: "http://127.0.0.1:" + rpcPort + "/ai",
+      YNX_PUBLIC_AI_HEALTH: "http://127.0.0.1:" + rpcPort + "/ai/health",
+    },
+    "http://127.0.0.1:" + indexerPort + "/health",
+  );
+  t.after(async () => server.stop());
+
+  assert.ok(Date.now() - startedAt < 5000, "large sparse JSONL startup exceeded five seconds");
+  const blockSearch = assertJson(await requestJson("http://127.0.0.1:" + indexerPort + "/search?q=100"), 200);
+  assert.equal(blockSearch.kind, "block");
+  assert.equal(blockSearch.block.hash, "BLOCKHASH100");
+});

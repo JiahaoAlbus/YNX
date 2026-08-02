@@ -651,11 +651,35 @@ function persistLineage() {
 
 function loadRecentJsonlIntoCache(filePath, cache, limit) {
   if (!fs.existsSync(filePath)) return;
-  const lines = fs
-    .readFileSync(filePath, "utf8")
+  const normalizedLimit = Math.max(0, Number(limit) || 0);
+  if (normalizedLimit === 0) return;
+  const descriptor = fs.openSync(filePath, "r");
+  const chunks = [];
+  const chunkBytes = 64 * 1024;
+  const maxBootstrapBytes = 64 * 1024 * 1024;
+  let position = fs.fstatSync(descriptor).size;
+  let bytesBuffered = 0;
+  let newlineCount = 0;
+  try {
+    while (position > 0 && newlineCount <= normalizedLimit && bytesBuffered < maxBootstrapBytes) {
+      const size = Math.min(chunkBytes, position, maxBootstrapBytes - bytesBuffered);
+      position -= size;
+      const chunk = Buffer.allocUnsafe(size);
+      fs.readSync(descriptor, chunk, 0, size, position);
+      chunks.unshift(chunk);
+      bytesBuffered += size;
+      for (const byte of chunk) {
+        if (byte === 10) newlineCount += 1;
+      }
+    }
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  const lines = Buffer.concat(chunks)
+    .toString("utf8")
     .split(/\r?\n/)
     .filter(Boolean)
-    .slice(-limit);
+    .slice(-normalizedLimit);
   for (const line of lines) {
     const parsed = safeJsonParse(line, null);
     if (parsed) cache.push(parsed);
